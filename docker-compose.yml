@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: comercial
+      POSTGRES_USER: comercial
+      POSTGRES_PASSWORD: comercial
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-testing-db.sh:/docker-entrypoint-initdb.d/init-testing-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comercial"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    restart: unless-stopped
+    volumes:
+      # backend/ inteiro (incluindo storage/app/backup) já é bind mount do host —
+      # um volume nomeado aninhado aqui causaria o Docker criar o mount point como
+      # root, quebrando permissão de escrita do www-data (ver docs/01-architecture.md,
+      # nota sobre isolar containers do usuário do host).
+      - ./backend:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    restart: unless-stopped
+    volumes:
+      # backend/ inteiro (incluindo storage/app/backup) já é bind mount do host —
+      # um volume nomeado aninhado aqui causaria o Docker criar o mount point como
+      # root, quebrando permissão de escrita do www-data (ver docs/01-architecture.md,
+      # nota sobre isolar containers do usuário do host).
+      - ./backend:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "while true; do php artisan schedule:run; sleep 60; done"]
+
+  nuxt-build:
+    build:
+      context: .
+      dockerfile: docker/nuxt/Dockerfile
+    profiles: ["build"]
+    volumes:
+      - nuxt_dist:/dist
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend/public:/var/www/html/public:ro
+      - nuxt_dist:/var/www/frontend:ro
+    depends_on:
+      - php-fpm
+
+volumes:
+  postgres_data:
+  nuxt_dist:
