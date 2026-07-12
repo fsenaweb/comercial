@@ -68,6 +68,12 @@ services:
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./backend/public:/var/www/html/public:ro
+      # public/storage é um symlink (via `php artisan storage:link`) que aponta
+      # pro caminho absoluto /var/www/html/storage/app/public — sem montar
+      # storage/app/public aqui também, o nginx segue o link pra um caminho que
+      # não existe no seu próprio container e serve 404 pros arquivos enviados
+      # (ex.: logo da loja).
+      - ./backend/storage/app/public:/var/www/html/storage/app/public:ro
       - nuxt_dist:/var/www/frontend:ro
     depends_on:
       - php-fpm

@@ -1,6 +1,8 @@
 # Design System
 
-**Status: v1 — baseado em 4 telas do AppLoja (dashboard, modal de caixa, lista de caixa, modal de cliente) + CSS compilado deles + o logo da nossa loja.** Documento vivo: conforme mais telas de referência forem chegando, atualizar aqui.
+**Status: v2 — baseado em 9 telas do AppLoja (dashboard, modal de caixa, lista de caixa, modal de cliente, pedidos, produtos) + CSS compilado deles + o logo da nossa loja.** Documento vivo: conforme mais telas de referência forem chegando, atualizar aqui.
+
+> Atualização (Sprint 1, revisão de design): a primeira leva de telas de cadastro (categorias, produtos etc.) saiu **visualmente pobre** em relação a este documento — sem sidebar, sem ícones, sem cards de KPI, `<select>` nativo cru. As seções abaixo foram detalhadas com o que realmente falta implementar; ver "Aplicação no código atual" para o estado depois do reforço.
 
 ## Princípio: marca vs. semântica
 A AppLoja usa um teal (`--brand: rgb(47,165,153)`) como cor de marca e reserva `emerald`/`rose`/`sky` do Tailwind para semântica de status (sucesso/erro/info). Nós seguimos a mesma separação, trocando só a cor de marca:
@@ -38,18 +40,26 @@ A referência usa um par display/body, não uma fonte só:
 - No Nuxt: `@nuxt/fonts` (auto-hospeda, sem chamada externa a cada load) ou self-host manual dos `.woff2` — decidir na hora de implementar; qualquer uma evita o registro de terceiros do Google Fonts CDN direto no HTML (privacidade/latência).
 
 ## Espaçamento, raio e sombra
-- **Raio:** generoso. `rounded-xl` (12px) a `rounded-2xl` (16px) em cards/modais; `rounded-full` em pills, badges, avatares e botões de ação circulares.
+- **Raio:** generoso. `rounded-xl` (12px) a `rounded-2xl` (16px) em cards/modais; `rounded-full` em pills, badges, avatares — **e também nos botões primário/secundário**, confirmado nos prints de Caixa/Produtos ("Abrir novo caixa", "Nova Venda", "Novo caixa" são todos pill, não `rounded-xl`). Ajuste em relação à v1: `BaseButton` usa `rounded-full`, não `rounded-xl`.
 - **Sombra padrão de card:** suave, duas camadas (`0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06)` — equivalente ao `shadow-card` da referência). Nada de sombra dura.
 - **Glow em CTA:** botão principal ganha sombra colorida sutil no hover (cor da marca ou do status), não só a sombra neutra — reforça o que é clicável/importante.
 
-## Padrões de componente (o que vimos nas 4 telas)
+## Ícones
+A referência usa um set de ícones de traço fino (estilo Lucide/Feather) em **todo lugar**: cada item de menu da sidebar, cada card de KPI (chip colorido com ícone), busca, ordenação de coluna, badges de status, ações de linha (editar/excluir), botões (carrinho, atualizar). A ausência total de ícones foi o maior motivo da v1 das telas de cadastro parecer pobre.
+- **Biblioteca:** `lucide-vue-next` (tree-shakeable, um `import` por ícone, estilo de traço compatível com a referência).
+- **Tamanho padrão:** 16–18px em botões/tabela, 20px em item de menu da sidebar, 22–24px dentro do chip colorido de KPI.
+- **Cor padrão:** herda `currentColor` (segue o texto ao redor); chips de KPI usam a cor do próprio chip (ver StatCard abaixo).
 
-- **Shell (sidebar + topbar):** sidebar clara, grupos colapsáveis por seção (nosso caso: Cadastros, Estoque, Caixa/PDV, Relatórios), item ativo com fundo sólido na cor de marca + texto `--brand-ink`. Topbar com busca, notificações, usuário — **sem** o dropdown "Aplicativos"/marketplace e **sem** gamificação (XP/nível/streak): não fazem sentido numa ferramenta interna de uma loja só (ver "Fora de escopo" abaixo).
-- **Card de KPI** (`components/ui/StatCard.vue`, futuro): label uppercase pequeno e cinza, valor grande em negrito (fonte display), subtexto cinza, chip de ícone colorido no canto. Card de alerta (ex.: estoque baixo) ganha borda/fundo tingido de `warning`, não de `danger` — reservamos vermelho para erro real, não para "precisa de atenção".
-- **Badge de status** (`components/ui/StatusBadge.vue`, futuro): pill (`rounded-full`), fundo tingido levemente + texto na cor cheia do status (ex.: `bg-emerald-100 text-emerald-700` para "Aberto").
+## Padrões de componente (o que vimos nas 9 telas)
+
+- **Shell (sidebar + topbar):** sidebar clara fixa (~260px), coluna própria de altura cheia — **não** é um nav em linha dentro do topbar (erro da v1). Do topo pra baixo: logo + nome do sistema, campo de busca (`Buscar no menu...`), grupos de navegação com ícone + label (grupos como "Cadastros" ficam expandidos por padrão mostrando os itens-filho recuados; grupos futuros como "Estoque e Compras"/"Financeiro" colapsam com chevron), separador, bloco "Suporte", e no rodapé fixo (fora do scroll) as ações de saída. Item ativo: fundo sólido na cor de marca (`--brand`) + texto `--brand-ink`, cantos arredondados (`rounded-xl`), não cobre a largura toda da sidebar (tem padding lateral). Topbar é uma faixa fina só na coluna à direita da sidebar (não atravessa por cima dela), com busca/notificações/usuário — **sem** o dropdown "Aplicativos"/marketplace e **sem** gamificação (XP/nível/streak): não fazem sentido numa ferramenta interna de uma loja só (ver "Fora de escopo" abaixo).
+- **Card de KPI** (`components/ui/StatCard.vue`): label uppercase pequeno e cinza, valor grande em negrito (fonte display), subtexto cinza, chip de ícone colorido (`rounded-xl`, ~40px, fundo tingido leve tipo `bg-emerald-100 text-emerald-600`) no canto superior direito do card. Cores do chip variam por card só pra diferenciar visualmente (não carregam semântica de status) — usar uma rotação neutra (emerald/sky/violet/amber em tom claro) exceto quando o card É um alerta de verdade (ex.: estoque baixo), aí sim usa `warning` com borda esquerda tingida (visto no card "REPOSIÇÃO DE ESTOQUE" com borda vermelha/`danger` quando há pendência).
+- **Badge de status** (`components/ui/StatusBadge.vue`): pill (`rounded-full`), fundo tingido levemente + texto na cor cheia do status (ex.: `bg-emerald-100 text-emerald-700` para "Aberto").
 - **Modal com seções agrupadas:** título + subtítulo no topo; corpo dividido em blocos com label uppercase pequeno acima de cada grupo de campos (ex.: "DADOS PRINCIPAIS", "DOCUMENTOS", "ENDEREÇO" no cadastro de cliente); rodapé com ação secundária (ghost) à esquerda e primária (marca) à direita.
 - **Formulário em grid pareado:** campos relacionados lado a lado (Celular/Telefone, CEP sozinho, Endereço/Número, Complemento/Bairro/Cidade/Estado) — reduz o scroll em formulários longos como o de cliente/produto.
-- **Toolbar de tabela:** pills de filtro rápido (ex.: "Abertos / Fechados" com contador), busca, filtro de data — tudo numa linha acima da tabela, antes de qualquer paginação.
+- **Toolbar de tabela:** pills de filtro rápido (ex.: "Abertos / Fechados" com contador, ativo com fundo escuro sólido + texto branco), busca com ícone de lupa à esquerda do input, filtro de data — tudo numa linha acima da tabela, antes de qualquer paginação. Contador "Exibindo N de M" abaixo da toolbar, acima da tabela.
+- **Ações de linha na tabela:** ícones (lápis para editar, lixeira para excluir), não texto sublinhado — texto sublinhado (v1) é o padrão de link de conteúdo, não de ação de tabela densa.
+- **`<select>`:** nunca o nativo cru — mesma casca visual do `BaseInput` (borda, raio, foco em `--brand`), com um chevron (ícone `ChevronDown`) sobreposto à direita substituindo a seta do navegador.
 - **Toast de feedback:** fixo, canto inferior central, animação sutil de entrada (fade + leve subida). Substitui alert() nativo.
 
 ## Fora de escopo (não trazer da AppLoja)
@@ -61,4 +71,6 @@ Coerente com `docs/04-roadmap.md` ("Fora de escopo"):
 - `glass-panel` / `mesh-background` (fundo animado com gradiente) — decorativo de página de marketing; se algum dia fizer sentido, seria só na tela de login, nunca nas telas de operação (PDV/back-office precisam de foco, não de decoração).
 
 ## Aplicação no código atual
-As telas da Sprint 0 (`login.vue`, `layouts/default.vue`, `settings/store.vue`, `BaseButton`/`BaseInput`) já foram retrocedidas para os tokens acima (`app/assets/css/main.css`, tema fixo claro via `color-scheme: light` + meta tag, sem seguir o SO).
+As telas da Sprint 0 (`login.vue`, `settings/store.vue`) usam os tokens acima (`app/assets/css/main.css`, tema fixo claro via `color-scheme: light` + meta tag, sem seguir o SO).
+
+A partir da revisão de design da Sprint 1: `layouts/default.vue` foi reconstruído com o shell sidebar+topbar (`components/layout/AppSidebar.vue`), `lucide-vue-next` instalado para ícones, `components/ui/StatCard.vue` e `StatusBadge.vue` criados, `BaseButton` passou a `rounded-full`, `BaseSelect` ganhou casca customizada com chevron, `BaseTable` passou a aceitar ações em ícone. Todas as telas de cadastro (`categories`, `subcategories`, `brands`, `units`, `suppliers`, `customers`, `products`) foram atualizadas para esse padrão.
