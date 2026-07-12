@@ -31,12 +31,13 @@ Toda sprint segue o fluxo de trabalho do `CLAUDE.md` (branch própria → desenv
 - [x] Validação end-to-end via nginx: `docker compose exec php-fpm php artisan test` (70 passed), `npx nuxi typecheck` e `npm run generate` limpos, telas verificadas no navegador (Playwright headless) incluindo criação de categoria, produto e variação com estoque inicial.
 - [x] Armadilha nova documentada: o serviço `nuxt-build` do compose faz `COPY frontend/` **na imagem** (não é bind mount) — editar código do front e rodar só `docker compose --profile build run --rm nuxt-build` serve a build antiga. É preciso `docker compose build nuxt-build` antes (ver `07-dev-environment.md`).
 
-## Sprint 2: Caixa (parte da Fase 2)
-- [ ] Migrations e Models para `cash_registers`, `cash_operations`, `payment_methods` (+ seeder de formas de pagamento padrão).
-- [ ] `OpenCashRegisterAction` e `CloseCashRegisterAction`, com regra de **um caixa aberto por vez** (`CashRegisterAlreadyOpenException`) e lançamentos de sangria/reforço.
-- [ ] Endpoints de abertura/fechamento/consulta de operações do caixa atual.
-- [ ] Tela de abertura/fechamento de caixa no Nuxt (`useCashRegisterStore`).
-- [ ] Testes: feature tests para abrir/fechar caixa (incluindo tentativa de abrir um segundo caixa, fechar caixa já fechado, sangria/reforço).
+## Sprint 2: Caixa (parte da Fase 2) — ✅ CONCLUÍDA (2026-07-15, branch `feat/sprint-2-caixa`)
+- [x] Migrations e Models para `cash_registers`, `cash_operations`, `payment_methods` (+ seeder de formas de pagamento padrão).
+- [x] `OpenCashRegisterAction` e `CloseCashRegisterAction`, com regra de **um caixa aberto por vez** (`CashRegisterAlreadyOpenException`) e lançamentos de sangria/reforço. *Ampliado com `UpdateCashRegisterAction` (edição de abertura/observação com o caixa ainda aberto) e `RemoveCashOperationAction` (remove um lançamento indevido antes do fechamento — depois de fechado o extrato é imutável), decisões motivadas pelo layout de referência (`Caixa.dc.html`) recebido do usuário.*
+- [x] Endpoints de abertura/fechamento/consulta de operações do caixa atual — *mais `GET /cash-registers` (histórico completo, com filtro por status/busca), `PUT /cash-registers/{id}` e `DELETE /cash-registers/operations/{id}`, necessários pra tela de referência.*
+- [x] Tela de abertura/fechamento de caixa no Nuxt (`useCashRegisterStore`) — `pages/cash-register.vue`, réplica funcional do layout `Caixa.dc.html` (lista com KPIs/filtro/busca → abertura → detalhe com edição/operações/fechamento) usando os componentes reais do design system (`StatCard`, `StatusBadge`, `BaseModal`-free inline flow). Ações restritas a admin/cashier (`auth.user.role`); link ativado em `AppSidebar.vue`. Validado ponta a ponta no navegador (Playwright): abrir → sangria → reforço → saldo/KPIs corretos → fechar → histórico.
+- [x] Testes: feature tests para abrir/fechar caixa (incluindo tentativa de abrir um segundo caixa, fechar caixa já fechado, sangria/reforço) — 27 testes novos em `tests/Feature/CashRegister/` (abertura, fechamento, edição, operações, listagem, formas de pagamento).
+- [x] *Extra pós-sprint:* CRUD completo de `payment_methods` (`store`/`show`/`update`/`destroy`, `PaymentMethodPolicy`, hard delete — sem soft delete, conforme `03-database-modeling.md`) — decisão do usuário de não deixar a lista de formas de pagamento hardcoded, já que cadastro é o mesmo custo de manter um enum fixo e é mais flexível pra loja ajustar sozinha. Tela em `settings/catalog.vue` via `CatalogEntityCard` (novo tipo de campo `switch`, reutilizável por outros cadastros futuros). 9 testes novos em `tests/Feature/PaymentMethod/PaymentMethodTest.php` (substituindo os 2 testes de listagem que estavam em `tests/Feature/CashRegister/`).
 
 ## Sprint 3: PDV, Venda e Comprovante (parte da Fase 2 — o coração do sistema)
 - [ ] Migrations para `sales` e `sale_items` (referenciando `seller_id`, `cash_register_id`).

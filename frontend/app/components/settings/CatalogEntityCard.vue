@@ -5,7 +5,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 interface CatalogField {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'select'
+  type: 'text' | 'textarea' | 'select' | 'switch'
   options?: { value: string | number; label: string }[]
   secondary?: boolean
 }
@@ -18,7 +18,7 @@ const props = defineProps<{
   titlePlural: string
   description: string
   icon: Component
-  tone: 'emerald' | 'sky' | 'violet' | 'amber'
+  tone: 'emerald' | 'sky' | 'violet' | 'amber' | 'teal'
   fields: CatalogField[]
   addLabel: string
 }>()
@@ -28,6 +28,7 @@ const toneClasses: Record<string, string> = {
   sky: 'bg-sky-100 text-sky-600',
   violet: 'bg-violet-100 text-violet-600',
   amber: 'bg-amber-100 text-amber-700',
+  teal: 'bg-teal-100 text-teal-600',
 }
 
 const api = useResourceApi<CatalogItem>(props.resource)
@@ -43,10 +44,10 @@ const modalError = ref<unknown>(null)
 const editingId = ref<number | null>(null)
 
 function emptyForm() {
-  return Object.fromEntries(props.fields.map((f) => [f.key, ''])) as Record<string, string>
+  return Object.fromEntries(props.fields.map((f) => [f.key, f.type === 'switch' ? true : ''])) as Record<string, string | boolean>
 }
 
-const form = reactive<Record<string, string>>(emptyForm())
+const form = reactive<Record<string, string | boolean>>(emptyForm())
 
 async function load() {
   loading.value = true
@@ -67,7 +68,7 @@ function openEditModal(item: CatalogItem) {
   listModalOpen.value = false
   editingId.value = item.id
   for (const field of props.fields) {
-    form[field.key] = String(item[field.key] ?? '')
+    form[field.key] = field.type === 'switch' ? Boolean(item[field.key]) : String(item[field.key] ?? '')
   }
   modalError.value = null
   createModalOpen.value = true
@@ -118,6 +119,9 @@ function resolveDisplay(item: CatalogItem, field: CatalogField): string {
   const raw = item[field.key]
   if (field.type === 'select') {
     return field.options?.find((o) => String(o.value) === String(raw))?.label ?? '—'
+  }
+  if (field.type === 'switch') {
+    return raw ? 'Ativo' : 'Inativo'
   }
   return raw == null || raw === '' ? '—' : String(raw)
 }
@@ -172,24 +176,30 @@ const previewChips = computed(() => items.value.slice(0, 5).map(resolveLabel))
         <template v-for="field in fields" :key="field.key">
           <BaseInput
             v-if="field.type === 'text'"
-            :model-value="form[field.key] ?? ''"
+            :model-value="(form[field.key] as string) ?? ''"
             :label="field.label"
             :error="firstFieldError(modalError, field.key)"
             @update:model-value="form[field.key] = $event"
           />
           <BaseTextarea
             v-else-if="field.type === 'textarea'"
-            :model-value="form[field.key] ?? ''"
+            :model-value="(form[field.key] as string) ?? ''"
             :label="field.label"
             :error="firstFieldError(modalError, field.key)"
             @update:model-value="form[field.key] = $event"
           />
           <BaseSelect
             v-else-if="field.type === 'select'"
-            :model-value="form[field.key] ?? ''"
+            :model-value="(form[field.key] as string) ?? ''"
             :label="field.label"
             :options="field.options ?? []"
             :error="firstFieldError(modalError, field.key)"
+            @update:model-value="form[field.key] = $event"
+          />
+          <BaseSwitch
+            v-else-if="field.type === 'switch'"
+            :model-value="Boolean(form[field.key])"
+            :label="field.label"
             @update:model-value="form[field.key] = $event"
           />
         </template>

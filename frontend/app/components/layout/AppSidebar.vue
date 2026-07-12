@@ -32,11 +32,13 @@ const financeiroOpen = ref(false)
 const gestaoOpen = ref(false)
 const sidebarQuery = ref('')
 
-const quickAccessLinks = [{ to: '/', label: 'Dashboard', icon: LayoutGrid }]
+const quickAccessLinks = [
+  { to: '/', label: 'Dashboard', icon: LayoutGrid },
+  { to: '/cash-register', label: 'Caixa', icon: DollarSign },
+]
 
 const comingSoonLinks = [
   { label: 'PDV', icon: Monitor },
-  { label: 'Caixa', icon: DollarSign },
   { label: 'Pedidos', icon: ShoppingCart },
   { label: 'Ordens de Serviço', icon: Wrench },
   { label: 'Notas Fiscais', icon: FileText },
