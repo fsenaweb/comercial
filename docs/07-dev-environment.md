@@ -9,21 +9,21 @@ Guia operacional do projeto: como subir a stack, rodar validações, e as armadi
 ## Subindo a stack pela primeira vez
 
 ```bash
-# 1. Variáveis de UID/GID (o compose usa default 1000; exporte se seu usuário for outro)
-export UID=$(id -u) GID=$(id -g)
-
-# 2. Sobe banco, API, scheduler e nginx
+# 1. Sobe banco, API, scheduler e nginx
+# (UID/GID do host: default já é 1000; se o seu usuário for outro, prefixe com
+# `env UID=$(id -u) GID=$(id -g)` — `UID` é somente-leitura no bash, não dá pra "export")
 docker compose up -d
 
-# 3. Configura o backend (primeira vez)
+# 2. Configura o backend (primeira vez)
 cp backend/.env.example backend/.env
 docker compose exec php-fpm php artisan key:generate
 docker compose exec php-fpm php artisan migrate --seed   # cria admin@loja.local / password
+docker compose exec php-fpm php artisan storage:link     # symlink pra servir uploads (ex.: logo da loja) via nginx
 
-# 4. Gera a SPA e publica no volume servido pelo nginx
+# 3. Gera a SPA e publica no volume servido pelo nginx
 docker compose --profile build run --rm nuxt-build
 
-# 5. Acessa http://localhost — login com o admin do seed (trocar a senha!)
+# 4. Acessa http://localhost — login com o admin do seed (trocar a senha!)
 ```
 
 O banco `comercial_testing` (usado pela suíte de testes) é criado automaticamente pelo init script do postgres — **apenas na primeira criação do volume**. Se o volume for antigo e o banco não existir: `docker compose exec postgres psql -U comercial -c "CREATE DATABASE comercial_testing OWNER comercial"`.
@@ -46,7 +46,9 @@ cd frontend && cp .env.example .env && npm install && npm run dev
 # (o .env aponta NUXT_PUBLIC_API_BASE para http://localhost/api — o nginx do compose)
 
 # Atualizar a SPA servida pelo nginx após mudanças no front
-docker compose --profile build run --rm nuxt-build
+./deploy-frontend.sh
+# (equivale a: docker compose build --no-cache nuxt-build && docker compose --profile build run --rm nuxt-build && docker compose restart nginx —
+#  o --no-cache é obrigatório, ver "Armadilhas conhecidas"; nunca rodar sem --no-cache)
 ```
 
 ## Hostname local (opcional, recomendado)
@@ -63,6 +65,7 @@ O `.env` do backend já reconhece qualquer host graças a `SESSION_DOMAIN=null`;
 
 | Sintoma | Causa | Correção |
 |---|---|---|
+| `export UID=$(id -u)` (ou `./deploy-frontend.sh`) falha com `UID: a variável permite somente leitura` | `UID` é uma variável especial somente-leitura do bash (e do zsh, dependendo da versão) — não pode ser reatribuída via `export`/`=` | Usar `env UID=$(id -u) GID=$(id -g) docker compose ...` (passa a variável só pro processo filho, sem tocar na tabela de variáveis do shell). `deploy-frontend.sh` já faz isso |
 | `502 Bad Gateway` em tudo | nginx cacheia o IP do container `php-fpm`; ao recriar o container, o IP muda | `docker compose restart nginx` |
 | `404 File not found` vindo do PHP em `/api/*` | Caminho do `SCRIPT_FILENAME` divergente entre nginx e php-fpm | `backend/public` deve estar montado no nginx no **mesmo** caminho absoluto do container PHP (`/var/www/html/public`) — já configurado; não alterar um lado só |
 | Arquivos do repo com dono `root` | Comando rodado em container sem `-u`, ou volume nomeado aninhado dentro do bind mount | Prevenção: `docker compose exec` (usuário já correto) ou `-u $(id -u):$(id -g)` em `docker run`; **nunca** declarar volume nomeado dentro de `./backend`. Limpeza: `docker run --rm -v "$(pwd)":/app alpine rm -rf /app/<caminho>` |
@@ -72,20 +75,24 @@ O `.env` do backend já reconhece qualquer host graças a `SESSION_DOMAIN=null`;
 | Teste com processo externo não vê os dados | `RefreshDatabase` mantém os dados numa transação não commitada, invisível para conexões externas (ex.: `pg_dump`) | Usar `DatabaseMigrations` nesse teste (ver `BackupRestoreTest`) |
 | Componente (`<BaseButton>`, `<BaseInput>`...) não aparece na tela — sem erro no build/typecheck | Nuxt prefixa componentes auto-importados pelo nome da subpasta (`components/ui/BaseButton.vue` vira `<UiBaseButton>`, não `<BaseButton>`); Vue falha em resolver a tag em runtime e renderiza só o texto do slot (ou nada) — **build e `nuxi typecheck` passam normalmente**, isso não é erro de compilação | `components: [{ path: '~/components', pathPrefix: false }]` no `nuxt.config.ts` (já configurado). Para conferir o nome real registrado sem abrir navegador: `grep BaseButton frontend/.nuxt/components.d.ts` |
 | `curl`/`typecheck`/build "verdes" mas a tela não funciona | O front é 100% client-rendered (`ssr:false`) — `curl` só vê o HTML estático vazio (a Nitro não prerenderiza conteúdo), nunca executa o JS que monta a tela de verdade. **Bug de runtime do Vue não aparece em nenhuma validação que não execute JS no navegador.** | Não existe substituto para abrir no navegador (ou usar uma ferramenta de automação de browser, se disponível) antes de dar uma tela por concluída; validação de HTTP status não é validação de UI |
+| Editou código do front, rodou `docker compose --profile build run --rm nuxt-build`, mas a build servida pelo nginx continua com a versão antiga (chunks `_nuxt/*.js` sem o código novo) | O serviço `nuxt-build` faz `COPY frontend/ ./` **na imagem** Docker (ver `docker/nuxt/Dockerfile`) — não é bind mount do código-fonte. `docker compose run` reusa a imagem já construída, que não sabe dos arquivos novos; às vezes até `docker compose build nuxt-build` (sem `--no-cache`) reaproveita uma camada velha e não pega o `COPY` mais recente. Achado na Sprint 1 depurando por que as telas de cadastro não apareciam mesmo com typecheck/build limpos. | `docker compose build --no-cache nuxt-build` antes de `docker compose --profile build run --rm nuxt-build` quando o código do front mudou desde a última imagem — o `--no-cache` é o que garante que o `COPY` não é pulado |
+| Corrigiu um bug de front, rebuildou, reiniciou o nginx, mas o navegador do usuário final continua reproduzindo o bug antigo | `default.conf` não define `Cache-Control`; sem esse header o navegador aplica cache heurístico e pode continuar servindo o `index.html`/bundle antigos indefinidamente, mesmo com o servidor já atualizado | Corrigido: `/_nuxt/*` (nome com hash de conteúdo) ganhou `Cache-Control: public, max-age=31536000, immutable`; `index.html`/demais rotas ganharam `Cache-Control: no-cache` (sempre revalida). Se o sintoma persistir em uma máquina específica, pedir um hard refresh (`Ctrl+Shift+R`) uma única vez para descartar o cache antigo já guardado antes dessa correção |
+| Login falha com CORS/CSRF ao acessar via nginx (`http://loja.local` ou o host da LAN), mas funcionava antes | `frontend/.env` (criado para o `npm run dev` local, que precisa apontar `NUXT_PUBLIC_API_BASE` para `http://localhost/api`) foi parar dentro da imagem do `nuxt-build` — o `COPY frontend/ ./` do Dockerfile copia esse `.env`, e o `npm run generate` o lê, baking o valor de dev (`localhost`) na build de produção em vez do padrão relativo (`/api`, mesma origem). Causa raiz: `frontend/.env` não estava no `.dockerignore`. | Corrigido: `frontend/.env` adicionado ao `.dockerignore` — a build via Docker nunca mais herda esse arquivo, independente do que estiver configurado localmente para o dev server |
+| Upload (ex.: logo da loja) salva com sucesso no backend, mas a imagem dá 404 ao carregar pelo nginx | `public/storage` é um symlink (`php artisan storage:link`) pra um caminho **absoluto** (`/var/www/html/storage/app/public`). O container do nginx só montava `backend/public`, não `backend/storage` — o symlink existe mas aponta pra um caminho que não existe dentro do próprio container do nginx | Corrigido: `docker-compose.yml` do serviço `nginx` ganhou um segundo bind mount, `./backend/storage/app/public:/var/www/html/storage/app/public:ro`, além do `location /storage/` em `docker/nginx/default.conf`. Rodar `docker compose up -d nginx` (não só `restart`) depois de puxar essa mudança, pra recriar o container com o volume novo |
 
 ## Deploy / atualização na máquina da loja
 
 ```bash
 git pull
-export UID=$(id -u) GID=$(id -g)
-docker compose build
+# UID é somente-leitura no bash — não dá pra "export"; `env` passa pro processo filho
+env UID=$(id -u) GID=$(id -g) docker compose build
 docker compose up -d
 docker compose exec php-fpm php artisan migrate --force
-docker compose --profile build run --rm nuxt-build
-docker compose restart nginx   # containers recriados = IP novo (ver armadilhas)
+docker compose exec php-fpm php artisan storage:link   # idempotente; só precisa na primeira vez
+./deploy-frontend.sh   # build --no-cache + publica a SPA + restart nginx
 ```
 
-> Encapsular isso em um `deploy.sh` está no backlog (`05-sprints.md`, melhorias transversais).
+> Um `deploy.sh` cobrindo o ciclo completo (git pull + migrate + `deploy-frontend.sh`) ainda está no backlog (`05-sprints.md`, melhorias transversais) — hoje só a parte de frontend (a mais repetitiva) está encapsulada.
 
 ### Configuração de produção (LAN) — checklist do `.env`
 - `APP_ENV=production`, `APP_DEBUG=false`.

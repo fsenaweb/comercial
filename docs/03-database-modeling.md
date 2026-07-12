@@ -12,7 +12,7 @@ O banco segue o padrão do Eloquent ORM. Nomes de tabela e coluna em **inglês**
   - Autorização por papel via Policies do Laravel + middleware `role:`, não por tabela de permissões.
 
 ## 2. Configuração da Loja
-- ✅ **store_settings**: registro único (id fixo = 1, acessado via `StoreSetting::current()`). name, cnpj (nullable), address, phone, logo_path (nullable), `require_seller_on_sale` (boolean — se a seleção de vendedor no PDV é obrigatória), `auto_open_cash_register` (boolean — se o caixa abre automaticamente ao iniciar o expediente).
+- ✅ **store_settings**: registro único (id fixo = 1, acessado via `StoreSetting::current()`). name, trade_name (nullable), cnpj (nullable), email (nullable), phone (nullable), mobile_phone (nullable), endereço estruturado (zip_code, address, address_number, address_complement, neighborhood, city, state — mesmo padrão de `customers`/`suppliers`), logo_path (nullable, upload real via `POST /store-settings/logo`, disco `public`, servido pelo nginx em `/storage/...`), `require_seller_on_sale` (boolean — se a seleção de vendedor no PDV é obrigatória), `auto_open_cash_register` (boolean — se o caixa abre automaticamente ao iniciar o expediente).
 
 ## 3. Tabelas de framework (criadas pelo Laravel — Sprint 0)
 - ✅ **sessions** — obrigatória: a autenticação é por cookie de sessão com driver `database` (ver `01-architecture.md`).
