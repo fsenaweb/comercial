@@ -23,5 +23,7 @@ class DatabaseSeeder extends Seeder
                 'active' => true,
             ],
         );
+
+        $this->call(PaymentMethodSeeder::class);
     }
 }

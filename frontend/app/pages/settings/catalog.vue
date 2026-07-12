@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Folder, FolderTree, Ruler, Tag } from 'lucide-vue-next'
+import { CreditCard, Folder, FolderTree, Ruler, Tag } from 'lucide-vue-next'
 
 interface Category {
   id: number
@@ -67,6 +67,19 @@ onMounted(async () => {
             tone="sky"
             add-label="Nova marca"
             :fields="[{ key: 'name', label: 'Nome', type: 'text' }]"
+          />
+          <CatalogEntityCard
+            resource="payment-methods"
+            title="Forma de pagamento"
+            title-plural="Formas de pagamento"
+            description="Formas de pagamento aceitas no caixa e no PDV."
+            :icon="CreditCard"
+            tone="teal"
+            add-label="Nova forma de pagamento"
+            :fields="[
+              { key: 'name', label: 'Nome', type: 'text' },
+              { key: 'active_on_pos', label: 'Ativo no PDV', type: 'switch', secondary: true },
+            ]"
           />
           <CatalogEntityCard
             resource="units"

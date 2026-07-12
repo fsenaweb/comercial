@@ -35,10 +35,12 @@ O banco segue o padrão do Eloquent ORM. Nomes de tabela e coluna em **inglês**
 - ⬜ **stock_movements**: id, product_variation_id, `type` (enum: `in`, `out`, `adjustment`, `sale`), quantity, origin (texto/enum curto — ex.: "manual", "sale", "supplier_entry"), reference_id (nullable — id da venda/entrada relacionada, quando houver), user_id, created_at.
 
 ## 6. Caixa
-- ⬜ **cash_registers**: id, opened_at, opening_amount, `status` (enum: `open`, `closed`), closed_at (nullable), closing_amount (nullable), opened_by (fk `users.id`), closed_by (fk `users.id`, nullable), notes.
+- ✅ **cash_registers**: id, opened_at, opening_amount, `status` (enum: `open`, `closed`), closed_at (nullable), closing_amount (nullable), opened_by (fk `users.id`), closed_by (fk `users.id`, nullable), notes.
   - Regra: **um caixa aberto por vez** na loja inteira (não por terminal, não por usuário).
-- ⬜ **cash_operations**: id, cash_register_id, user_id (quem lançou), `type` (enum: `in`, `out`), `origin` (enum: `sale`, `cash_withdrawal`, `cash_reinforcement`, `adjustment`), payment_method_id (nullable), amount, notes, created_at.
-- ⬜ **payment_methods**: id, name, active_on_pos (boolean).
+  - `expected_amount`/`difference_amount` são calculados on-the-fly (`CashRegister::expectedAmount()`, via `bcmath`), nunca persistidos — não há coluna nova além do que já estava fechado aqui.
+- ✅ **cash_operations**: id, cash_register_id, user_id (quem lançou), `type` (enum: `in`, `out`), `origin` (enum: `sale`, `cash_withdrawal`, `cash_reinforcement`, `adjustment`), payment_method_id (nullable), amount, notes, created_at.
+  - `sale` reservado para a Sprint 3 (venda ainda não gera `cash_operations`).
+- ✅ **payment_methods**: id, name, active_on_pos (boolean).
 
 ## 7. Vendas / Atendimento
 - ⬜ **sales**: id, number, customer_id (nullable), `seller_id` (fk `users.id`), cash_register_id (fk), subtotal, discount, total, payment_method_id, notes, `status` (enum: `pending`, `completed`, `canceled`), created_at.

@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\CashRegisterController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
 use App\Http\Controllers\Api\StoreSettingController;
@@ -36,4 +38,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->parameters(['variations' => 'productVariation'])
         ->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('users', UserController::class)->only(['index', 'store', 'update']);
+
+    Route::apiResource('payment-methods', PaymentMethodController::class);
+
+    Route::get('/cash-registers', [CashRegisterController::class, 'index']);
+    Route::get('/cash-registers/current', [CashRegisterController::class, 'current']);
+    Route::post('/cash-registers/open', [CashRegisterController::class, 'open']);
+    Route::post('/cash-registers/operations', [CashRegisterController::class, 'storeOperation']);
+    Route::delete('/cash-registers/operations/{cashOperation}', [CashRegisterController::class, 'destroyOperation']);
+    Route::put('/cash-registers/{cashRegister}', [CashRegisterController::class, 'update']);
+    Route::post('/cash-registers/{cashRegister}/close', [CashRegisterController::class, 'close']);
+    Route::get('/cash-registers/{cashRegister}/operations', [CashRegisterController::class, 'operations']);
 });
