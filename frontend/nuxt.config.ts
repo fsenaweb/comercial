@@ -10,6 +10,9 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // Título único pra todas as páginas — só o PDV troca (kiosk, tela sempre
+      // aberta no balcão), via useHead direto em pos.vue.
+      title: 'JP Parafusos — Sistema Comercial',
       // Tema sempre claro por decisão de produto — não seguir o SO (ver
       // docs/08-design-system.md e app/assets/css/main.css).
       meta: [{ name: 'color-scheme', content: 'light' }],

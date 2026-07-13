@@ -22,6 +22,8 @@ class ProductVariationResource extends JsonResource
             'current_quantity' => $this->current_quantity,
             'min_quantity' => $this->min_quantity,
             'max_quantity' => $this->max_quantity,
+            'wholesale_min_qty' => $this->wholesale_min_qty,
+            'wholesale_price' => $this->wholesale_price,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

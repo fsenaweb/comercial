@@ -28,6 +28,8 @@ class SaleResource extends JsonResource
             'notes' => $this->notes,
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
+            'canceled_reason' => $this->canceled_reason,
+            'canceled_at' => $this->canceled_at,
             'items' => SaleItemResource::collection($this->whenLoaded('items')),
             'created_at' => $this->created_at,
         ];

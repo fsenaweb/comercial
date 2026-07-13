@@ -33,6 +33,9 @@ export interface CashOperation {
   payment_method_name: string | null
   amount: string
   notes: string | null
+  sale_number: string | null
+  sale_status: 'pending' | 'completed' | 'canceled' | null
+  sale_status_label: string | null
   created_at: string
 }
 

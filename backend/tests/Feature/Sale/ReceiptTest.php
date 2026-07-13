@@ -19,7 +19,7 @@ class ReceiptTest extends TestCase
         CashRegister::factory()->open()->create();
         $admin = User::factory()->admin()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
-        $variation = ProductVariation::factory()->create(['sale_price' => 10]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
 
         $sale = app(RegisterSaleAction::class)->execute([
             'payment_method_id' => $paymentMethod->id,
@@ -39,7 +39,7 @@ class ReceiptTest extends TestCase
         CashRegister::factory()->open()->create();
         $admin = User::factory()->admin()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
-        $variation = ProductVariation::factory()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 20]);
 
         $sale = app(RegisterSaleAction::class)->execute([
             'payment_method_id' => $paymentMethod->id,

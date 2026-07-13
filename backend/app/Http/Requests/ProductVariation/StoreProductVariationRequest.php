@@ -19,11 +19,13 @@ class StoreProductVariationRequest extends FormRequest
             'ean_gtin' => ['nullable', 'string', 'max:255'],
             'product_code' => ['required', 'string', 'max:255', 'unique:product_variations,product_code'],
             'cost_price' => ['required', 'numeric', 'min:0'],
-            'markup' => ['nullable', 'numeric'],
+            'markup' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'initial_quantity' => ['required', 'integer'],
             'min_quantity' => ['nullable', 'integer', 'min:0'],
             'max_quantity' => ['nullable', 'integer', 'min:0'],
+            'wholesale_min_qty' => ['nullable', 'integer', 'min:1', 'required_with:wholesale_price'],
+            'wholesale_price' => ['nullable', 'numeric', 'min:0', 'required_with:wholesale_min_qty'],
         ];
     }
 
@@ -35,6 +37,8 @@ class StoreProductVariationRequest extends FormRequest
             'cost_price.required' => 'Informe o preço de custo.',
             'sale_price.required' => 'Informe o preço de venda.',
             'initial_quantity.required' => 'Informe a quantidade inicial em estoque.',
+            'wholesale_min_qty.required_with' => 'Informe a quantidade mínima para o preço de atacado.',
+            'wholesale_price.required_with' => 'Informe o preço de atacado.',
         ];
     }
 }

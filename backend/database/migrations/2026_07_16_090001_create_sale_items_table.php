@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('discount_value', 10, 2)->default(0);
             $table->decimal('discount', 10, 2)->default(0);
             $table->decimal('total', 12, 2);
+            $table->boolean('is_wholesale')->default(false);
             $table->timestamp('created_at')->useCurrent();
         });
     }

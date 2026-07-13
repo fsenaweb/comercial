@@ -25,6 +25,27 @@ class ProductCatalogSeeder extends Seeder
     {
         $admin = User::where('role', 'admin')->first() ?? User::factory()->admin()->create();
 
+        // Vendedores de demonstração, pra testar a troca de vendedor no PDV (F3) —
+        // login não é o ponto aqui, só existirem pra aparecer no seletor.
+        foreach (
+            [
+                ['name' => 'Carla Mendes', 'email' => 'carla@loja.local'],
+                ['name' => 'Diego Fernandes', 'email' => 'diego@loja.local'],
+                ['name' => 'Bruna Oliveira', 'email' => 'bruna@loja.local'],
+            ] as $seller
+        ) {
+            User::firstOrCreate(
+                ['email' => $seller['email']],
+                [
+                    'name' => $seller['name'],
+                    'password' => 'password',
+                    'role' => 'seller',
+                    'commission_percent' => 5,
+                    'active' => true,
+                ],
+            );
+        }
+
         $unitUn = Unit::firstOrCreate(['abbreviation' => 'UN'], ['name' => 'Unidade']);
         $unitL = Unit::firstOrCreate(['abbreviation' => 'L'], ['name' => 'Litro']);
         $unitCx = Unit::firstOrCreate(['abbreviation' => 'CX'], ['name' => 'Caixa']);

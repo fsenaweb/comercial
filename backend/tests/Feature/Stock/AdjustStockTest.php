@@ -102,6 +102,21 @@ class AdjustStockTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['reason']);
     }
 
+    public function test_new_quantity_cannot_be_negative(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/adjustment', [
+            'product_variation_id' => $variation->id,
+            'new_quantity' => -1,
+            'reason' => 'Contagem',
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['new_quantity']);
+        $this->assertEquals(10, $variation->fresh()->current_quantity);
+    }
+
     public function test_product_variation_must_exist(): void
     {
         $admin = User::factory()->admin()->create();

@@ -181,10 +181,11 @@ await load()
             <div class="mt-4 grid grid-cols-2 gap-4">
               <BaseInput :model-value="selected.variation.current_quantity" label="Quantidade atual" disabled />
               <BaseInput
-                v-model.number="newQuantity"
+                :model-value="newQuantity"
                 type="number"
                 label="Quantidade contada"
                 :error="firstFieldError(error, 'new_quantity')"
+                @update:model-value="newQuantity = $event === '' ? null : Math.max(0, Number($event))"
               />
             </div>
             <p class="mt-2 text-xs" :class="delta === 0 ? 'text-txt-muted' : delta > 0 ? 'text-emerald-700' : 'text-rose-600'">
@@ -217,7 +218,7 @@ await load()
         <ul class="space-y-2 text-xs text-txt-secondary">
           <li>• Informe a quantidade <strong>contada</strong> no estoque, não a diferença — o sistema calcula a diferença sozinho.</li>
           <li>• Todo ajuste gera um registro no <NuxtLink to="/stock/kardex" class="font-semibold text-brand underline">Kardex</NuxtLink>, com motivo, usuário e data.</li>
-          <li>• Estoque negativo é permitido pelo sistema (decisão de produto), mas revise antes de confirmar um ajuste que resulte nisso.</li>
+          <li>• O sistema não permite estoque negativo — um ajuste ou venda que resultaria em saldo negativo é bloqueado.</li>
           <li>• Para receber mercadoria de um fornecedor, use a tela <NuxtLink to="/stock/entries" class="font-semibold text-brand underline">Entradas de Estoque</NuxtLink> em vez desta.</li>
         </ul>
       </div>

@@ -12,8 +12,11 @@ import {
   UserPlus,
   X,
 } from 'lucide-vue-next'
+import { lineTotalCents } from '~/utils/cartMath'
+import type { CartItem } from '~/stores/cart'
 
 definePageMeta({ layout: 'pos' })
+useHead({ title: 'PDV — JP Parafusos' })
 
 interface Variation {
   id: number
@@ -23,6 +26,8 @@ interface Variation {
   product_code: string
   sale_price: string
   current_quantity: number
+  wholesale_min_qty: number | null
+  wholesale_price: string | null
 }
 
 interface Product {
@@ -162,6 +167,8 @@ function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
     productCode: row.variation.product_code,
     salePrice: unitPrice ?? Number(row.variation.sale_price),
     currentQuantity: row.variation.current_quantity,
+    wholesaleMinQty: row.variation.wholesale_min_qty,
+    wholesalePrice: row.variation.wholesale_price !== null ? Number(row.variation.wholesale_price) : null,
   }, quantity)
 }
 
@@ -265,14 +272,53 @@ function chooseProductFromPicker(row: SkuRow) {
   showProductPicker.value = false
 }
 
+// ---- Modal de troca de vendedor/operador (F3) — mesmo padrão do F2 ----
+const showOperatorPicker = ref(false)
+const operatorPickerSearch = ref('')
+
+const filteredOperatorPickerRows = computed(() => {
+  const q = operatorPickerSearch.value.trim().toLowerCase()
+  if (!q) return users.value
+  return users.value.filter((u) => u.name.toLowerCase().includes(q))
+})
+
+const activeSellerName = computed(() => users.value.find((u) => u.id === cart.sellerId)?.name ?? null)
+
+function openOperatorPicker() {
+  operatorPickerSearch.value = ''
+  showOperatorPicker.value = true
+}
+
+function chooseOperatorFromPicker(row: UserOption) {
+  cart.setSeller(row.id)
+  showOperatorPicker.value = false
+}
+
 function handleGlobalKeydown(event: KeyboardEvent) {
-  if (event.key !== 'F2') return
-  event.preventDefault()
-  openProductPicker()
+  if (event.key === 'F2') {
+    event.preventDefault()
+    openProductPicker()
+    return
+  }
+  if (event.key === 'F3') {
+    event.preventDefault()
+    openOperatorPicker()
+  }
 }
 
 onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
+
+// Total da linha já líquido de desconto (mesma conta usada no Resumo da venda) — a
+// linha do carrinho mostrava só unitário × quantidade, sem refletir o desconto do item.
+function itemTotal(item: CartItem): number {
+  return lineTotalCents({
+    unitPrice: cart.effectivePrice(item),
+    quantity: item.quantity,
+    discountType: item.discountType,
+    discountValue: item.discountValue,
+  }) / 100
+}
 
 // ---- Configuração do pedido ----
 const configOpen = ref(false)
@@ -400,9 +446,23 @@ async function handleFinalizarVenda() {
 
       <div class="h-7 w-px flex-none bg-border" />
 
+      <button
+        type="button"
+        class="flex flex-none cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-left leading-tight hover:bg-surface-subtle"
+        @click="openOperatorPicker"
+      >
+        <div>
+          <div class="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-txt-muted uppercase">
+            Vendedor
+            <span class="rounded border border-border px-1 text-[9px] font-bold text-txt-muted">F3</span>
+          </div>
+          <div class="text-[13.5px] font-bold text-txt-primary">{{ activeSellerName ?? 'Selecionar vendedor' }}</div>
+        </div>
+      </button>
+
       <div class="flex-none leading-tight">
-        <div class="text-[10px] font-bold tracking-wide text-txt-muted uppercase">Operador</div>
-        <div class="text-[13.5px] font-bold text-txt-primary">{{ auth.user?.name ?? '-' }}</div>
+        <div class="text-[10px] font-bold tracking-wide text-txt-muted uppercase">Sessão</div>
+        <div class="text-[13.5px] font-bold text-txt-secondary">{{ auth.user?.name ?? '-' }}</div>
       </div>
 
       <div
@@ -592,6 +652,22 @@ async function handleFinalizarVenda() {
               <div class="min-w-0">
                 <p class="truncate text-[16px] font-bold text-txt-primary">{{ item.productName }}</p>
                 <p class="truncate text-[13.5px] text-txt-muted">Cód. {{ item.productCode }}<span v-if="item.variationLabel"> · {{ item.variationLabel }}</span></p>
+                <label
+                  v-if="item.wholesaleMinQty !== null && item.wholesalePrice !== null"
+                  class="mt-1 flex items-center gap-1.5"
+                  :class="item.quantity >= item.wholesaleMinQty ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="item.applyWholesale"
+                    :disabled="item.quantity < item.wholesaleMinQty"
+                    class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand"
+                    @change="cart.setItemWholesale(item.key, ($event.target as HTMLInputElement).checked)"
+                  >
+                  <span class="text-[11.5px] font-semibold text-txt-secondary">
+                    Atacado ({{ formatCurrency(Math.round(item.wholesalePrice * 100)) }} a partir de {{ item.wholesaleMinQty }} un.)
+                  </span>
+                </label>
               </div>
               <div class="flex flex-none items-center gap-1.5">
                 <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity - 1)">
@@ -602,7 +678,7 @@ async function handleFinalizarVenda() {
                   <Plus :size="13" />
                 </button>
               </div>
-              <div class="w-36 flex-none">
+              <div class="w-44 flex-none">
                 <DiscountInput
                   :type="item.discountType"
                   :value="item.discountValue"
@@ -611,7 +687,7 @@ async function handleFinalizarVenda() {
                 />
               </div>
               <span class="w-24 flex-none text-right text-[17px] font-bold text-txt-primary">
-                {{ formatCurrency(Math.round((item.unitPrice * item.quantity) * 100)) }}
+                {{ formatCurrency(Math.round(itemTotal(item) * 100)) }}
               </span>
               <button type="button" class="flex h-7.5 w-7.5 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50" @click="cart.removeItem(item.key)">
                 <Trash2 :size="15" />
@@ -748,6 +824,31 @@ async function handleFinalizarVenda() {
           <BaseButton :block="false" @click="chooseProductFromPicker(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredProductPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
+      </div>
+    </BaseModal>
+
+    <!-- MODAL: TROCAR VENDEDOR (F3) -->
+    <BaseModal :open="showOperatorPicker" title="Trocar vendedor" subtitle="Busque por nome e escolha quem está atendendo agora." @close="showOperatorPicker = false">
+      <label class="relative mb-3 block">
+        <Search :size="15" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-txt-muted" />
+        <input
+          v-model="operatorPickerSearch"
+          type="text"
+          placeholder="Nome do vendedor"
+          autofocus
+          class="w-full rounded-xl border border-border py-2.5 pr-3 pl-9 text-sm"
+        >
+      </label>
+      <div class="max-h-96 space-y-1 overflow-y-auto">
+        <div
+          v-for="row in filteredOperatorPickerRows"
+          :key="row.id"
+          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+        >
+          <p class="truncate text-sm font-bold text-txt-primary">{{ row.name }}</p>
+          <BaseButton :block="false" @click="chooseOperatorFromPicker(row)">Escolher</BaseButton>
+        </div>
+        <p v-if="filteredOperatorPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum vendedor encontrado.</p>
       </div>
     </BaseModal>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eye, Receipt, Search, TrendingUp, Users } from 'lucide-vue-next'
+import { Ban, Eye, Receipt, Search, TrendingUp, Users } from 'lucide-vue-next'
 
 interface UserOption {
   id: number
@@ -32,10 +32,14 @@ interface SaleItemDetail {
 interface SaleDetail extends SaleListItem {
   subtotal: string
   discount: string
+  canceled_reason: string | null
+  canceled_at: string | null
   items: SaleItemDetail[]
 }
 
 const api = useApi()
+const auth = useAuthStore()
+const { parse, firstFieldError } = useApiError()
 const { format } = useCurrencyMask()
 
 const sales = ref<SaleListItem[]>([])
@@ -46,8 +50,16 @@ const search = ref('')
 const sellerId = ref<string | number>('')
 const dateFrom = ref('')
 const dateTo = ref('')
+const statusFilter = ref('')
 
 const sellerOptions = computed(() => [{ value: '', label: 'Todos os vendedores' }, ...sellers.value.map((s) => ({ value: s.id, label: s.name }))])
+const statusOptions = [
+  { value: '', label: 'Todas' },
+  { value: 'completed', label: 'Concluídas' },
+  { value: 'canceled', label: 'Canceladas' },
+]
+
+const canCancelSale = computed(() => auth.isAdmin || auth.isCashier)
 
 function formatAmount(value: string | number): string {
   return format(Math.round(Number(value) * 100))
@@ -63,6 +75,7 @@ function buildQuery() {
   if (sellerId.value) query.set('seller_id', String(sellerId.value))
   if (dateFrom.value) query.set('date_from', dateFrom.value)
   if (dateTo.value) query.set('date_to', dateTo.value)
+  if (statusFilter.value) query.set('status', statusFilter.value)
   return query.toString()
 }
 
@@ -79,8 +92,9 @@ async function loadSellers() {
   sellers.value = data
 }
 
-const totalPeriod = computed(() => sales.value.reduce((sum, s) => sum + Number(s.total), 0))
-const averageTicket = computed(() => (sales.value.length > 0 ? totalPeriod.value / sales.value.length : 0))
+const completedSales = computed(() => sales.value.filter((s) => s.status !== 'canceled'))
+const totalPeriod = computed(() => completedSales.value.reduce((sum, s) => sum + Number(s.total), 0))
+const averageTicket = computed(() => (completedSales.value.length > 0 ? totalPeriod.value / completedSales.value.length : 0))
 
 // ---- Detalhe da venda ----
 const showDetail = ref(false)
@@ -94,6 +108,35 @@ async function viewSale(saleId: number) {
   const { data } = await api<{ data: SaleDetail }>(`/sales/${saleId}`)
   detail.value = data
   detailLoading.value = false
+}
+
+// ---- Cancelamento de venda ----
+const showCancelModal = ref(false)
+const cancelSaleId = ref<number | null>(null)
+const cancelReason = ref('')
+const cancelSaving = ref(false)
+const cancelError = ref<unknown>(null)
+
+function openCancelModal(saleId: number) {
+  cancelSaleId.value = saleId
+  cancelReason.value = ''
+  cancelError.value = null
+  showCancelModal.value = true
+}
+
+async function confirmCancelSale() {
+  if (!cancelSaleId.value) return
+  cancelSaving.value = true
+  cancelError.value = null
+  try {
+    await api(`/sales/${cancelSaleId.value}/cancel`, { method: 'POST', body: { reason: cancelReason.value } })
+    showCancelModal.value = false
+    await load()
+  } catch (err) {
+    cancelError.value = err
+  } finally {
+    cancelSaving.value = false
+  }
 }
 
 await Promise.all([load(), loadSellers()])
@@ -124,6 +167,9 @@ await Promise.all([load(), loadSellers()])
         <BaseSelect v-model="sellerId" label="Vendedor" :options="sellerOptions" />
       </div>
       <div class="w-44">
+        <BaseSelect v-model="statusFilter" label="Status" :options="statusOptions" />
+      </div>
+      <div class="w-44">
         <BaseInput v-model="dateFrom" type="date" label="De" />
       </div>
       <div class="w-44">
@@ -133,7 +179,7 @@ await Promise.all([load(), loadSellers()])
     </div>
 
     <div class="rounded-2xl border border-border bg-surface-raised shadow-card">
-      <div class="grid grid-cols-[0.9fr_1.3fr_1.3fr_1fr_1fr_0.9fr_60px] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
+      <div class="grid grid-cols-[0.9fr_1.3fr_1.3fr_1fr_1fr_0.9fr_90px] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
         <span>Nº</span>
         <span>Data</span>
         <span>Cliente</span>
@@ -149,7 +195,7 @@ await Promise.all([load(), loadSellers()])
         v-for="sale in sales"
         v-else
         :key="sale.id"
-        class="grid grid-cols-[0.9fr_1.3fr_1.3fr_1fr_1fr_0.9fr_60px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
+        class="grid grid-cols-[0.9fr_1.3fr_1.3fr_1fr_1fr_0.9fr_90px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
         <span class="text-sm font-bold text-emerald-700">{{ sale.number }}</span>
         <span class="text-sm text-txt-secondary">{{ formatDateTime(sale.created_at) }}</span>
@@ -157,10 +203,17 @@ await Promise.all([load(), loadSellers()])
         <span class="truncate text-sm text-txt-secondary">{{ sale.seller_name ?? '—' }}</span>
         <span class="text-right text-sm font-semibold text-txt-primary">{{ formatAmount(sale.total) }}</span>
         <span>
-          <StatusBadge :label="sale.status_label" :tone="sale.status === 'completed' ? 'success' : 'neutral'" />
+          <StatusBadge :label="sale.status_label" :tone="sale.status === 'canceled' ? 'danger' : 'success'" />
         </span>
-        <div class="flex justify-end">
+        <div class="flex justify-end gap-1">
           <IconButton :icon="Eye" label="Ver detalhes" @click="viewSale(sale.id)" />
+          <IconButton
+            v-if="canCancelSale && sale.status === 'completed'"
+            :icon="Ban"
+            label="Cancelar venda"
+            tone="danger"
+            @click="openCancelModal(sale.id)"
+          />
         </div>
       </div>
     </div>
@@ -173,6 +226,11 @@ await Promise.all([load(), loadSellers()])
           <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '—' }}</strong></span>
           <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ detail.payment_method_name ?? '—' }}</strong></span>
           <span class="text-txt-secondary">Data: <strong class="text-txt-primary">{{ formatDateTime(detail.created_at) }}</strong></span>
+        </div>
+
+        <div v-if="detail.status === 'canceled'" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <p class="font-bold">Venda cancelada{{ detail.canceled_at ? ` em ${formatDateTime(detail.canceled_at)}` : '' }}</p>
+          <p v-if="detail.canceled_reason" class="mt-0.5">Motivo: {{ detail.canceled_reason }}</p>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border">
@@ -197,6 +255,17 @@ await Promise.all([load(), loadSellers()])
           <span class="text-txt-secondary">Subtotal: <strong class="text-txt-primary">{{ formatAmount(detail.subtotal) }}</strong></span>
           <span class="text-txt-secondary">Desconto: <strong class="text-txt-primary">{{ formatAmount(detail.discount) }}</strong></span>
           <span class="text-txt-secondary">Total: <strong class="text-emerald-700">{{ formatAmount(detail.total) }}</strong></span>
+        </div>
+      </div>
+    </BaseModal>
+
+    <BaseModal :open="showCancelModal" title="Cancelar venda" subtitle="A venda fica marcada como cancelada, com estorno automático de estoque e caixa — nada é apagado." @close="showCancelModal = false">
+      <div class="space-y-4">
+        <BaseInput v-model="cancelReason" label="Motivo do cancelamento" placeholder="Ex.: cliente desistiu, erro de digitação..." :error="firstFieldError(cancelError, 'reason')" />
+        <p v-if="cancelError && !firstFieldError(cancelError, 'reason')" class="text-sm text-rose-600">{{ parse(cancelError).message }}</p>
+        <div class="flex justify-end gap-3 border-t border-border pt-4">
+          <BaseButton type="button" variant="ghost" :block="false" @click="showCancelModal = false">Voltar</BaseButton>
+          <BaseButton type="button" variant="danger" :loading="cancelSaving" :block="false" @click="confirmCancelSale">Confirmar cancelamento</BaseButton>
         </div>
       </div>
     </BaseModal>

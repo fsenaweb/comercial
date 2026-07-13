@@ -22,6 +22,9 @@ return new class extends Migration
             $table->foreignId('payment_method_id')->constrained();
             $table->text('notes')->nullable();
             $table->string('status')->default('completed');
+            $table->string('canceled_reason')->nullable();
+            $table->timestamp('canceled_at')->nullable();
+            $table->foreignId('canceled_by')->nullable()->constrained('users');
             $table->timestamp('created_at')->useCurrent();
         });
     }

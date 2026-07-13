@@ -23,10 +23,12 @@ class UpdateProductVariationRequest extends FormRequest
                 Rule::unique('product_variations', 'product_code')->ignore($this->route('productVariation')),
             ],
             'cost_price' => ['required', 'numeric', 'min:0'],
-            'markup' => ['nullable', 'numeric'],
+            'markup' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'min_quantity' => ['nullable', 'integer', 'min:0'],
             'max_quantity' => ['nullable', 'integer', 'min:0'],
+            'wholesale_min_qty' => ['nullable', 'integer', 'min:1', 'required_with:wholesale_price'],
+            'wholesale_price' => ['nullable', 'numeric', 'min:0', 'required_with:wholesale_min_qty'],
         ];
     }
 
@@ -37,6 +39,8 @@ class UpdateProductVariationRequest extends FormRequest
             'product_code.unique' => 'Já existe uma variação com este código.',
             'cost_price.required' => 'Informe o preço de custo.',
             'sale_price.required' => 'Informe o preço de venda.',
+            'wholesale_min_qty.required_with' => 'Informe a quantidade mínima para o preço de atacado.',
+            'wholesale_price.required_with' => 'Informe o preço de atacado.',
         ];
     }
 }
