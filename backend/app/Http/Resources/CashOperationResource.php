@@ -18,6 +18,7 @@ class CashOperationResource extends JsonResource
             'type_label' => $this->type->label(),
             'origin' => $this->origin->value,
             'origin_label' => $this->origin->label(),
+            'reference_id' => $this->reference_id,
             'payment_method_id' => $this->payment_method_id,
             'payment_method_name' => $this->whenLoaded('paymentMethod', fn () => $this->paymentMethod?->name),
             'amount' => $this->amount,

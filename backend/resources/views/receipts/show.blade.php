@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Comprovante {{ $sale->number }}</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #000;
+        width: 80mm;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .line { border-top: 1px dashed #000; margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 1px 0; vertical-align: top; }
+    .right { text-align: right; }
+    .totals td { padding: 2px 0; }
+    .barcode { text-align: center; margin-top: 8px; }
+    @media print {
+        @page { size: 80mm auto; margin: 0; }
+        body { width: 80mm; padding: 4mm; }
+    }
+</style>
+</head>
+<body>
+    <div class="center bold">{{ $storeSetting->trade_name ?: $storeSetting->name }}</div>
+    @if ($storeSetting->cnpj)
+        <div class="center">CNPJ: {{ $storeSetting->cnpj }}</div>
+    @endif
+    @if ($storeSetting->address)
+        <div class="center">{{ $storeSetting->address }}{{ $storeSetting->address_number ? ', '.$storeSetting->address_number : '' }} - {{ $storeSetting->city }}/{{ $storeSetting->state }}</div>
+    @endif
+
+    <div class="line"></div>
+    <div class="center bold">DOCUMENTO NÃO FISCAL</div>
+    <div class="center">Comprovante de venda {{ $sale->number }}</div>
+    <div class="line"></div>
+
+    <table>
+        <tr><td>Data</td><td class="right">{{ $sale->created_at->format('d/m/Y H:i') }}</td></tr>
+        <tr><td>Vendedor</td><td class="right">{{ $sale->seller?->name ?? '-' }}</td></tr>
+        <tr><td>Cliente</td><td class="right">{{ $sale->customer?->name ?? 'Não informado' }}</td></tr>
+        <tr><td>Forma de pagamento</td><td class="right">{{ $sale->paymentMethod?->name }}</td></tr>
+    </table>
+
+    <div class="line"></div>
+
+    <table>
+        @foreach ($sale->items as $item)
+            <tr>
+                <td colspan="2">{{ $item->productVariation?->product?->name }}</td>
+            </tr>
+            <tr>
+                <td>{{ $item->quantity }} x R$ {{ number_format($item->unit_price, 2, ',', '.') }}</td>
+                <td class="right">R$ {{ number_format($item->total, 2, ',', '.') }}</td>
+            </tr>
+        @endforeach
+    </table>
+
+    <div class="line"></div>
+
+    <table class="totals">
+        <tr><td>Subtotal</td><td class="right">R$ {{ number_format($sale->subtotal, 2, ',', '.') }}</td></tr>
+        @if ($sale->discount > 0)
+            <tr><td>Desconto</td><td class="right">- R$ {{ number_format($sale->discount, 2, ',', '.') }}</td></tr>
+        @endif
+        <tr class="bold"><td>Total</td><td class="right">R$ {{ number_format($sale->total, 2, ',', '.') }}</td></tr>
+    </table>
+
+    <div class="line"></div>
+
+    <div class="barcode">
+        {!! $barcodeSvg !!}
+        <div>{{ $sale->number }}</div>
+    </div>
+
+    <div class="center" style="margin-top:8px;">Obrigado pela preferência!</div>
+
+    <script>
+        window.onload = () => window.print();
+    </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('type')->default('product');
+            $table->boolean('active')->default(true);
             $table->foreignId('unit_id')->constrained();
             $table->string('location')->nullable();
             $table->foreignId('category_id')->constrained();

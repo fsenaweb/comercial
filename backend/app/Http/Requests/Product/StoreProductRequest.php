@@ -18,6 +18,7 @@ class StoreProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::enum(ProductType::class)],
+            'active' => ['nullable', 'boolean'],
             'unit_id' => ['required', 'integer', 'exists:units,id'],
             'location' => ['nullable', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],

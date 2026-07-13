@@ -46,6 +46,7 @@ interface Product {
   name: string
   type: 'product' | 'service' | 'kit'
   type_label: string
+  active: boolean
   unit_id: number
   location: string | null
   category_id: number
@@ -179,6 +180,7 @@ function emptyModalForm() {
   return {
     name: '',
     type: 'product',
+    active: true,
     unit_id: '' as string | number,
     location: null as string | null,
     category_id: '' as string | number,
@@ -204,6 +206,25 @@ function emptyModalForm() {
 
 const modalForm = reactive(emptyModalForm())
 
+// Aviso de possível duplicidade: compara o nome digitado com os produtos já
+// carregados (client-side, sem endpoint novo) em ambas as direções — cobre
+// tanto "Parafuso 4x30" digitado igual a um já cadastrado quanto uma versão
+// mais curta/mais longa do mesmo nome. Não bloqueia o cadastro, só avisa.
+function findSimilarProducts(name: string, excludeId: number | null) {
+  const query = name.trim().toLowerCase()
+  if (query.length < 3) return []
+  return products.value
+    .filter((p) => {
+      if (p.id === excludeId) return false
+      const productName = p.name.toLowerCase()
+      return productName.includes(query) || query.includes(productName)
+    })
+    .slice(0, 5)
+}
+
+const modalSimilarProducts = computed(() => findSimilarProducts(modalForm.name, editingProductId.value))
+const quickSimilarProducts = computed(() => findSimilarProducts(quickForm.name, null))
+
 const subcategoryOptions = computed(() =>
   subcategories.value
     .filter((s) => String(s.category_id) === String(modalForm.category_id))
@@ -225,6 +246,7 @@ function openEditModal(row: SkuRow) {
   Object.assign(modalForm, emptyModalForm())
   modalForm.name = row.product.name
   modalForm.type = row.product.type
+  modalForm.active = row.product.active
   modalForm.unit_id = row.product.unit_id
   modalForm.location = row.product.location
   modalForm.category_id = row.product.category_id
@@ -270,6 +292,7 @@ async function handleModalSubmit() {
   const productPayload = {
     name: modalForm.name,
     type: modalForm.type,
+    active: modalForm.active,
     unit_id: modalForm.unit_id,
     location: modalForm.location,
     category_id: modalForm.category_id,
@@ -589,6 +612,15 @@ await load()
         </div>
 
         <BaseInput v-model="quickForm.name" label="Nome" :error="firstFieldError(quickError, 'name')" />
+        <div v-if="quickSimilarProducts.length > 0" class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p class="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+            <AlertTriangle :size="13" />
+            Produto parecido já cadastrado
+          </p>
+          <ul class="mt-1 space-y-0.5 pl-5 text-xs text-amber-800">
+            <li v-for="similar in quickSimilarProducts" :key="similar.id" class="list-disc">{{ similar.name }}</li>
+          </ul>
+        </div>
 
         <div class="grid grid-cols-2 gap-4">
           <BaseSelect v-model="quickForm.category_id" label="Categoria" :options="categoryOptions" :error="firstFieldError(quickError, 'category_id')" />
@@ -648,7 +680,10 @@ await load()
         :key="row.key"
         class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
-        <span class="text-sm font-medium text-txt-primary">{{ row.product.name }}</span>
+        <span class="flex items-center gap-2 text-sm font-medium text-txt-primary">
+          {{ row.product.name }}
+          <StatusBadge v-if="!row.product.active" label="Inativo" tone="danger" />
+        </span>
         <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '—' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '—' }}</span>
         <span v-if="row.variation">
@@ -698,7 +733,8 @@ await load()
               <p class="font-display text-sm font-bold text-txt-primary">Dados do produto</p>
               <p class="text-xs text-txt-secondary">Preencha as informações principais para cadastrar ou editar o produto.</p>
             </div>
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex shrink-0 items-center gap-3">
+              <BaseSwitch v-model="modalForm.active" label="Produto ativo" />
               <BaseButton type="button" variant="ghost" :block="false" @click="navigateTo('/settings/catalog')">
                 <ExternalLink :size="13" />
                 Gerenciar catálogo
@@ -711,6 +747,15 @@ await load()
             <div>
               <BaseInput v-model="modalForm.name" label="Nome" :error="firstFieldError(modalError, 'name')" />
               <p class="mt-1 text-[11px] text-txt-muted">Use um nome claro para facilitar busca, venda e reposição.</p>
+              <div v-if="modalSimilarProducts.length > 0" class="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p class="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+                  <AlertTriangle :size="13" />
+                  Produto parecido já cadastrado
+                </p>
+                <ul class="mt-1 space-y-0.5 pl-5 text-xs text-amber-800">
+                  <li v-for="similar in modalSimilarProducts" :key="similar.id" class="list-disc">{{ similar.name }}</li>
+                </ul>
+              </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <BaseSelect v-model="modalForm.supplier_id" label="Fornecedor" :options="supplierOptions" placeholder="Nenhum" :error="firstFieldError(modalError, 'supplier_id')" />

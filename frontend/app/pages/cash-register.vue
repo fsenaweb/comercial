@@ -1,11 +1,33 @@
 <script setup lang="ts">
-import { ArrowLeft, Eye, Layers, Plus, Search, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-vue-next'
+import { ArrowLeft, Eye, Layers, Plus, Search, ShoppingCart, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-vue-next'
 import type { CashOperationOrigin, CashRegister } from '~/stores/cashRegister'
 
 interface PaymentMethod {
   id: number
   name: string
   active_on_pos: boolean
+}
+
+interface SaleItemDetail {
+  id: number
+  product_name: string | null
+  product_code: string | null
+  quantity: number
+  unit_price: string
+  discount: string
+  total: string
+}
+
+interface SaleDetail {
+  id: number
+  number: string
+  customer_name: string | null
+  seller_name: string | null
+  subtotal: string
+  discount: string
+  total: string
+  payment_method_name: string | null
+  items: SaleItemDetail[]
 }
 
 const store = useCashRegisterStore()
@@ -204,6 +226,24 @@ async function handleRemoveOperation(operationId: number) {
   await Promise.all([store.fetchList(), store.fetchCurrent()])
 }
 
+// ---- Ver itens de uma venda (a partir da operação de caixa) ----
+const showSaleDetail = ref(false)
+const saleDetailLoading = ref(false)
+const saleDetail = ref<SaleDetail | null>(null)
+
+async function viewSaleItems(saleId: number) {
+  showSaleDetail.value = true
+  saleDetailLoading.value = true
+  saleDetail.value = null
+  try {
+    const api = useApi()
+    const { data } = await api<{ data: SaleDetail }>(`/sales/${saleId}`)
+    saleDetail.value = data
+  } finally {
+    saleDetailLoading.value = false
+  }
+}
+
 await loadAll()
 </script>
 
@@ -393,7 +433,7 @@ await loadAll()
         <div class="px-6 pt-5">
           <div class="font-display text-base font-bold text-txt-primary">Operações do caixa</div>
         </div>
-        <div class="mt-3 grid grid-cols-[0.9fr_0.9fr_1fr_1fr_2fr_60px] items-center gap-2 border-b border-border px-6 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
+        <div class="mt-3 grid grid-cols-[0.9fr_0.9fr_1fr_1fr_2fr_76px] items-center gap-2 border-b border-border px-6 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
           <span>Hora</span>
           <span>Tipo</span>
           <span>Forma</span>
@@ -409,7 +449,7 @@ await loadAll()
           v-for="operation in store.operations"
           v-else
           :key="operation.id"
-          class="grid grid-cols-[0.9fr_0.9fr_1fr_1fr_2fr_60px] items-center gap-2 border-b border-border px-6 py-3 last:border-0"
+          class="grid grid-cols-[0.9fr_0.9fr_1fr_1fr_2fr_76px] items-center gap-2 border-b border-border px-6 py-3 last:border-0"
         >
           <span class="text-sm text-txt-secondary">{{ new Date(operation.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }}</span>
           <span>
@@ -418,7 +458,8 @@ await loadAll()
           <span class="text-sm text-txt-secondary">{{ operation.payment_method_name ?? '—' }}</span>
           <span class="text-sm font-semibold text-txt-primary">{{ formatAmount(operation.amount) }}</span>
           <span class="truncate text-sm text-txt-secondary">{{ operation.notes ?? operation.origin_label }}</span>
-          <div class="flex justify-end">
+          <div class="flex justify-end gap-1">
+            <IconButton v-if="operation.origin === 'sale' && operation.reference_id" :icon="ShoppingCart" label="Ver itens da venda" @click="viewSaleItems(operation.reference_id)" />
             <IconButton v-if="canOperate && selected.status === 'open'" :icon="Trash2" label="Remover" tone="danger" @click="handleRemoveOperation(operation.id)" />
           </div>
         </div>
@@ -430,5 +471,46 @@ await loadAll()
         </div>
       </div>
     </div>
+
+    <!-- MODAL: ITENS DA VENDA -->
+    <BaseModal
+      :open="showSaleDetail"
+      :title="saleDetail ? `Venda ${saleDetail.number}` : 'Venda'"
+      subtitle="Itens vendidos, descontos e forma de pagamento."
+      @close="showSaleDetail = false"
+    >
+      <div v-if="saleDetailLoading" class="py-8 text-center text-sm text-txt-muted">Carregando...</div>
+      <div v-else-if="saleDetail" class="space-y-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ saleDetail.customer_name ?? 'Não informado' }}</strong></span>
+          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ saleDetail.seller_name ?? '—' }}</strong></span>
+          <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ saleDetail.payment_method_name ?? '—' }}</strong></span>
+        </div>
+
+        <div class="overflow-hidden rounded-xl border border-border">
+          <div class="grid grid-cols-[2fr_0.6fr_1fr_1fr] gap-2 border-b border-border bg-surface-subtle px-4 py-2 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
+            <span>Produto</span>
+            <span class="text-center">Qtd.</span>
+            <span class="text-right">Unitário</span>
+            <span class="text-right">Total</span>
+          </div>
+          <div v-for="item in saleDetail.items" :key="item.id" class="grid grid-cols-[2fr_0.6fr_1fr_1fr] gap-2 border-b border-border px-4 py-2.5 text-sm last:border-0">
+            <div class="min-w-0">
+              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '—' }}</p>
+              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '—' }}</p>
+            </div>
+            <span class="text-center text-txt-secondary">{{ item.quantity }}</span>
+            <span class="text-right text-txt-secondary">{{ formatAmount(item.unit_price) }}</span>
+            <span class="text-right font-semibold text-txt-primary">{{ formatAmount(item.total) }}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-5 text-sm">
+          <span class="text-txt-secondary">Subtotal: <strong class="text-txt-primary">{{ formatAmount(saleDetail.subtotal) }}</strong></span>
+          <span class="text-txt-secondary">Desconto: <strong class="text-txt-primary">{{ formatAmount(saleDetail.discount) }}</strong></span>
+          <span class="text-txt-secondary">Total: <strong class="text-emerald-700">{{ formatAmount(saleDetail.total) }}</strong></span>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

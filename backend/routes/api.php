@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
+use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StoreSettingController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\SupplierController;
@@ -37,9 +38,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('products.variations', ProductVariationController::class)
         ->parameters(['variations' => 'productVariation'])
         ->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/users/active', [UserController::class, 'active']);
     Route::apiResource('users', UserController::class)->only(['index', 'store', 'update']);
 
     Route::apiResource('payment-methods', PaymentMethodController::class);
+
+    Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
 
     Route::get('/cash-registers', [CashRegisterController::class, 'index']);
     Route::get('/cash-registers/current', [CashRegisterController::class, 'current']);

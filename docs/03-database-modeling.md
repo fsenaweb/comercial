@@ -27,8 +27,8 @@ O banco segue o padrão do Eloquent ORM. Nomes de tabela e coluna em **inglês**
 - ⬜ **units**: id, name, abbreviation (ex.: "Unidade" / "UN", "Caixa" / "CX").
 - ⬜ **suppliers**: id, corporate_name, trade_name, cnpj, contact, address (nullable — opcional na v1), soft deletes.
 - ⬜ **customers**: id, name, mobile_phone, phone (nullable), email (nullable), document (cpf/cnpj), is_company (boolean), birth_date (nullable), zip_code, address, address_number, address_complement, neighborhood, city, state, notes, soft deletes.
-- ⬜ **products**: id, name, `type` (enum: `product`, `service`, `kit`), unit_id, location (nullable — posição física no estoque), category_id, subcategory_id, brand_id, fiscal_fields (json, nullable — reservado para integração futura com sistema fiscal separado; não usado no MVP), soft deletes, timestamps.
-- ⬜ **product_variations** (SKU — **o estoque vive aqui, não em `products`**): id, product_id, color (nullable), size (nullable), ean_gtin (nullable), product_code, cost_price, markup, sale_price, `current_quantity`, min_quantity, max_quantity, soft deletes, timestamps.
+- ✅ **products**: id, name, `type` (enum: `product`, `service`, `kit`), `active` (boolean, default `true` — produto descontinuado/pausado some da busca do PDV sem apagar histórico; não confundir com exclusão, que é para cadastros duplicados de verdade), unit_id, location (nullable — posição física no estoque), category_id, subcategory_id, brand_id, fiscal_fields (json, nullable — reservado para integração futura com sistema fiscal separado; não usado no MVP), soft deletes, timestamps.
+- ✅ **product_variations** (SKU — **o estoque vive aqui, não em `products`**): id, product_id, color (nullable), size (nullable), ean_gtin (nullable), product_code, cost_price, markup, sale_price, `current_quantity`, min_quantity, max_quantity, soft deletes, timestamps.
   - **Regra de integridade:** `current_quantity` nunca é editado diretamente — só muda como efeito de um `INSERT` em `stock_movements` (inclusive o estoque inicial de um produto novo, que deve gerar um `stock_movements` do tipo `adjustment` com origem "estoque inicial"). Essa regra é reforçada em código (só o `AdjustStockAction`/`RegisterStockEntryAction` grava em `current_quantity`, nunca um Controller direto).
 
 ## 5. Estoque (Kardex)
@@ -38,20 +38,20 @@ O banco segue o padrão do Eloquent ORM. Nomes de tabela e coluna em **inglês**
 - ✅ **cash_registers**: id, opened_at, opening_amount, `status` (enum: `open`, `closed`), closed_at (nullable), closing_amount (nullable), opened_by (fk `users.id`), closed_by (fk `users.id`, nullable), notes.
   - Regra: **um caixa aberto por vez** na loja inteira (não por terminal, não por usuário).
   - `expected_amount`/`difference_amount` são calculados on-the-fly (`CashRegister::expectedAmount()`, via `bcmath`), nunca persistidos — não há coluna nova além do que já estava fechado aqui.
-- ✅ **cash_operations**: id, cash_register_id, user_id (quem lançou), `type` (enum: `in`, `out`), `origin` (enum: `sale`, `cash_withdrawal`, `cash_reinforcement`, `adjustment`), payment_method_id (nullable), amount, notes, created_at.
-  - `sale` reservado para a Sprint 3 (venda ainda não gera `cash_operations`).
+- ✅ **cash_operations**: id, cash_register_id, user_id (quem lançou), `type` (enum: `in`, `out`), `origin` (enum: `sale`, `cash_withdrawal`, `cash_reinforcement`, `adjustment`), `reference_id` (nullable, sem FK — mesmo padrão de `stock_movements.reference_id`; o que referencia depende de `origin`, hoje só `sale` → `sales.id`, usado pela tela de Caixa pra abrir o detalhe de itens de uma venda), payment_method_id (nullable), amount, notes, created_at.
+  - `origin: sale` já gera `cash_operations` desde a Sprint 3 (`RegisterSaleAction`).
 - ✅ **payment_methods**: id, name, active_on_pos (boolean).
 
 ## 7. Vendas / Atendimento
-- ⬜ **sales**: id, number, customer_id (nullable), `seller_id` (fk `users.id`), cash_register_id (fk), subtotal, discount, total, payment_method_id, notes, `status` (enum: `pending`, `completed`, `canceled`), created_at.
-- ⬜ **sale_items**: id, sale_id, product_variation_id, quantity, unit_price, discount, total.
+- ✅ **sales**: id, number, customer_id (nullable), `seller_id` (fk `users.id`), cash_register_id (fk), subtotal, `discount_type` (enum: `fixed`, `percentage`), `discount_value` (valor digitado pelo operador), discount (valor absoluto já resolvido, persistido), total, payment_method_id, notes, `status` (enum: `pending`, `completed`, `canceled` — só `completed` usado até a Sprint 3), created_at.
+- ✅ **sale_items**: id, sale_id, product_variation_id, quantity, unit_price, `discount_type`, `discount_value`, discount, total.
 
 ## 8. Regras de negócio associadas ao modelo
 - Venda **exige caixa aberto** (`sales.cash_register_id` sempre referencia um `cash_registers` com `status = open` no momento da criação).
 - Venda **permite estoque negativo** — a baixa em `product_variations.current_quantity` ocorre mesmo levando a valores negativos; o `stock_movements` correspondente é sempre registrado.
 - No PDV, vendedor é pré-selecionado pelo usuário logado, mas trocável; obrigatoriedade controlada por `store_settings.require_seller_on_sale`.
 - Cliente é opcional em `sales.customer_id`.
-- Desconto existe tanto em `sale_items.discount` (por item) quanto em `sales.discount` (no total).
+- Desconto existe tanto em `sale_items.discount` (por item) quanto em `sales.discount` (no total) — em ambos os casos, o operador escolhe entre valor fixo (R$) ou percentual (`discount_type`/`discount_value`); o valor absoluto efetivamente aplicado fica sempre persistido em `discount`, nunca recalculado depois.
 - Valores monetários: `decimal` (nunca float); percentuais como `decimal(5,2)`.
 
 ## Fase 2 (opcional, fora do núcleo)

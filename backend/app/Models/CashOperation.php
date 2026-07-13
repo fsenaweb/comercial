@@ -20,6 +20,7 @@ class CashOperation extends Model
         'user_id',
         'type',
         'origin',
+        'reference_id',
         'payment_method_id',
         'amount',
         'notes',

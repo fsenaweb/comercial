@@ -127,6 +127,40 @@ class ProductTest extends TestCase
         $response->assertOk()->assertJsonPath('data.name', 'Atualizado');
     }
 
+    public function test_product_is_active_by_default(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $unit = Unit::factory()->create();
+        $category = Category::factory()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/products', [
+            'name' => 'Refrigerante Lata',
+            'type' => 'product',
+            'unit_id' => $unit->id,
+            'category_id' => $category->id,
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.active', true);
+        $this->assertDatabaseHas('products', ['name' => 'Refrigerante Lata', 'active' => true]);
+    }
+
+    public function test_admin_can_deactivate_a_product(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $product = Product::factory()->create(['active' => true]);
+
+        $response = $this->actingAs($admin)->putJson("/api/products/{$product->id}", [
+            'name' => $product->name,
+            'type' => $product->type->value,
+            'active' => false,
+            'unit_id' => $product->unit_id,
+            'category_id' => $product->category_id,
+        ]);
+
+        $response->assertOk()->assertJsonPath('data.active', false);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'active' => false]);
+    }
+
     public function test_admin_can_delete_product(): void
     {
         $admin = User::factory()->admin()->create();
