@@ -14,7 +14,7 @@ Isso evita dois problemas: (1) parecer clone da AppLoja (cor de marca é só nos
 
 ## Cores
 
-Tokens como CSS custom properties. **Tema sempre claro — decisão de produto, não segue `prefers-color-scheme` do sistema operacional.** Um sistema de loja usado por vendedores/caixa não deve mudar de aparência sozinho conforme o SO de quem está logado; isso já causou confusão numa validação da Sprint 0 (tela renderizou escura sem ninguém ter pedido). Dark mode via toggle explícito só entra se for pedido no futuro — os valores da AppLoja para tema escuro nem chegaram a ser adaptados aqui por esse motivo.
+Tokens como CSS custom properties. **Tema sempre claro por padrão — decisão de produto, não segue `prefers-color-scheme` do sistema operacional.** Um sistema de loja usado por vendedores/caixa não deve mudar de aparência sozinho conforme o SO de quem está logado; isso já causou confusão numa validação da Sprint 0 (tela renderizou escura sem ninguém ter pedido). Dark mode só muda via **toggle explícito do usuário** (pedido em 2026-07-13, ver "Melhorias transversais" em `05-sprints.md`) — os tokens escuros ainda não foram derivados aqui; entram junto com a implementação dessa melhoria.
 
 | Token | Uso | Valor (claro, único tema) |
 |---|---|---|
