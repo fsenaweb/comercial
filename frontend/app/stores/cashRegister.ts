@@ -28,6 +28,7 @@ export interface CashOperation {
   type_label: string
   origin: CashOperationOrigin
   origin_label: string
+  reference_id: number | null
   payment_method_id: number | null
   payment_method_name: string | null
   amount: string

@@ -17,6 +17,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'type',
+        'active',
         'unit_id',
         'location',
         'category_id',
@@ -30,6 +31,7 @@ class Product extends Model
     {
         return [
             'type' => ProductType::class,
+            'active' => 'boolean',
             'fiscal_fields' => 'array',
         ];
     }

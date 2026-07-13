@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained();
             $table->string('type');
             $table->string('origin');
+            $table->unsignedBigInteger('reference_id')->nullable();
             $table->foreignId('payment_method_id')->nullable()->constrained();
             $table->decimal('amount', 10, 2);
             $table->text('notes')->nullable();

@@ -14,6 +14,7 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'type' => $this->type->value,
             'type_label' => $this->type->label(),
+            'active' => $this->active,
             'unit_id' => $this->unit_id,
             'unit' => UnitResource::make($this->whenLoaded('unit')),
             'location' => $this->location,

@@ -26,7 +26,16 @@ class ProductController extends Controller
 
         $product = Product::create($request->validated());
 
-        return ProductResource::make($product->load(['unit', 'category', 'subcategory', 'brand', 'supplier']));
+        // Recarrega do banco: 'active' não é enviado no payload na maioria dos
+        // cadastros (fica por conta do default da coluna), e save()/create()
+        // não recarregam defaults de coluna no objeto em memória — sem isso a
+        // resposta traria 'active' null em vez de true logo após a criação.
+        // fresh() devolve uma instância nova, então precisa marcar
+        // wasRecentlyCreated manualmente pro Resource continuar respondendo 201.
+        $fresh = $product->fresh(['unit', 'category', 'subcategory', 'brand', 'supplier']);
+        $fresh->wasRecentlyCreated = true;
+
+        return ProductResource::make($fresh);
     }
 
     public function show(Product $product): ProductResource

@@ -6,8 +6,6 @@ import {
   ChevronDown,
   CreditCard,
   DollarSign,
-  FileText,
-  HelpCircle,
   Landmark,
   LayoutGrid,
   LogOut,
@@ -20,7 +18,6 @@ import {
   UserCog,
   Users,
   Warehouse,
-  Wrench,
 } from 'lucide-vue-next'
 
 const auth = useAuthStore()
@@ -34,14 +31,12 @@ const sidebarQuery = ref('')
 
 const quickAccessLinks = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
+  { to: '/pos', label: 'PDV', icon: Monitor },
   { to: '/cash-register', label: 'Caixa', icon: DollarSign },
 ]
 
 const comingSoonLinks = [
-  { label: 'PDV', icon: Monitor },
   { label: 'Pedidos', icon: ShoppingCart },
-  { label: 'Ordens de Serviço', icon: Wrench },
-  { label: 'Notas Fiscais', icon: FileText },
 ]
 
 const cadastrosLinks = [
@@ -229,22 +224,16 @@ async function handleLogout() {
         </div>
       </div>
 
-      <p class="px-2.5 pt-3.5 pb-1.5 text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Suporte</p>
-      <div
-        v-show="matches('Ajuda e Sugestões')"
-        title="Em breve"
-        class="flex cursor-not-allowed items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-muted/70"
-      >
-        <HelpCircle :size="17" />
-        Ajuda e Sugestões
-      </div>
     </nav>
 
     <div class="space-y-0.5 border-t border-border p-3">
-      <div title="Em breve" class="flex cursor-not-allowed items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-muted/70">
+      <NuxtLink
+        to="/pos"
+        class="flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle hover:text-txt-primary"
+      >
         <Monitor :size="17" />
         Ir para o PDV
-      </div>
+      </NuxtLink>
       <button
         class="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
         @click="handleLogout"

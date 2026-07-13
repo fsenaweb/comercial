@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,9 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Laravel registra por padrão um redirect para a rota nomeada "login"
         // quando um guest bate num endpoint protegido sem pedir JSON
         // explicitamente. Não existe (nem existirá) essa rota aqui — API-only,
-        // sem views (ver docs/01-architecture.md) — então isso derrubava com
-        // RouteNotFoundException em vez de devolver 401. Sempre 401 JSON.
-        $middleware->redirectGuestsTo(fn () => null);
+        // sem views (ver docs/01-architecture.md). Para requisições que já
+        // pedem JSON isso nunca é consultado (o unauthenticated() do handler
+        // responde 401 direto); mas para a única rota com HTML de verdade
+        // (o comprovante térmico, ver routes/web.php) retornar null aqui
+        // caía no fallback `?? route('login')` do próprio Laravel — que
+        // também não existe — e virava 500 em vez de simplesmente mandar o
+        // guest pra tela de login da SPA.
+        $middleware->redirectGuestsTo(fn () => '/login');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // API-only por decisão de arquitetura (ver docs/01-architecture.md) — a
@@ -29,5 +35,5 @@ return Application::configure(basePath: dirname(__DIR__))
         // fluxos de autenticação/erro que precisariam de HTML. Sem isso, o guest
         // que bate num endpoint protegido recebe um redirect para uma rota
         // "login" que não existe (500), em vez de 401 JSON.
-        $exceptions->shouldRenderJsonWhen(fn () => true);
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => ! $request->routeIs('sales.receipt'));
     })->create();

@@ -33,6 +33,23 @@ class UserTest extends TestCase
         $response->assertOk()->assertJsonCount(3, 'data');
     }
 
+    public function test_any_authenticated_role_can_list_active_users(): void
+    {
+        User::factory()->create(['active' => true]);
+        User::factory()->create(['active' => false]);
+        $seller = User::factory()->create();
+
+        $response = $this->actingAs($seller)->getJson('/api/users/active');
+
+        $response->assertOk()->assertJsonCount(2, 'data');
+        $this->assertArrayNotHasKey('email', $response->json('data.0'));
+    }
+
+    public function test_guest_cannot_list_active_users(): void
+    {
+        $this->getJson('/api/users/active')->assertStatus(401);
+    }
+
     public function test_admin_can_create_user(): void
     {
         $admin = User::factory()->admin()->create();
