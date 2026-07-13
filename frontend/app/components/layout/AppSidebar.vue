@@ -4,16 +4,21 @@ import {
   Briefcase,
   Building2,
   ChevronDown,
+  ClipboardEdit,
   CreditCard,
   DollarSign,
+  History,
   Landmark,
   LayoutGrid,
   LogOut,
   Monitor,
   Package,
+  PackagePlus,
+  Receipt,
   Search,
   Settings,
   ShoppingCart,
+  Tag,
   UserCheck,
   UserCog,
   Users,
@@ -24,7 +29,7 @@ const auth = useAuthStore()
 const route = useRoute()
 
 const cadastrosOpen = ref(true)
-const estoqueOpen = ref(false)
+const estoqueOpen = ref(true)
 const financeiroOpen = ref(false)
 const gestaoOpen = ref(false)
 const sidebarQuery = ref('')
@@ -33,11 +38,19 @@ const quickAccessLinks = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/pos', label: 'PDV', icon: Monitor },
   { to: '/cash-register', label: 'Caixa', icon: DollarSign },
+  { to: '/sales-history', label: 'Vendas', icon: Receipt },
 ]
 
 const comingSoonLinks = [
   { label: 'Pedidos', icon: ShoppingCart },
 ]
+
+const estoqueLinks = [
+  { to: '/stock/entries', label: 'Entradas de Estoque', icon: PackagePlus },
+  { to: '/stock/adjustments', label: 'Ajuste de Estoque', icon: ClipboardEdit },
+  { to: '/stock/kardex', label: 'Kardex', icon: History },
+]
+const estoqueComingSoon = [{ label: 'Etiquetas', icon: Tag }]
 
 const cadastrosLinks = [
   { to: '/products', label: 'Produtos', icon: Package },
@@ -59,6 +72,7 @@ function matches(label: string) {
 }
 
 const isCadastrosActive = computed(() => cadastrosLinks.some((link) => route.path.startsWith(link.to)))
+const isEstoqueActive = computed(() => estoqueLinks.some((link) => route.path.startsWith(link.to)))
 const isGestaoActive = computed(() => gestaoItems.value.some((item) => item.to && route.path.startsWith(item.to)))
 
 async function handleLogout() {
@@ -158,18 +172,45 @@ async function handleLogout() {
         </div>
       </div>
 
-      <button
-        type="button"
-        class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle"
-        @click="estoqueOpen = !estoqueOpen"
-      >
-        <span class="flex items-center gap-3">
-          <Warehouse :size="17" />
-          Estoque e Compras
-        </span>
-        <ChevronDown :size="15" class="transition-transform" :class="{ '-rotate-90': !estoqueOpen }" />
-      </button>
-      <p v-if="estoqueOpen" class="px-2.5 py-1.5 pl-9 text-xs text-txt-muted italic">Em breve</p>
+      <div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          :class="isEstoqueActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
+          @click="estoqueOpen = !estoqueOpen"
+        >
+          <span class="flex items-center gap-3">
+            <Warehouse :size="17" />
+            Estoque e Compras
+          </span>
+          <ChevronDown :size="15" class="transition-transform" :class="{ '-rotate-90': !estoqueOpen }" />
+        </button>
+
+        <div v-show="estoqueOpen" class="mt-0.5 ml-3.5 space-y-0.5 border-l border-border pl-2.5">
+          <NuxtLink
+            v-for="link in estoqueLinks"
+            v-show="matches(link.label)"
+            :key="link.to"
+            :to="link.to"
+            class="flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle hover:text-txt-primary"
+            active-class="!bg-brand !text-brand-ink !shadow-card"
+          >
+            <component :is="link.icon" :size="16" />
+            {{ link.label }}
+          </NuxtLink>
+          <div
+            v-for="link in estoqueComingSoon"
+            v-show="matches(link.label)"
+            :key="link.label"
+            title="Em breve"
+            class="flex cursor-not-allowed items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-muted/70"
+          >
+            <component :is="link.icon" :size="16" />
+            {{ link.label }}
+            <span class="ml-auto text-[10px] font-bold tracking-wide uppercase opacity-70">Em breve</span>
+          </div>
+        </div>
+      </div>
 
       <button
         type="button"

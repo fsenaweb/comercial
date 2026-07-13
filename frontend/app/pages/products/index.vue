@@ -151,9 +151,23 @@ const lowStockCount = computed(() =>
 const noStockCount = computed(() =>
   products.value.reduce((total, p) => total + (p.variations ?? []).filter((v) => v.current_quantity <= 0).length, 0),
 )
+const excessStockCount = computed(() =>
+  products.value.reduce(
+    (total, p) =>
+      total + (p.variations ?? []).filter((v) => v.max_quantity !== null && v.current_quantity > v.max_quantity).length,
+    0,
+  ),
+)
 
 function currencyBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function stockBadgeTone(variation: Variation): 'danger' | 'warning' | 'info' | 'success' {
+  if (variation.current_quantity <= 0) return 'danger'
+  if (variation.min_quantity !== null && variation.current_quantity <= variation.min_quantity) return 'warning'
+  if (variation.max_quantity !== null && variation.current_quantity > variation.max_quantity) return 'info'
+  return 'success'
 }
 
 // ---- Modal "Novo Produto" / "Editar Produto" — produto + primeira/atual variação juntos ----
@@ -551,7 +565,7 @@ await load()
       <StatCard
         label="Alertas"
         :value="lowStockCount"
-        :subtext="`${noStockCount} sem estoque`"
+        :subtext="`${noStockCount} sem estoque · ${excessStockCount} em excesso`"
         :icon="AlertTriangle"
         :tone="lowStockCount > 0 ? 'warning' : 'emerald'"
       />
@@ -687,10 +701,7 @@ await load()
         <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '—' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '—' }}</span>
         <span v-if="row.variation">
-          <StatusBadge
-            :label="String(row.variation.current_quantity)"
-            :tone="row.variation.current_quantity <= 0 ? 'danger' : row.variation.min_quantity !== null && row.variation.current_quantity <= row.variation.min_quantity ? 'warning' : 'success'"
-          />
+          <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
         </span>
         <span v-else class="text-sm text-txt-muted">—</span>
         <div class="flex justify-end gap-1">
@@ -709,6 +720,10 @@ await load()
           <span class="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-txt-secondary uppercase">
             <span class="h-3 w-3 rounded-sm bg-rose-300" />
             Sem estoque
+          </span>
+          <span class="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-txt-secondary uppercase">
+            <span class="h-3 w-3 rounded-sm bg-sky-300" />
+            Estoque acima do máximo
           </span>
         </div>
         <span class="text-xs text-txt-secondary">
@@ -999,10 +1014,7 @@ await load()
           ]"
         >
           <template #cell-current_quantity="{ item }">
-            <StatusBadge
-              :label="String(item.current_quantity)"
-              :tone="item.min_quantity !== null && item.current_quantity <= item.min_quantity ? 'warning' : 'success'"
-            />
+            <StatusBadge :label="String(item.current_quantity)" :tone="stockBadgeTone(item)" />
           </template>
           <template v-if="auth.isAdmin" #actions="{ item }">
             <IconButton :icon="Pencil" label="Editar" @click="startEditSku(item)" />

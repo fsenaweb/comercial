@@ -56,6 +56,8 @@ const loading = ref(true)
 const view = ref<'list' | 'open' | 'detail'>('list')
 const filterStatus = ref<'open' | 'closed'>('open')
 const search = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
 const selectedId = ref<number | null>(null)
 const paymentMethods = ref<PaymentMethod[]>([])
 
@@ -83,7 +85,10 @@ const filteredRegisters = computed(() => {
   return registers.value.filter((r) => {
     const matchesStatus = r.status === filterStatus.value
     const matchesSearch = q === '' || String(r.id).includes(q) || (r.notes ?? '').toLowerCase().includes(q)
-    return matchesStatus && matchesSearch
+    const openedDate = r.opened_at.slice(0, 10)
+    const matchesFrom = dateFrom.value === '' || openedDate >= dateFrom.value
+    const matchesTo = dateTo.value === '' || openedDate <= dateTo.value
+    return matchesStatus && matchesSearch && matchesFrom && matchesTo
   })
 })
 
@@ -298,6 +303,14 @@ await loadAll()
         <label class="flex flex-1 items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-txt-muted" style="min-width: 220px">
           <Search :size="15" />
           <input v-model="search" type="text" placeholder="Buscar por ID ou observação" class="w-full bg-transparent text-sm text-txt-primary placeholder:text-txt-muted focus:outline-none">
+        </label>
+        <label class="flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-txt-muted">
+          <span class="text-xs font-semibold whitespace-nowrap">De</span>
+          <input v-model="dateFrom" type="date" class="bg-transparent text-sm text-txt-primary focus:outline-none">
+        </label>
+        <label class="flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-txt-muted">
+          <span class="text-xs font-semibold whitespace-nowrap">Até</span>
+          <input v-model="dateTo" type="date" class="bg-transparent text-sm text-txt-primary focus:outline-none">
         </label>
       </div>
 

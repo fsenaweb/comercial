@@ -40,6 +40,14 @@ class CashRegisterController extends Controller
             });
         }
 
+        if ($request->filled('date_from')) {
+            $query->whereDate('opened_at', '>=', $request->string('date_from')->value());
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('opened_at', '<=', $request->string('date_to')->value());
+        }
+
         return CashRegisterResource::collection($query->get());
     }
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
 use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StoreSettingController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\SupplierController;
@@ -44,6 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('payment-methods', PaymentMethodController::class);
 
     Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
+
+    Route::get('/stock-movements', [StockMovementController::class, 'index']);
+    Route::post('/stock-movements/adjustment', [StockMovementController::class, 'adjustment']);
+    Route::post('/stock-movements/entries', [StockMovementController::class, 'entry']);
 
     Route::get('/cash-registers', [CashRegisterController::class, 'index']);
     Route::get('/cash-registers/current', [CashRegisterController::class, 'current']);

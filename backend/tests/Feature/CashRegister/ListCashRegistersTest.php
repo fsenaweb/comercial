@@ -44,6 +44,21 @@ class ListCashRegistersTest extends TestCase
         $response->assertOk()->assertJsonCount(1, 'data');
     }
 
+    public function test_can_filter_by_period(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $old = CashRegister::factory()->closed()->create(['opened_at' => now()->subDays(10)]);
+        $recent = CashRegister::factory()->closed()->create(['opened_at' => now()->subDay()]);
+
+        $response = $this->actingAs($admin)->getJson('/api/cash-registers?date_from='.now()->subDays(2)->toDateString());
+
+        $response->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $recent->id);
+
+        $response = $this->actingAs($admin)->getJson('/api/cash-registers?date_to='.now()->subDays(5)->toDateString());
+
+        $response->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $old->id);
+    }
+
     public function test_guest_cannot_list_cash_registers(): void
     {
         $this->getJson('/api/cash-registers')->assertStatus(401);
