@@ -21,6 +21,7 @@ class SaleItemResource extends JsonResource
             'discount_value' => $this->discount_value,
             'discount' => $this->discount,
             'total' => $this->total,
+            'is_wholesale' => $this->is_wholesale,
         ];
     }
 }

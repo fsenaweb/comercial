@@ -39,6 +39,8 @@ interface Variation {
   current_quantity: number
   min_quantity: number | null
   max_quantity: number | null
+  wholesale_min_qty: number | null
+  wholesale_price: string | null
 }
 
 interface Product {
@@ -73,7 +75,13 @@ const brandsApi = useResourceApi<Option>('brands')
 const suppliersApi = useResourceApi<{ id: number; corporate_name: string }>('suppliers')
 const api = useApi()
 const { parse, firstFieldError } = useApiError()
-const { maskInput: maskCurrency, toNumber: currencyToNumber } = useCurrencyMask()
+const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurrency } = useCurrencyMask()
+
+// Custo + margem% -> preço de venda calculado ao vivo (o preço continua
+// editável manualmente depois; o watch só recalcula quando custo/markup mudam).
+function applyMarkup(costPrice: number, markupPercent: number): number {
+  return costPrice * (1 + markupPercent / 100)
+}
 const auth = useAuthStore()
 
 const products = ref<Product[]>([])
@@ -215,10 +223,20 @@ function emptyModalForm() {
     quantity: 0,
     min_quantity: null as number | null,
     max_quantity: null as number | null,
+    wholesale_min_qty: null as number | null,
+    wholesale_price_masked: 'R$ 0,00',
   }
 }
 
 const modalForm = reactive(emptyModalForm())
+
+watch(() => [modalForm.cost_price_masked, modalForm.markup], () => {
+  if (modalForm.markup === '') return
+  const markupPercent = Number(modalForm.markup)
+  if (Number.isNaN(markupPercent)) return
+  const cost = currencyToNumber(modalForm.cost_price_masked)
+  modalForm.sale_price_masked = formatCurrency(Math.round(applyMarkup(cost, markupPercent) * 100))
+})
 
 // Aviso de possível duplicidade: compara o nome digitado com os produtos já
 // carregados (client-side, sem endpoint novo) em ambas as direções — cobre
@@ -281,6 +299,10 @@ function openEditModal(row: SkuRow) {
     modalForm.quantity = row.variation.current_quantity
     modalForm.min_quantity = row.variation.min_quantity
     modalForm.max_quantity = row.variation.max_quantity
+    modalForm.wholesale_min_qty = row.variation.wholesale_min_qty
+    modalForm.wholesale_price_masked = row.variation.wholesale_price
+      ? maskCurrency(String(Math.round(Number(row.variation.wholesale_price) * 100)))
+      : 'R$ 0,00'
   }
   modalError.value = null
   fiscalOpen.value = Boolean(modalForm.ncm || modalForm.cfop || modalForm.cest)
@@ -296,6 +318,9 @@ function handleModalCostInput(value: string) {
 }
 function handleModalSaleInput(value: string) {
   modalForm.sale_price_masked = maskCurrency(value)
+}
+function handleModalWholesaleInput(value: string) {
+  modalForm.wholesale_price_masked = maskCurrency(value)
 }
 
 async function handleModalSubmit() {
@@ -333,6 +358,8 @@ async function handleModalSubmit() {
       sale_price: currencyToNumber(modalForm.sale_price_masked),
       min_quantity: modalForm.min_quantity,
       max_quantity: modalForm.max_quantity,
+      wholesale_min_qty: modalForm.wholesale_min_qty,
+      wholesale_price: modalForm.wholesale_min_qty !== null ? currencyToNumber(modalForm.wholesale_price_masked) : null,
     }
 
     if (editingVariationId.value) {
@@ -375,13 +402,24 @@ function emptyQuickForm() {
     unit_id: '' as string | number,
     category_id: '' as string | number,
     cost_price_masked: 'R$ 0,00',
+    markup: '',
     sale_price_masked: 'R$ 0,00',
     initial_quantity: 0,
     ean_gtin: '' as string,
+    wholesale_min_qty: null as number | null,
+    wholesale_price_masked: 'R$ 0,00',
   }
 }
 
 const quickForm = reactive(emptyQuickForm())
+
+watch(() => [quickForm.cost_price_masked, quickForm.markup], () => {
+  if (quickForm.markup === '') return
+  const markupPercent = Number(quickForm.markup)
+  if (Number.isNaN(markupPercent)) return
+  const cost = currencyToNumber(quickForm.cost_price_masked)
+  quickForm.sale_price_masked = formatCurrency(Math.round(applyMarkup(cost, markupPercent) * 100))
+})
 
 function toggleQuickPanel() {
   quickOpen.value = !quickOpen.value
@@ -396,6 +434,9 @@ function handleQuickCostInput(value: string) {
 }
 function handleQuickSaleInput(value: string) {
   quickForm.sale_price_masked = maskCurrency(value)
+}
+function handleQuickWholesaleInput(value: string) {
+  quickForm.wholesale_price_masked = maskCurrency(value)
 }
 
 async function handleQuickSubmit() {
@@ -416,8 +457,11 @@ async function handleQuickSubmit() {
         product_code: code,
         ean_gtin: quickForm.ean_gtin.trim() || null,
         cost_price: currencyToNumber(quickForm.cost_price_masked),
+        markup: quickForm.markup === '' ? null : Number(quickForm.markup),
         sale_price: currencyToNumber(quickForm.sale_price_masked),
         initial_quantity: quickForm.initial_quantity,
+        wholesale_min_qty: quickForm.wholesale_min_qty,
+        wholesale_price: quickForm.wholesale_min_qty !== null ? currencyToNumber(quickForm.wholesale_price_masked) : null,
       },
     })
     quickOpen.value = false
@@ -452,14 +496,25 @@ function emptySkuForm() {
     ean_gtin: null as string | null,
     product_code: '',
     cost_price_masked: 'R$ 0,00',
+    markup: '',
     sale_price_masked: 'R$ 0,00',
     initial_quantity: 0,
     min_quantity: null as number | null,
     max_quantity: null as number | null,
+    wholesale_min_qty: null as number | null,
+    wholesale_price_masked: 'R$ 0,00',
   }
 }
 
 const skuForm = reactive(emptySkuForm())
+
+watch(() => [skuForm.cost_price_masked, skuForm.markup], () => {
+  if (skuForm.markup === '') return
+  const markupPercent = Number(skuForm.markup)
+  if (Number.isNaN(markupPercent)) return
+  const cost = currencyToNumber(skuForm.cost_price_masked)
+  skuForm.sale_price_masked = formatCurrency(Math.round(applyMarkup(cost, markupPercent) * 100))
+})
 
 async function loadSkuModalProduct(productId: number) {
   skuModalLoading.value = true
@@ -488,9 +543,14 @@ function startEditSku(variation: Variation) {
   skuForm.ean_gtin = variation.ean_gtin
   skuForm.product_code = variation.product_code
   skuForm.cost_price_masked = maskCurrency(String(Math.round(Number(variation.cost_price) * 100)))
+  skuForm.markup = variation.markup ?? ''
   skuForm.sale_price_masked = maskCurrency(String(Math.round(Number(variation.sale_price) * 100)))
   skuForm.min_quantity = variation.min_quantity
   skuForm.max_quantity = variation.max_quantity
+  skuForm.wholesale_min_qty = variation.wholesale_min_qty
+  skuForm.wholesale_price_masked = variation.wholesale_price
+    ? maskCurrency(String(Math.round(Number(variation.wholesale_price) * 100)))
+    : 'R$ 0,00'
 }
 
 function resetSkuForm() {
@@ -504,6 +564,9 @@ function handleSkuCostInput(value: string) {
 function handleSkuSaleInput(value: string) {
   skuForm.sale_price_masked = maskCurrency(value)
 }
+function handleSkuWholesaleInput(value: string) {
+  skuForm.wholesale_price_masked = maskCurrency(value)
+}
 
 async function handleSkuSubmit() {
   if (!skuModalProduct.value) return
@@ -516,9 +579,12 @@ async function handleSkuSubmit() {
     ean_gtin: skuForm.ean_gtin,
     product_code: skuForm.product_code,
     cost_price: currencyToNumber(skuForm.cost_price_masked),
+    markup: skuForm.markup === '' ? null : Number(skuForm.markup),
     sale_price: currencyToNumber(skuForm.sale_price_masked),
     min_quantity: skuForm.min_quantity,
     max_quantity: skuForm.max_quantity,
+    wholesale_min_qty: skuForm.wholesale_min_qty,
+    wholesale_price: skuForm.wholesale_min_qty !== null ? currencyToNumber(skuForm.wholesale_price_masked) : null,
     ...(skuEditingId.value ? {} : { initial_quantity: skuForm.initial_quantity }),
   }
 
@@ -641,18 +707,19 @@ await load()
           <BaseSelect v-model="quickForm.unit_id" label="Unidade" :options="unitOptions" :error="firstFieldError(quickError, 'unit_id')" />
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <BaseInput
-            :model-value="quickForm.sale_price_masked"
-            label="Valor de venda"
-            :error="firstFieldError(quickError, 'sale_price')"
-            @update:model-value="handleQuickSaleInput"
-          />
+        <div class="grid grid-cols-3 gap-4">
           <BaseInput
             :model-value="quickForm.cost_price_masked"
             label="Custo"
             :error="firstFieldError(quickError, 'cost_price')"
             @update:model-value="handleQuickCostInput"
+          />
+          <BaseInput v-model="quickForm.markup" label="Lucro (%)" :error="firstFieldError(quickError, 'markup')" />
+          <BaseInput
+            :model-value="quickForm.sale_price_masked"
+            label="Valor de venda"
+            :error="firstFieldError(quickError, 'sale_price')"
+            @update:model-value="handleQuickSaleInput"
           />
         </div>
 
@@ -664,6 +731,21 @@ await load()
             :error="firstFieldError(quickError, 'initial_quantity')"
           />
           <BaseInput v-model="quickForm.ean_gtin" label="Código de barras (EAN/GTIN)" :error="firstFieldError(quickError, 'ean_gtin')" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <BaseInput
+            v-model.number="quickForm.wholesale_min_qty"
+            type="number"
+            label="Qtd. p/ Preço Atacado"
+            :error="firstFieldError(quickError, 'wholesale_min_qty')"
+          />
+          <BaseInput
+            :model-value="quickForm.wholesale_price_masked"
+            label="Preço Atacado"
+            :error="firstFieldError(quickError, 'wholesale_price')"
+            @update:model-value="handleQuickWholesaleInput"
+          />
         </div>
 
         <p v-if="quickError" class="text-sm text-rose-600">{{ parse(quickError).message }}</p>
@@ -877,7 +959,7 @@ await load()
                 :error="firstFieldError(modalError, 'cost_price')"
                 @update:model-value="handleModalCostInput"
               />
-              <BaseInput v-model="modalForm.markup" label="Markup (%)" :error="firstFieldError(modalError, 'markup')" />
+              <BaseInput v-model="modalForm.markup" label="Lucro (%)" :error="firstFieldError(modalError, 'markup')" />
               <BaseInput
                 :model-value="modalForm.sale_price_masked"
                 label="Valor de venda"
@@ -899,6 +981,22 @@ await load()
               />
               <BaseInput v-model.number="modalForm.max_quantity" type="number" label="Qtde máxima" :error="firstFieldError(modalError, 'max_quantity')" />
               <BaseInput v-model.number="modalForm.min_quantity" type="number" label="Qtde mínima" :error="firstFieldError(modalError, 'min_quantity')" />
+            </div>
+
+            <p class="mt-4 mb-2 text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Preço de atacado (opcional)</p>
+            <div class="grid grid-cols-2 gap-4">
+              <BaseInput
+                v-model.number="modalForm.wholesale_min_qty"
+                type="number"
+                label="Qtd. p/ Preço Atacado"
+                :error="firstFieldError(modalError, 'wholesale_min_qty')"
+              />
+              <BaseInput
+                :model-value="modalForm.wholesale_price_masked"
+                label="Preço Atacado"
+                :error="firstFieldError(modalError, 'wholesale_price')"
+                @update:model-value="handleModalWholesaleInput"
+              />
             </div>
           </div>
         </div>
@@ -966,13 +1064,14 @@ await load()
               <BaseInput v-model="skuForm.ean_gtin" label="EAN/GTIN" :error="firstFieldError(skuError, 'ean_gtin')" />
             </div>
             <BaseInput v-model="skuForm.product_code" label="Código do produto" :error="firstFieldError(skuError, 'product_code')" />
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
               <BaseInput
                 :model-value="skuForm.cost_price_masked"
                 label="Preço de custo"
                 :error="firstFieldError(skuError, 'cost_price')"
                 @update:model-value="handleSkuCostInput"
               />
+              <BaseInput v-model="skuForm.markup" label="Lucro (%)" :error="firstFieldError(skuError, 'markup')" />
               <BaseInput
                 :model-value="skuForm.sale_price_masked"
                 label="Preço de venda"
@@ -990,6 +1089,20 @@ await load()
               />
               <BaseInput v-model.number="skuForm.min_quantity" type="number" label="Estoque mínimo" :error="firstFieldError(skuError, 'min_quantity')" />
               <BaseInput v-model.number="skuForm.max_quantity" type="number" label="Estoque máximo" :error="firstFieldError(skuError, 'max_quantity')" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <BaseInput
+                v-model.number="skuForm.wholesale_min_qty"
+                type="number"
+                label="Qtd. p/ Preço Atacado"
+                :error="firstFieldError(skuError, 'wholesale_min_qty')"
+              />
+              <BaseInput
+                :model-value="skuForm.wholesale_price_masked"
+                label="Preço Atacado"
+                :error="firstFieldError(skuError, 'wholesale_price')"
+                @update:model-value="handleSkuWholesaleInput"
+              />
             </div>
 
             <p v-if="skuError" class="text-sm text-rose-600">{{ parse(skuError).message }}</p>

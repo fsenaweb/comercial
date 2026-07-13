@@ -80,7 +80,7 @@ class RegisterSaleTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['cash_register']);
     }
 
-    public function test_sale_allows_negative_stock(): void
+    public function test_sale_rejects_insufficient_stock(): void
     {
         CashRegister::factory()->open()->create();
         $admin = User::factory()->admin()->create();
@@ -92,14 +92,66 @@ class RegisterSaleTest extends TestCase
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 5]],
         ]);
 
-        $response->assertCreated();
+        $response->assertStatus(422);
 
-        $this->assertEquals(-4, $variation->fresh()->current_quantity);
-        $this->assertDatabaseHas('stock_movements', [
+        $this->assertEquals(1, $variation->fresh()->current_quantity);
+        $this->assertDatabaseCount('sale_items', 0);
+        $this->assertDatabaseMissing('stock_movements', [
             'product_variation_id' => $variation->id,
             'type' => 'sale',
-            'quantity' => 5,
         ]);
+    }
+
+    public function test_sale_with_exact_available_stock_succeeds(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 5]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payment_method_id' => $paymentMethod->id,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 5]],
+        ]);
+
+        $response->assertCreated();
+        $this->assertEquals(0, $variation->fresh()->current_quantity);
+    }
+
+    public function test_wholesale_price_requires_explicit_apply_wholesale_flag(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create([
+            'sale_price' => 10,
+            'wholesale_min_qty' => 10,
+            'wholesale_price' => 8,
+            'current_quantity' => 50,
+        ]);
+
+        // Quantidade bate o mínimo, mas sem apply_wholesale o preço normal continua valendo
+        // — o operador decide se aplica o atacado (checkbox no PDV), não é automático.
+        $notApplied = $this->actingAs($admin)->postJson('/api/sales', [
+            'payment_method_id' => $paymentMethod->id,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 10]],
+        ]);
+        $notApplied->assertCreated()->assertJsonPath('data.items.0.unit_price', '10.00')
+            ->assertJsonPath('data.items.0.is_wholesale', false);
+
+        $belowMinimum = $this->actingAs($admin)->postJson('/api/sales', [
+            'payment_method_id' => $paymentMethod->id,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 9, 'apply_wholesale' => true]],
+        ]);
+        $belowMinimum->assertCreated()->assertJsonPath('data.items.0.unit_price', '10.00')
+            ->assertJsonPath('data.items.0.is_wholesale', false);
+
+        $applied = $this->actingAs($admin)->postJson('/api/sales', [
+            'payment_method_id' => $paymentMethod->id,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 10, 'apply_wholesale' => true]],
+        ]);
+        $applied->assertCreated()->assertJsonPath('data.items.0.unit_price', '8.00')
+            ->assertJsonPath('data.items.0.is_wholesale', true);
     }
 
     public function test_sale_requires_at_least_one_item(): void
@@ -226,7 +278,7 @@ class RegisterSaleTest extends TestCase
         CashRegister::factory()->open()->create();
         $admin = User::factory()->admin()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
-        $variation = ProductVariation::factory()->create(['sale_price' => 10]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
 
         // 3 unidades a R$10 = R$30, desconto de item R$5 -> R$25, desconto de venda R$2 -> R$23
         $response = $this->actingAs($admin)->postJson('/api/sales', [
@@ -249,7 +301,7 @@ class RegisterSaleTest extends TestCase
         CashRegister::factory()->open()->create();
         $admin = User::factory()->admin()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
-        $variation = ProductVariation::factory()->create(['sale_price' => 12.50]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 12.50, 'current_quantity' => 20]);
 
         // 3 unidades a R$12,50 = R$37,50, desconto de item 10% -> R$33,75
         $response = $this->actingAs($admin)->postJson('/api/sales', [

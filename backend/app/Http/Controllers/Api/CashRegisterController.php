@@ -92,7 +92,7 @@ class CashRegisterController extends Controller
     public function operations(CashRegister $cashRegister): AnonymousResourceCollection
     {
         return CashOperationResource::collection(
-            $cashRegister->operations()->with(['user', 'paymentMethod'])->latest('id')->get()
+            $cashRegister->operations()->with(['user', 'paymentMethod', 'sale'])->latest('id')->get()
         );
     }
 

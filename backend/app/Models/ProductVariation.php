@@ -25,6 +25,8 @@ class ProductVariation extends Model
         'current_quantity',
         'min_quantity',
         'max_quantity',
+        'wholesale_min_qty',
+        'wholesale_price',
     ];
 
     protected function casts(): array
@@ -36,6 +38,8 @@ class ProductVariation extends Model
             'current_quantity' => 'integer',
             'min_quantity' => 'integer',
             'max_quantity' => 'integer',
+            'wholesale_min_qty' => 'integer',
+            'wholesale_price' => 'decimal:2',
         ];
     }
 

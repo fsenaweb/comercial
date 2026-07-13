@@ -30,7 +30,7 @@ class RegisterSaleAction
             }
 
             $variationIds = collect($data['items'])->pluck('product_variation_id')->unique()->sort()->values();
-            $variations = ProductVariation::whereIn('id', $variationIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $variations = ProductVariation::whereIn('id', $variationIds)->orderBy('id')->with('product')->lockForUpdate()->get()->keyBy('id');
 
             if ($variations->count() !== $variationIds->count()) {
                 abort(404, 'Um ou mais produtos da venda não foram encontrados.');
@@ -41,7 +41,14 @@ class RegisterSaleAction
 
             foreach ($data['items'] as $item) {
                 $variation = $variations[$item['product_variation_id']];
-                $unitPrice = (string) $variation->sale_price;
+                if ($variation->current_quantity < $item['quantity']) {
+                    abort(422, "Estoque insuficiente para {$variation->product->name} (disponível: {$variation->current_quantity}).");
+                }
+                $isWholesale = ($item['apply_wholesale'] ?? false)
+                    && $variation->wholesale_min_qty !== null
+                    && $variation->wholesale_price !== null
+                    && $item['quantity'] >= $variation->wholesale_min_qty;
+                $unitPrice = (string) ($isWholesale ? $variation->wholesale_price : $variation->sale_price);
                 $lineDiscountType = DiscountType::from($item['discount_type'] ?? DiscountType::Fixed->value);
                 $lineDiscountValue = (string) ($item['discount_value'] ?? 0);
                 $lineGross = bcmul($unitPrice, (string) $item['quantity'], 2);
@@ -60,6 +67,7 @@ class RegisterSaleAction
                     'discount_value' => $lineDiscountValue,
                     'discount' => $lineDiscountAmount,
                     'total' => $lineTotal,
+                    'is_wholesale' => $isWholesale,
                 ];
             }
 
@@ -99,6 +107,7 @@ class RegisterSaleAction
                     'discount_value' => $row['discount_value'],
                     'discount' => $row['discount'],
                     'total' => $row['total'],
+                    'is_wholesale' => $row['is_wholesale'],
                 ]);
 
                 $row['variation']->decrement('current_quantity', $row['quantity']);

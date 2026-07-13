@@ -12,6 +12,9 @@ export interface CartItem {
   discountType: DiscountType
   discountValue: number
   availableQuantity: number
+  wholesaleMinQty: number | null
+  wholesalePrice: number | null
+  applyWholesale: boolean
 }
 
 export interface SaleItem {
@@ -51,6 +54,16 @@ export interface Sale {
   created_at: string
 }
 
+// Preço efetivo de um item: só usa o preço de atacado quando o operador marcou
+// o checkbox E a quantidade ainda bate o mínimo — nunca automático (espelha a
+// regra do RegisterSaleAction no backend, que exige `apply_wholesale` explícito).
+function effectiveUnitPrice(item: Pick<CartItem, 'unitPrice' | 'quantity' | 'applyWholesale' | 'wholesaleMinQty' | 'wholesalePrice'>): number {
+  if (item.applyWholesale && item.wholesaleMinQty !== null && item.wholesalePrice !== null && item.quantity >= item.wholesaleMinQty) {
+    return item.wholesalePrice
+  }
+  return item.unitPrice
+}
+
 export const useCartStore = defineStore('cart', {
   state: () => ({
     items: [] as CartItem[],
@@ -65,7 +78,7 @@ export const useCartStore = defineStore('cart', {
 
   getters: {
     subtotal: (state) => subtotalCents(state.items.map((item) => ({
-      unitPrice: item.unitPrice,
+      unitPrice: effectiveUnitPrice(item),
       quantity: item.quantity,
       discountType: item.discountType,
       discountValue: item.discountValue,
@@ -73,7 +86,7 @@ export const useCartStore = defineStore('cart', {
 
     total(state): number {
       const subtotalC = subtotalCents(state.items.map((item) => ({
-        unitPrice: item.unitPrice,
+        unitPrice: effectiveUnitPrice(item),
         quantity: item.quantity,
         discountType: item.discountType,
         discountValue: item.discountValue,
@@ -84,6 +97,7 @@ export const useCartStore = defineStore('cart', {
 
     itemCount: (state) => state.items.reduce((sum, item) => sum + item.quantity, 0),
     isEmpty: (state) => state.items.length === 0,
+    effectivePrice: () => (item: CartItem) => effectiveUnitPrice(item),
   },
 
   actions: {
@@ -94,6 +108,8 @@ export const useCartStore = defineStore('cart', {
       productCode: string
       salePrice: number
       currentQuantity: number
+      wholesaleMinQty?: number | null
+      wholesalePrice?: number | null
     }, quantity = 1) {
       const existing = this.items.find((item) => item.productVariationId === variation.id)
       if (existing) {
@@ -112,7 +128,15 @@ export const useCartStore = defineStore('cart', {
         discountType: 'percentage',
         discountValue: 0,
         availableQuantity: variation.currentQuantity,
+        wholesaleMinQty: variation.wholesaleMinQty ?? null,
+        wholesalePrice: variation.wholesalePrice ?? null,
+        applyWholesale: false,
       })
+    },
+
+    setItemWholesale(key: string, apply: boolean) {
+      const item = this.items.find((i) => i.key === key)
+      if (item) item.applyWholesale = apply
     },
 
     updateQuantity(key: string, quantity: number) {
@@ -182,6 +206,7 @@ export const useCartStore = defineStore('cart', {
           items: this.items.map((item) => ({
             product_variation_id: item.productVariationId,
             quantity: item.quantity,
+            apply_wholesale: item.applyWholesale,
             discount_type: item.discountType,
             discount_value: item.discountValue,
           })),

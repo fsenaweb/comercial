@@ -23,6 +23,7 @@ class SaleItem extends Model
         'discount_value',
         'discount',
         'total',
+        'is_wholesale',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class SaleItem extends Model
             'discount_value' => 'decimal:2',
             'discount' => 'decimal:2',
             'total' => 'decimal:2',
+            'is_wholesale' => 'boolean',
         ];
     }
 

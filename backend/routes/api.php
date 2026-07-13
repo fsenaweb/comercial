@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('payment-methods', PaymentMethodController::class);
 
     Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
+    Route::post('/sales/{sale}/cancel', [SaleController::class, 'cancel']);
 
     Route::get('/stock-movements', [StockMovementController::class, 'index']);
     Route::post('/stock-movements/adjustment', [StockMovementController::class, 'adjustment']);

@@ -49,4 +49,9 @@ class CashOperation extends Model
     {
         return $this->belongsTo(PaymentMethod::class);
     }
+
+    public function sale(): BelongsTo
+    {
+        return $this->belongsTo(Sale::class, 'reference_id');
+    }
 }

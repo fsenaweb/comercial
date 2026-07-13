@@ -112,12 +112,7 @@ async function handleSubmit() {
           />
 
           <div>
-            <div class="mb-1 flex items-baseline justify-between">
-              <span class="text-sm font-medium text-txt-secondary">Senha</span>
-              <button type="button" class="text-xs font-semibold text-amber-700 hover:underline" @click="handleForgotPassword">
-                Esqueceu sua senha?
-              </button>
-            </div>
+            <span class="mb-1 block text-sm font-medium text-txt-secondary">Senha</span>
             <span class="relative block">
               <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-txt-muted">
                 <Lock :size="16" />
@@ -140,6 +135,11 @@ async function handleSubmit() {
               </button>
             </span>
             <span v-if="passwordError" class="mt-1 block text-sm text-rose-600">{{ passwordError }}</span>
+            <div class="mt-1.5 text-right">
+              <button type="button" class="text-xs font-semibold text-amber-700 hover:underline" @click="handleForgotPassword">
+                Esqueceu sua senha?
+              </button>
+            </div>
           </div>
 
           <p v-if="generalError" class="text-sm text-rose-600">{{ generalError }}</p>

@@ -21,6 +21,8 @@ return new class extends Migration
             $table->integer('current_quantity')->default(0);
             $table->integer('min_quantity')->nullable();
             $table->integer('max_quantity')->nullable();
+            $table->integer('wholesale_min_qty')->nullable();
+            $table->decimal('wholesale_price', 12, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

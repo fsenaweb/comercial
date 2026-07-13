@@ -470,10 +470,19 @@ await loadAll()
           </span>
           <span class="text-sm text-txt-secondary">{{ operation.payment_method_name ?? '—' }}</span>
           <span class="text-sm font-semibold text-txt-primary">{{ formatAmount(operation.amount) }}</span>
-          <span class="truncate text-sm text-txt-secondary">{{ operation.notes ?? operation.origin_label }}</span>
+          <span class="flex min-w-0 items-center gap-1.5 truncate text-sm text-txt-secondary">
+            <span class="truncate">{{ operation.notes ?? operation.origin_label }}</span>
+            <StatusBadge v-if="operation.sale_status === 'canceled'" label="Venda cancelada" tone="danger" />
+          </span>
           <div class="flex justify-end gap-1">
             <IconButton v-if="operation.origin === 'sale' && operation.reference_id" :icon="ShoppingCart" label="Ver itens da venda" @click="viewSaleItems(operation.reference_id)" />
-            <IconButton v-if="canOperate && selected.status === 'open'" :icon="Trash2" label="Remover" tone="danger" @click="handleRemoveOperation(operation.id)" />
+            <IconButton
+              v-if="canOperate && selected.status === 'open' && operation.origin !== 'sale' && operation.origin !== 'adjustment'"
+              :icon="Trash2"
+              label="Remover"
+              tone="danger"
+              @click="handleRemoveOperation(operation.id)"
+            />
           </div>
         </div>
 

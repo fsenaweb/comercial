@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Sale\CancelSaleAction;
 use App\Actions\Sale\RegisterSaleAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Sale\CancelSaleRequest;
 use App\Http\Requests\Sale\StoreSaleRequest;
 use App\Http\Resources\SaleResource;
 use App\Models\Sale;
@@ -36,6 +38,10 @@ class SaleController extends Controller
             $query->whereDate('created_at', '<=', $request->string('date_to')->value());
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->value());
+        }
+
         return SaleResource::collection($query->paginate(20));
     }
 
@@ -49,6 +55,15 @@ class SaleController extends Controller
         $this->authorize('create', Sale::class);
 
         $sale = $action->execute($request->validated(), $request->user());
+
+        return SaleResource::make($sale);
+    }
+
+    public function cancel(CancelSaleRequest $request, Sale $sale, CancelSaleAction $action): SaleResource
+    {
+        $this->authorize('cancel', $sale);
+
+        $sale = $action->execute($sale, $request->validated('reason'), $request->user());
 
         return SaleResource::make($sale);
     }

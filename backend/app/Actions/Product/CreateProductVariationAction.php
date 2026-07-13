@@ -25,6 +25,8 @@ class CreateProductVariationAction
                 'current_quantity' => $data['initial_quantity'],
                 'min_quantity' => $data['min_quantity'] ?? null,
                 'max_quantity' => $data['max_quantity'] ?? null,
+                'wholesale_min_qty' => $data['wholesale_min_qty'] ?? null,
+                'wholesale_price' => $data['wholesale_price'] ?? null,
             ]);
 
             StockMovement::create([
