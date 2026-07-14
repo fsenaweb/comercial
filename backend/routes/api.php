@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
 use App\Http\Controllers\Api\QuoteController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StoreSettingController;
@@ -62,4 +63,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cash-registers/{cashRegister}', [CashRegisterController::class, 'update']);
     Route::post('/cash-registers/{cashRegister}/close', [CashRegisterController::class, 'close']);
     Route::get('/cash-registers/{cashRegister}/operations', [CashRegisterController::class, 'operations']);
+
+    Route::prefix('reports')->group(function () {
+        Route::get('/sales-by-day', [ReportController::class, 'salesByDay']);
+        Route::get('/sales-by-product', [ReportController::class, 'salesByProduct']);
+        Route::get('/sales-by-seller', [ReportController::class, 'salesBySeller']);
+        Route::get('/sales-by-category', [ReportController::class, 'salesByCategory']);
+        Route::get('/low-stock', [ReportController::class, 'lowStock']);
+        Route::get('/dashboard-summary', [ReportController::class, 'dashboardSummary']);
+        Route::get('/catalog/{key}', [ReportController::class, 'show']);
+        Route::get('/catalog/{key}/export/pdf', [ReportController::class, 'exportPdf']);
+        Route::get('/catalog/{key}/export/excel', [ReportController::class, 'exportExcel']);
+    });
 });

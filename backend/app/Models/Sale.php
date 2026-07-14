@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DiscountType;
 use App\Enums\SaleStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -91,5 +92,10 @@ class Sale extends Model
     public function originQuote(): HasOne
     {
         return $this->hasOne(Sale::class, 'converted_to_sale_id');
+    }
+
+    public function scopeCompleted(Builder $query): Builder
+    {
+        return $query->where('status', SaleStatus::Completed);
     }
 }

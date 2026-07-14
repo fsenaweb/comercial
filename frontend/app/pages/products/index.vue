@@ -67,6 +67,13 @@ interface SkuRow {
   variation: Variation | null
 }
 
+interface ProductSales {
+  product_id: number
+  product_name: string
+  quantity_sold: number
+  total: string
+}
+
 const productsApi = useResourceApi<Product>('products')
 const unitsApi = useResourceApi<Option>('units')
 const categoriesApi = useResourceApi<Option>('categories')
@@ -85,6 +92,7 @@ function applyMarkup(costPrice: number, markupPercent: number): number {
 const auth = useAuthStore()
 
 const products = ref<Product[]>([])
+const salesLast30d = ref<ProductSales[]>([])
 const units = ref<Option[]>([])
 const categories = ref<Option[]>([])
 const subcategories = ref<Subcategory[]>([])
@@ -99,24 +107,36 @@ const categoryOptions = computed(() => categories.value.map((c) => ({ value: c.i
 const brandOptions = computed(() => brands.value.map((b) => ({ value: b.id, label: b.name })))
 const supplierOptions = computed(() => suppliers.value.map((s) => ({ value: s.id, label: s.corporate_name })))
 
+function isoDaysAgo(days: number): string {
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString().slice(0, 10)
+}
+
 async function load() {
   loading.value = true
-  const [productsResult, unitsResult, categoriesResult, subcategoriesResult, brandsResult, suppliersResult] = await Promise.all([
-    productsApi.list(),
-    unitsApi.list(),
-    categoriesApi.list(),
-    subcategoriesApi.list(),
-    brandsApi.list(),
-    suppliersApi.list(),
-  ])
+  const [productsResult, unitsResult, categoriesResult, subcategoriesResult, brandsResult, suppliersResult, salesResult] =
+    await Promise.all([
+      productsApi.list(),
+      unitsApi.list(),
+      categoriesApi.list(),
+      subcategoriesApi.list(),
+      brandsApi.list(),
+      suppliersApi.list(),
+      api<{ data: ProductSales[] }>(`/reports/sales-by-product?date_from=${isoDaysAgo(29)}`),
+    ])
   products.value = productsResult
   units.value = unitsResult
   categories.value = categoriesResult
   subcategories.value = subcategoriesResult
   brands.value = brandsResult
   suppliers.value = suppliersResult
+  salesLast30d.value = salesResult.data
   loading.value = false
 }
+
+const salesLast30dQty = computed(() => salesLast30d.value.reduce((sum, p) => sum + p.quantity_sold, 0))
+const topSellingProducts = computed(() => salesLast30d.value.slice(0, 5))
 
 const skuRows = computed<SkuRow[]>(() => {
   const rows: SkuRow[] = []
@@ -635,7 +655,7 @@ await load()
         :icon="AlertTriangle"
         :tone="lowStockCount > 0 ? 'warning' : 'emerald'"
       />
-      <StatCard label="Vendas 30 dias" value="—" subtext="Módulo de Vendas em breve" :icon="BarChart3" tone="sky" />
+      <StatCard label="Vendas 30 dias" :value="salesLast30dQty" subtext="Unidades vendidas" :icon="BarChart3" tone="sky" />
     </div>
 
     <div class="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
@@ -649,15 +669,28 @@ await load()
             Últimos 30 dias
           </span>
         </div>
-        <div class="mt-4 flex h-28 items-center justify-center rounded-xl bg-surface-subtle text-xs text-txt-muted">
-          Sem vendas
+        <div class="mt-4">
+          <BarSparkline
+            :data="topSellingProducts.map((p) => ({ label: p.product_name, value: p.quantity_sold }))"
+            tone="emerald"
+          />
         </div>
       </div>
 
       <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
         <span class="text-[10.5px] font-bold tracking-wide text-amber-700 uppercase">Ranking</span>
         <p class="font-display text-sm font-bold text-txt-primary">Mais vendidos</p>
-        <div class="mt-3 flex h-24 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-txt-muted">
+        <div v-if="topSellingProducts.length" class="mt-3 divide-y divide-border">
+          <div
+            v-for="(product, index) in topSellingProducts.slice(0, 3)"
+            :key="product.product_id"
+            class="flex items-center justify-between py-2 text-sm"
+          >
+            <span class="truncate text-txt-secondary">{{ index + 1 }}. {{ product.product_name }}</span>
+            <span class="shrink-0 font-display font-bold text-txt-primary">{{ product.quantity_sold }}</span>
+          </div>
+        </div>
+        <div v-else class="mt-3 flex h-24 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-txt-muted">
           Sem vendas finalizadas no período.
         </div>
       </div>
