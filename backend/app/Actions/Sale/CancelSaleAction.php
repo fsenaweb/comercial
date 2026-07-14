@@ -24,9 +24,20 @@ class CancelSaleAction
         return DB::transaction(function () use ($sale, $reason, $user) {
             $sale = Sale::where('id', $sale->id)->lockForUpdate()->firstOrFail();
 
+            if ($sale->status === SaleStatus::Pending) {
+                $sale->update([
+                    'status' => SaleStatus::Canceled,
+                    'canceled_reason' => $reason,
+                    'canceled_at' => now(),
+                    'canceled_by' => $user->id,
+                ]);
+
+                return $sale->load(['items.productVariation.product', 'customer', 'seller', 'canceledBy']);
+            }
+
             if ($sale->status !== SaleStatus::Completed) {
                 throw ValidationException::withMessages([
-                    'status' => 'Esta venda já está cancelada.',
+                    'status' => 'Esta venda ou orçamento já está cancelado ou convertido, e não pode ser cancelado novamente.',
                 ]);
             }
 

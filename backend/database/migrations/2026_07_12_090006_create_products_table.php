@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained();
             $table->foreignId('subcategory_id')->nullable()->constrained();
             $table->foreignId('brand_id')->nullable()->constrained();
+            $table->foreignId('supplier_id')->nullable()->constrained();
             $table->json('fiscal_fields')->nullable();
             $table->timestamps();
             $table->softDeletes();

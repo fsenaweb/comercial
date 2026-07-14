@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Sale extends Model
 {
@@ -32,6 +33,9 @@ class Sale extends Model
         'canceled_reason',
         'canceled_at',
         'canceled_by',
+        'expires_at',
+        'converted_to_sale_id',
+        'converted_at',
     ];
 
     protected function casts(): array
@@ -44,6 +48,8 @@ class Sale extends Model
             'total' => 'decimal:2',
             'status' => SaleStatus::class,
             'canceled_at' => 'datetime',
+            'expires_at' => 'date',
+            'converted_at' => 'datetime',
         ];
     }
 
@@ -75,5 +81,15 @@ class Sale extends Model
     public function canceledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'canceled_by');
+    }
+
+    public function convertedToSale(): BelongsTo
+    {
+        return $this->belongsTo(Sale::class, 'converted_to_sale_id');
+    }
+
+    public function originQuote(): HasOne
+    {
+        return $this->hasOne(Sale::class, 'converted_to_sale_id');
     }
 }

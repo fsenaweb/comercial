@@ -100,6 +100,7 @@ async function loadAll() {
 await loadAll()
 
 const cashRegisterOpen = computed(() => cashRegisterStore.current !== null)
+const quoteOnlyMode = ref(false)
 
 const paymentMethodOptions = computed(() =>
   paymentMethods.value.filter((p) => p.active_on_pos).map((p) => ({ value: p.id, label: p.name })),
@@ -379,6 +380,19 @@ async function submitNewCustomer() {
 const valorRecebidoMasked = ref('R$ 0,00')
 const troco = computed(() => Math.max(0, currencyToNumber(valorRecebidoMasked.value) - cart.total))
 
+// "Valor recebido"/troco só fazem sentido pra pagamento em dinheiro — nas
+// demais formas (cartão, Pix...) o valor é sempre exato, sem troco a calcular.
+// payment_methods é um cadastro livre (Sprint 2), sem um campo que marque
+// "isto é dinheiro", então o critério é o nome informado pela loja.
+const isCashPayment = computed(() => {
+  const method = paymentMethods.value.find((p) => p.id === cart.paymentMethodId)
+  return method !== undefined && method.name.trim().toLowerCase() === 'dinheiro'
+})
+
+watch(isCashPayment, (isCash) => {
+  if (!isCash) valorRecebidoMasked.value = 'R$ 0,00'
+})
+
 function usarRestante() {
   valorRecebidoMasked.value = maskCurrency(String(Math.round(cart.total * 100)))
 }
@@ -388,7 +402,8 @@ const finalizing = ref(false)
 const checkoutError = ref<unknown>(null)
 
 const canFinalize = computed(() =>
-  !cart.isEmpty
+  cashRegisterOpen.value
+  && !cart.isEmpty
   && cart.paymentMethodId !== null
   && (!requireSellerOnSale.value || cart.sellerId !== null),
 )
@@ -409,6 +424,36 @@ async function handleFinalizarVenda() {
     finalizing.value = false
   }
 }
+
+// ---- Salvar orçamento ----
+const showQuoteModal = ref(false)
+const quoteExpiresAt = ref('')
+const savingQuote = ref(false)
+const quoteError = ref<unknown>(null)
+
+const canSaveQuote = computed(() => !cart.isEmpty)
+
+function openQuoteModal() {
+  quoteExpiresAt.value = ''
+  quoteError.value = null
+  showQuoteModal.value = true
+}
+
+async function confirmSaveQuote() {
+  if (!canSaveQuote.value) return
+  savingQuote.value = true
+  quoteError.value = null
+  try {
+    cart.setExpiresAt(quoteExpiresAt.value || null)
+    await cart.saveAsQuote()
+    showQuoteModal.value = false
+    await navigateTo('/quotes')
+  } catch (err) {
+    quoteError.value = err
+  } finally {
+    savingQuote.value = false
+  }
+}
 </script>
 
 <template>
@@ -416,7 +461,7 @@ async function handleFinalizarVenda() {
     Carregando PDV...
   </div>
 
-  <div v-else-if="!cashRegisterOpen" class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+  <div v-else-if="!cashRegisterOpen && !quoteOnlyMode" class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
     <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
       <ShieldCheck :size="30" />
     </div>
@@ -424,7 +469,10 @@ async function handleFinalizarVenda() {
       <p class="font-display text-lg font-bold text-txt-primary">Nenhum caixa aberto</p>
       <p class="mt-1 max-w-sm text-sm text-txt-secondary">É preciso abrir o caixa antes de iniciar uma venda no PDV.</p>
     </div>
-    <BaseButton :block="false" @click="navigateTo('/cash-register')">Ir para o Caixa</BaseButton>
+    <div class="flex items-center gap-4">
+      <BaseButton :block="false" @click="navigateTo('/cash-register')">Ir para o Caixa</BaseButton>
+      <button type="button" class="cursor-pointer text-sm font-bold text-brand underline" @click="quoteOnlyMode = true">Somente realizar orçamento</button>
+    </div>
   </div>
 
   <template v-else>
@@ -441,7 +489,9 @@ async function handleFinalizarVenda() {
 
       <div class="flex-none leading-tight">
         <div class="text-[10px] font-bold tracking-wide text-txt-muted uppercase">Caixa</div>
-        <div class="text-[13.5px] font-bold text-txt-primary">Caixa #{{ cashRegisterStore.current?.id }}</div>
+        <div class="text-[13.5px] font-bold" :class="cashRegisterOpen ? 'text-txt-primary' : 'text-rose-600'">
+          {{ cashRegisterOpen ? `Caixa #${cashRegisterStore.current?.id}` : 'Fechado' }}
+        </div>
       </div>
 
       <div class="h-7 w-px flex-none bg-border" />
@@ -725,12 +775,20 @@ async function handleFinalizarVenda() {
           <div class="font-display text-[36px] font-extrabold text-emerald-600">{{ formatCurrency(Math.round(cart.total * 100)) }}</div>
         </div>
 
-        <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-3 text-emerald-700">
+        <div v-if="cashRegisterOpen" class="flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-3 text-emerald-700">
           <ShieldCheck :size="16" class="flex-none" />
           <span class="text-xs font-semibold">Estoque sincronizado · venda protegida</span>
         </div>
+        <div v-else class="flex items-center gap-2 rounded-xl bg-rose-50 px-3.5 py-3 text-rose-700">
+          <ShieldCheck :size="16" class="flex-none" />
+          <span class="text-xs font-semibold">
+            Nenhum caixa aberto — dá pra montar um orçamento, mas é preciso
+            <button type="button" class="underline" @click="navigateTo('/cash-register')">abrir o caixa</button>
+            para finalizar uma venda.
+          </span>
+        </div>
 
-        <div class="rounded-2xl bg-surface-raised p-4.5 shadow-card">
+        <div v-if="cashRegisterOpen" class="rounded-2xl bg-surface-raised p-4.5 shadow-card">
           <BaseSelect
             :model-value="cart.paymentMethodId"
             label="Forma de pagamento"
@@ -739,27 +797,40 @@ async function handleFinalizarVenda() {
             @update:model-value="cart.setPaymentMethod(Number($event))"
           />
 
-          <div class="mt-3">
-            <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor recebido</label>
-            <input
-              :value="valorRecebidoMasked"
-              type="text"
-              class="w-full rounded-xl border border-border px-3 py-2 text-sm"
-              @input="valorRecebidoMasked = maskCurrency(($event.target as HTMLInputElement).value)"
-            >
-            <button type="button" class="mt-1 text-right text-[11.5px] font-bold text-brand" @click="usarRestante">Usar restante</button>
-          </div>
+          <template v-if="isCashPayment">
+            <div class="mt-3">
+              <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor recebido</label>
+              <input
+                :value="valorRecebidoMasked"
+                type="text"
+                class="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                @input="valorRecebidoMasked = maskCurrency(($event.target as HTMLInputElement).value)"
+              >
+              <div class="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand transition hover:bg-brand/20"
+                  @click="usarRestante"
+                >
+                  Usar restante
+                </button>
+              </div>
+            </div>
 
-          <div v-if="troco > 0" class="mt-2 flex items-center justify-between text-sm">
-            <span class="text-txt-secondary">Troco</span>
-            <span class="font-bold text-txt-primary">{{ formatCurrency(Math.round(troco * 100)) }}</span>
-          </div>
+            <div v-if="troco > 0" class="mt-2 flex items-center justify-between text-sm">
+              <span class="text-txt-secondary">Troco</span>
+              <span class="font-bold text-txt-primary">{{ formatCurrency(Math.round(troco * 100)) }}</span>
+            </div>
+          </template>
         </div>
 
         <p v-if="checkoutError" class="text-sm text-rose-600">{{ parse(checkoutError).message }}</p>
 
         <div class="flex-1" />
 
+        <BaseButton variant="ghost" :disabled="!canSaveQuote" @click="openQuoteModal">
+          Salvar Orçamento
+        </BaseButton>
         <BaseButton :loading="finalizing" :disabled="!canFinalize" @click="handleFinalizarVenda">
           Finalizar Venda
         </BaseButton>
@@ -849,6 +920,18 @@ async function handleFinalizarVenda() {
           <BaseButton :block="false" @click="chooseOperatorFromPicker(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredOperatorPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum vendedor encontrado.</p>
+      </div>
+    </BaseModal>
+
+    <!-- MODAL: SALVAR ORÇAMENTO -->
+    <BaseModal :open="showQuoteModal" title="Salvar orçamento" subtitle="O carrinho é salvo como orçamento — não baixa estoque nem lança no caixa." @close="showQuoteModal = false">
+      <div class="space-y-4">
+        <BaseInput v-model="quoteExpiresAt" type="date" label="Validade (opcional)" :error="firstFieldError(quoteError, 'expires_at')" />
+        <p v-if="quoteError && !firstFieldError(quoteError, 'expires_at')" class="text-sm text-rose-600">{{ parse(quoteError).message }}</p>
+        <div class="flex justify-end gap-3 border-t border-border pt-4">
+          <BaseButton type="button" variant="ghost" :block="false" @click="showQuoteModal = false">Cancelar</BaseButton>
+          <BaseButton type="button" :loading="savingQuote" :block="false" @click="confirmSaveQuote">Salvar orçamento</BaseButton>
+        </div>
       </div>
     </BaseModal>
 

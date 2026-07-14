@@ -2,16 +2,15 @@
 
 namespace App\Actions\Sale;
 
+use App\Actions\Sale\Concerns\BuildsSaleItems;
 use App\Enums\CashOperationOrigin;
 use App\Enums\CashOperationType;
 use App\Enums\CashRegisterStatus;
-use App\Enums\DiscountType;
 use App\Enums\SaleStatus;
 use App\Enums\StockMovementType;
 use App\Exceptions\CashRegisterClosedException;
 use App\Models\CashOperation;
 use App\Models\CashRegister;
-use App\Models\ProductVariation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StockMovement;
@@ -20,6 +19,8 @@ use Illuminate\Support\Facades\DB;
 
 class RegisterSaleAction
 {
+    use BuildsSaleItems;
+
     public function execute(array $data, User $user): Sale
     {
         return DB::transaction(function () use ($data, $user) {
@@ -29,55 +30,9 @@ class RegisterSaleAction
                 throw new CashRegisterClosedException();
             }
 
-            $variationIds = collect($data['items'])->pluck('product_variation_id')->unique()->sort()->values();
-            $variations = ProductVariation::whereIn('id', $variationIds)->orderBy('id')->with('product')->lockForUpdate()->get()->keyBy('id');
+            ['subtotal' => $subtotal, 'itemsToInsert' => $itemsToInsert] = $this->buildSaleItems($data['items'], checkStock: true);
 
-            if ($variations->count() !== $variationIds->count()) {
-                abort(404, 'Um ou mais produtos da venda não foram encontrados.');
-            }
-
-            $subtotal = '0.00';
-            $itemsToInsert = [];
-
-            foreach ($data['items'] as $item) {
-                $variation = $variations[$item['product_variation_id']];
-                if ($variation->current_quantity < $item['quantity']) {
-                    abort(422, "Estoque insuficiente para {$variation->product->name} (disponível: {$variation->current_quantity}).");
-                }
-                $isWholesale = ($item['apply_wholesale'] ?? false)
-                    && $variation->wholesale_min_qty !== null
-                    && $variation->wholesale_price !== null
-                    && $item['quantity'] >= $variation->wholesale_min_qty;
-                $unitPrice = (string) ($isWholesale ? $variation->wholesale_price : $variation->sale_price);
-                $lineDiscountType = DiscountType::from($item['discount_type'] ?? DiscountType::Fixed->value);
-                $lineDiscountValue = (string) ($item['discount_value'] ?? 0);
-                $lineGross = bcmul($unitPrice, (string) $item['quantity'], 2);
-                $lineDiscountAmount = $this->resolveDiscountAmount($lineGross, $lineDiscountType, $lineDiscountValue);
-                $lineTotal = bcsub($lineGross, $lineDiscountAmount, 2);
-                if (bccomp($lineTotal, '0', 2) < 0) {
-                    $lineTotal = '0.00';
-                }
-                $subtotal = bcadd($subtotal, $lineTotal, 2);
-
-                $itemsToInsert[] = [
-                    'variation' => $variation,
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $unitPrice,
-                    'discount_type' => $lineDiscountType,
-                    'discount_value' => $lineDiscountValue,
-                    'discount' => $lineDiscountAmount,
-                    'total' => $lineTotal,
-                    'is_wholesale' => $isWholesale,
-                ];
-            }
-
-            $saleDiscountType = DiscountType::from($data['discount_type'] ?? DiscountType::Fixed->value);
-            $saleDiscountValue = (string) ($data['discount_value'] ?? 0);
-            $saleDiscountAmount = $this->resolveDiscountAmount($subtotal, $saleDiscountType, $saleDiscountValue);
-            $total = bcsub($subtotal, $saleDiscountAmount, 2);
-            if (bccomp($total, '0', 2) < 0) {
-                $total = '0.00';
-            }
+            [$saleDiscountType, $saleDiscountValue, $saleDiscountAmount, $total] = $this->resolveSaleDiscount($subtotal, $data);
 
             $sellerId = $data['seller_id'] ?? $user->id;
 
@@ -135,19 +90,5 @@ class RegisterSaleAction
 
             return $sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister']);
         }, 3);
-    }
-
-    /**
-     * Resolve o valor absoluto do desconto a partir do tipo escolhido pelo
-     * operador: fixo usa o valor direto, percentual multiplica e só arredonda
-     * pra 2 casas no final (evita erro de arredondamento intermediário).
-     */
-    private function resolveDiscountAmount(string $base, DiscountType $type, string $value): string
-    {
-        if ($type === DiscountType::Percentage) {
-            return bcdiv(bcmul($base, $value, 4), '100', 2);
-        }
-
-        return bcadd($value, '0', 2);
     }
 }

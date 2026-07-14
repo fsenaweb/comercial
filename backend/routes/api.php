@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
+use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StoreSettingController;
@@ -46,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
     Route::post('/sales/{sale}/cancel', [SaleController::class, 'cancel']);
+    Route::post('/sales/{sale}/convert', [QuoteController::class, 'convert']);
+    Route::post('/quotes', [QuoteController::class, 'store']);
 
     Route::get('/stock-movements', [StockMovementController::class, 'index']);
     Route::post('/stock-movements/adjustment', [StockMovementController::class, 'adjustment']);

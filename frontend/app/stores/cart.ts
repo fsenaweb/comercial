@@ -48,8 +48,11 @@ export interface Sale {
   payment_method_id: number
   payment_method_name: string | null
   notes: string | null
-  status: 'pending' | 'completed' | 'canceled'
+  status: 'pending' | 'completed' | 'canceled' | 'converted'
   status_label: string
+  expires_at: string | null
+  converted_to_sale_id: number | null
+  converted_to_sale_number: string | null
   items: SaleItem[]
   created_at: string
 }
@@ -74,6 +77,7 @@ export const useCartStore = defineStore('cart', {
     saleDiscountType: 'percentage' as DiscountType,
     saleDiscountValue: 0,
     notes: null as string | null,
+    expiresAt: null as string | null,
   }),
 
   getters: {
@@ -182,6 +186,10 @@ export const useCartStore = defineStore('cart', {
       this.notes = value
     },
 
+    setExpiresAt(value: string | null) {
+      this.expiresAt = value
+    },
+
     reset() {
       this.items = []
       this.customerId = null
@@ -190,6 +198,7 @@ export const useCartStore = defineStore('cart', {
       this.saleDiscountType = 'percentage'
       this.saleDiscountValue = 0
       this.notes = null
+      this.expiresAt = null
     },
 
     async checkout() {
@@ -200,6 +209,31 @@ export const useCartStore = defineStore('cart', {
           customer_id: this.customerId,
           seller_id: this.sellerId,
           payment_method_id: this.paymentMethodId,
+          discount_type: this.saleDiscountType,
+          discount_value: this.saleDiscountValue,
+          notes: this.notes,
+          items: this.items.map((item) => ({
+            product_variation_id: item.productVariationId,
+            quantity: item.quantity,
+            apply_wholesale: item.applyWholesale,
+            discount_type: item.discountType,
+            discount_value: item.discountValue,
+          })),
+        },
+      })
+
+      this.reset()
+      return data
+    },
+
+    async saveAsQuote() {
+      const api = useApi()
+      const { data } = await api<{ data: Sale }>('/quotes', {
+        method: 'POST',
+        body: {
+          customer_id: this.customerId,
+          seller_id: this.sellerId,
+          expires_at: this.expiresAt,
           discount_type: this.saleDiscountType,
           discount_value: this.saleDiscountValue,
           notes: this.notes,

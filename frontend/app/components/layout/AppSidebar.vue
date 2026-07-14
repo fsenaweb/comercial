@@ -39,11 +39,10 @@ const quickAccessLinks = [
   { to: '/pos', label: 'PDV', icon: Monitor },
   { to: '/cash-register', label: 'Caixa', icon: DollarSign },
   { to: '/sales-history', label: 'Vendas', icon: Receipt },
+  { to: '/quotes', label: 'Orçamentos', icon: ShoppingCart },
 ]
 
-const comingSoonLinks = [
-  { label: 'Pedidos', icon: ShoppingCart },
-]
+const comingSoonLinks: { label: string, icon: typeof ShoppingCart }[] = []
 
 const estoqueLinks = [
   { to: '/stock/entries', label: 'Entradas de Estoque', icon: PackagePlus },

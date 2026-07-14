@@ -7,6 +7,7 @@ enum SaleStatus: string
     case Pending = 'pending';
     case Completed = 'completed';
     case Canceled = 'canceled';
+    case Converted = 'converted';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum SaleStatus: string
             self::Pending => 'Pendente',
             self::Completed => 'Concluída',
             self::Canceled => 'Cancelada',
+            self::Converted => 'Convertido',
         };
     }
 }
