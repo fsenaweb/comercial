@@ -219,7 +219,7 @@ await Promise.all([load(), loadSellers()])
       </div>
     </div>
 
-    <BaseModal :open="showDetail" :title="detail ? `Venda ${detail.number}` : 'Venda'" subtitle="Itens vendidos, descontos e forma de pagamento." @close="showDetail = false">
+    <BaseModal :open="showDetail" size="xl" :title="detail ? `Venda ${detail.number}` : 'Venda'" subtitle="Itens vendidos, descontos e forma de pagamento." @close="showDetail = false">
       <div v-if="detailLoading" class="py-8 text-center text-sm text-txt-muted">Carregando...</div>
       <div v-else-if="detail" class="space-y-4">
         <div class="grid grid-cols-2 gap-3 text-sm">

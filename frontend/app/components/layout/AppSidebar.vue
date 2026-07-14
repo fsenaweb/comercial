@@ -59,7 +59,7 @@ const cadastrosLinks = [
 const cadastrosComingSoon = [{ label: 'Vendedores', icon: UserCog }]
 
 const gestaoItems = computed(() => [
-  { key: 'relatorios', label: 'Relatórios', icon: BarChart3, to: null },
+  { key: 'relatorios', label: 'Relatórios', icon: BarChart3, to: '/reports' },
   ...(auth.isAdmin ? [{ key: 'dados-empresa', label: 'Dados da Empresa', icon: Landmark, to: '/settings/store' }] : []),
   ...(auth.isAdmin ? [{ key: 'usuarios', label: 'Usuários e Permissões', icon: UserCheck, to: '/users' }] : []),
   ...(auth.isAdmin ? [{ key: 'configuracoes', label: 'Configurações', icon: Settings, to: '/settings/catalog' }] : []),

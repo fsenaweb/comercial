@@ -8,10 +8,12 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Models\StoreSetting;
 use App\Models\Subcategory;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Catálogo de demonstração para o segmento-alvo (autopeças/motopeças,
@@ -23,6 +25,8 @@ class ProductCatalogSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->seedStoreSettings();
+
         $admin = User::where('role', 'admin')->first() ?? User::factory()->admin()->create();
 
         // Vendedores de demonstração, pra testar a troca de vendedor no PDV (F3) —
@@ -145,5 +149,38 @@ class ProductCatalogSeeder extends Seeder
                 'user_id' => $admin->id,
             ]);
         }
+    }
+
+    /**
+     * Dados da loja de demonstração (nome, CNPJ, endereço, contato, logo) — mesmos
+     * valores da referência visual do AppLoja (`Relatorios.dc.html`/`Produtos.dc.html`,
+     * projeto "Sistema Comercial JP Parafusos" no Claude Design), pra comparar
+     * lado a lado o cabeçalho dos relatórios exportados (PDF/Excel) com o mockup.
+     * Não há campo de Inscrição Estadual no modelo (`store_settings`) — fora de
+     * escopo, o mockup mostra "IE: 204109078" mas isso exigiria uma coluna nova.
+     */
+    private function seedStoreSettings(): void
+    {
+        $logoSource = __DIR__.'/assets/jp-logo.png';
+        $logoPath = 'logos/jp-logo.png';
+
+        if (is_file($logoSource) && ! Storage::disk('public')->exists($logoPath)) {
+            Storage::disk('public')->put($logoPath, file_get_contents($logoSource));
+        }
+
+        StoreSetting::current()->update([
+            'name' => 'JP Parafusos e Acessórios Ltda',
+            'trade_name' => 'JP Parafusos e Acessórios',
+            'cnpj' => '20484694000197',
+            'email' => 'jpsena09@gmail.com',
+            'phone' => '(84) 99911-2814',
+            'zip_code' => '59900000',
+            'address' => 'R Hipólito Cassiano',
+            'address_number' => '743',
+            'neighborhood' => 'Centro',
+            'city' => 'Pau dos Ferros',
+            'state' => 'RN',
+            'logo_path' => Storage::disk('public')->exists($logoPath) ? $logoPath : null,
+        ]);
     }
 }

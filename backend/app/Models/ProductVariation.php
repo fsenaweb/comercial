@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -56,5 +57,11 @@ class ProductVariation extends Model
     public function saleItems(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function scopeLowStock(Builder $query): Builder
+    {
+        return $query->whereNotNull('min_quantity')
+            ->whereColumn('current_quantity', '<', 'min_quantity');
     }
 }

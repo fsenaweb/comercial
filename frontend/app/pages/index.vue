@@ -13,33 +13,66 @@ import {
   Users,
 } from 'lucide-vue-next'
 
-interface Variation {
-  current_quantity: number
-  min_quantity: number | null
-}
-
-interface Product {
-  id: number
-  variations?: Variation[]
-}
-
 interface Customer {
   id: number
   created_at: string
 }
 
+interface SellerToday {
+  seller_id: number
+  seller_name: string
+  total: string
+}
+
+interface MonthlyCount {
+  month: string
+  count: number
+}
+
+interface MonthlyTotal {
+  month: string
+  total: string
+}
+
+interface DashboardSummary {
+  today_total: string
+  today_sales_count: number
+  sales_by_seller_today: SellerToday[]
+  low_stock_count: number
+  monthly_sales_count: MonthlyCount[]
+  monthly_sales_total: MonthlyTotal[]
+}
+
 const auth = useAuthStore()
-const productsApi = useResourceApi<Product>('products')
+const api = useApi()
+const { format } = useCurrencyMask()
+const productsApi = useResourceApi<{ id: number }>('products')
 const customersApi = useResourceApi<Customer>('customers')
 
-const products = ref<Product[]>([])
+const products = ref<{ id: number }[]>([])
 const customers = ref<Customer[]>([])
+const summary = ref<DashboardSummary | null>(null)
 const refreshing = ref(false)
 
+function money(value: string | number): string {
+  return format(Math.round(Number(value) * 100))
+}
+
+function monthLabel(month: string): string {
+  const [year, monthNumber] = month.split('-')
+  const date = new Date(Number(year), Number(monthNumber) - 1, 1)
+  return date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
+}
+
 async function load() {
-  const [productsResult, customersResult] = await Promise.all([productsApi.list(), customersApi.list()])
+  const [productsResult, customersResult, summaryResult] = await Promise.all([
+    productsApi.list(),
+    customersApi.list(),
+    api<{ data: DashboardSummary }>('/reports/dashboard-summary'),
+  ])
   products.value = productsResult
   customers.value = customersResult
+  summary.value = summaryResult.data
 }
 
 async function handleRefresh() {
@@ -48,14 +81,7 @@ async function handleRefresh() {
   refreshing.value = false
 }
 
-const lowStockCount = computed(() =>
-  products.value.reduce((total, product) => {
-    const lowVariations = (product.variations ?? []).filter(
-      (v) => v.min_quantity !== null && v.current_quantity <= v.min_quantity,
-    )
-    return total + lowVariations.length
-  }, 0),
-)
+const lowStockCount = computed(() => summary.value?.low_stock_count ?? 0)
 
 const newCustomersThisMonth = computed(() => {
   const now = new Date()
@@ -64,6 +90,16 @@ const newCustomersThisMonth = computed(() => {
     return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear()
   }).length
 })
+
+const currentMonthCount = computed(() => summary.value?.monthly_sales_count.at(-1)?.count ?? 0)
+const currentMonthTotal = computed(() => summary.value?.monthly_sales_total.at(-1)?.total ?? '0')
+
+const monthlyCountChart = computed(
+  () => summary.value?.monthly_sales_count.map((m) => ({ label: monthLabel(m.month), value: m.count })) ?? [],
+)
+const monthlyTotalChart = computed(
+  () => summary.value?.monthly_sales_total.map((m) => ({ label: monthLabel(m.month), value: Number(m.total) })) ?? [],
+)
 
 const shortcuts = [
   { to: '/products', label: 'Produtos', icon: Package, tone: 'emerald' },
@@ -79,15 +115,14 @@ await load()
     <div class="flex flex-wrap items-start justify-between gap-4">
       <p class="max-w-2xl text-[15px] leading-relaxed text-txt-secondary">
         Olá, <strong class="text-txt-primary">{{ auth.user?.name }}</strong>. Aqui você acompanha o que pede
-        atenção hoje — o estoque baixo e os clientes novos. O restante (vendas, caixa, relatórios) chega nas
-        próximas fases.
+        atenção hoje — vendas do dia, estoque baixo e a base de clientes.
       </p>
       <div class="flex shrink-0 gap-2.5">
         <BaseButton variant="ghost" :block="false" :loading="refreshing" loading-text="Atualizando…" @click="handleRefresh">
           <RefreshCw :size="15" />
           Atualizar painel
         </BaseButton>
-        <BaseButton :block="false" disabled title="Disponível quando o PDV for lançado">
+        <BaseButton :block="false" @click="navigateTo('/pos')">
           <Plus :size="15" />
           Nova Venda
         </BaseButton>
@@ -105,15 +140,15 @@ await load()
         <p class="mt-1.5 font-display text-2xl font-bold text-txt-primary">{{ customers.length }}</p>
         <span class="text-xs text-txt-muted">{{ newCustomersThisMonth }} novo(s) cliente(s) no mês</span>
       </div>
-      <div class="rounded-2xl border border-dashed border-border bg-surface-raised p-5 opacity-70">
-        <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Caixa vendido no mês</span>
-        <p class="mt-1.5 font-display text-2xl font-bold text-txt-muted">—</p>
-        <span class="text-xs text-txt-muted">Módulo de Caixa em breve</span>
+      <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
+        <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Vendas hoje</span>
+        <p class="mt-1.5 font-display text-2xl font-bold text-txt-primary">{{ summary?.today_sales_count ?? 0 }}</p>
+        <span class="text-xs text-txt-muted">Venda(s) concluída(s) hoje</span>
       </div>
-      <div class="rounded-2xl border border-dashed border-border bg-surface-raised p-5 opacity-70">
-        <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Vendas no mês</span>
-        <p class="mt-1.5 font-display text-2xl font-bold text-txt-muted">—</p>
-        <span class="text-xs text-txt-muted">Módulo de Vendas em breve</span>
+      <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
+        <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Faturamento hoje</span>
+        <p class="mt-1.5 font-display text-2xl font-bold text-txt-primary">{{ money(summary?.today_total ?? '0') }}</p>
+        <span class="text-xs text-txt-muted">Total vendido no dia</span>
       </div>
     </div>
 
@@ -132,52 +167,48 @@ await load()
         :icon="Users"
         tone="sky"
       />
-      <div class="rounded-2xl border border-dashed border-border bg-surface-raised p-5 opacity-70">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Total de vendas</span>
-            <p class="mt-1.5 font-display text-xl font-bold text-txt-muted">—</p>
-            <span class="text-xs text-txt-muted">Em breve</span>
-          </div>
-          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted">
-            <ShoppingCart :size="18" />
-          </span>
-        </div>
-      </div>
-      <div class="rounded-2xl border border-dashed border-border bg-surface-raised p-5 opacity-70">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Valor total vendido</span>
-            <p class="mt-1.5 font-display text-xl font-bold text-txt-muted">—</p>
-            <span class="text-xs text-txt-muted">Em breve</span>
-          </div>
-          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted">
-            <DollarSign :size="18" />
-          </span>
-        </div>
-      </div>
+      <StatCard label="Total de vendas" :value="currentMonthCount" subtext="Vendas concluídas no mês" :icon="ShoppingCart" tone="violet" />
+      <StatCard label="Valor total vendido" :value="money(currentMonthTotal)" subtext="Faturamento do mês" :icon="DollarSign" tone="amber" />
     </div>
 
     <div>
       <span class="text-[11px] font-bold tracking-wide text-txt-muted uppercase">Desempenho comercial</span>
       <h2 class="font-display text-xl font-bold text-txt-primary">Análise de vendas</h2>
-      <p class="text-sm text-txt-secondary">Chega junto com o módulo de PDV e Caixa (próximas fases).</p>
+      <p class="text-sm text-txt-secondary">Evolução das vendas concluídas nos últimos 6 meses.</p>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-2">
       <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
         <p class="font-display text-sm font-bold text-txt-primary">Vendas por mês</p>
-        <p class="text-xs text-txt-muted">Quantidade de vendas ao longo do ano</p>
-        <div class="mt-4 flex h-36 items-center justify-center rounded-xl bg-surface-subtle text-xs text-txt-muted">
-          Sem dados ainda
+        <p class="text-xs text-txt-muted">Quantidade de vendas nos últimos 6 meses</p>
+        <div class="mt-4">
+          <BarSparkline :data="monthlyCountChart" tone="sky" />
         </div>
       </div>
       <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
         <p class="font-display text-sm font-bold text-txt-primary">Valor em vendas por mês</p>
-        <p class="text-xs text-txt-muted">Evolução do faturamento mensal</p>
-        <div class="mt-4 flex h-36 items-center justify-center rounded-xl bg-surface-subtle text-xs text-txt-muted">
-          Sem dados ainda
+        <p class="text-xs text-txt-muted">Evolução do faturamento nos últimos 6 meses</p>
+        <div class="mt-4">
+          <BarSparkline :data="monthlyTotalChart" tone="brand" :format-value="money" />
         </div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
+      <p class="font-display text-sm font-bold text-txt-primary">Vendas por vendedor hoje</p>
+      <p class="text-xs text-txt-muted">Faturamento de cada vendedor no dia</p>
+      <div v-if="summary?.sales_by_seller_today.length" class="mt-4 divide-y divide-border">
+        <div
+          v-for="seller in summary.sales_by_seller_today"
+          :key="seller.seller_id"
+          class="flex items-center justify-between py-2.5 text-sm"
+        >
+          <span class="font-medium text-txt-primary">{{ seller.seller_name }}</span>
+          <span class="font-display font-bold text-txt-primary">{{ money(seller.total) }}</span>
+        </div>
+      </div>
+      <div v-else class="mt-4 flex h-16 items-center justify-center rounded-xl bg-surface-subtle text-xs text-txt-muted">
+        Nenhuma venda registrada hoje ainda
       </div>
     </div>
 
@@ -195,10 +226,13 @@ await load()
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted"><Banknote :size="16" /></span>
         <span class="text-xs font-bold tracking-wide text-txt-secondary uppercase">Contas</span>
       </div>
-      <div title="Em breve" class="flex cursor-not-allowed items-center gap-3 rounded-2xl border border-dashed border-border bg-surface-raised p-4 opacity-60">
-        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted"><PiggyBank :size="16" /></span>
+      <NuxtLink
+        to="/reports"
+        class="flex items-center gap-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card transition hover:border-border-strong hover:shadow-md"
+      >
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><PiggyBank :size="16" /></span>
         <span class="text-xs font-bold tracking-wide text-txt-secondary uppercase">Relatórios</span>
-      </div>
+      </NuxtLink>
       <NuxtLink
         v-if="auth.isAdmin"
         to="/settings/catalog"
