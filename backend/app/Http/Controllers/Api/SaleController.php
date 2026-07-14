@@ -16,7 +16,7 @@ class SaleController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Sale::query()->with(['customer', 'seller', 'paymentMethod'])->latest('id');
+        $query = Sale::query()->with(['customer', 'seller', 'paymentMethod', 'convertedToSale', 'originQuote'])->latest('id');
 
         if ($request->filled('search')) {
             $search = $request->string('search')->value();
@@ -42,12 +42,18 @@ class SaleController extends Controller
             $query->where('status', $request->string('status')->value());
         }
 
+        if ($request->has('is_quote')) {
+            $request->boolean('is_quote')
+                ? $query->whereNull('cash_register_id')
+                : $query->whereNotNull('cash_register_id');
+        }
+
         return SaleResource::collection($query->paginate(20));
     }
 
     public function show(Sale $sale): SaleResource
     {
-        return SaleResource::make($sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister']));
+        return SaleResource::make($sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister', 'convertedToSale', 'originQuote']));
     }
 
     public function store(StoreSaleRequest $request, RegisterSaleAction $action): SaleResource

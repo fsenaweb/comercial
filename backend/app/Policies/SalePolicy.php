@@ -16,4 +16,9 @@ class SalePolicy
     {
         return $user->isAdmin() || $user->isCashier();
     }
+
+    public function convert(User $user, Sale $sale): bool
+    {
+        return $user->isAdmin() || $user->isCashier();
+    }
 }

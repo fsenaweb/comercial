@@ -71,6 +71,7 @@ function formatDateTime(value: string): string {
 
 function buildQuery() {
   const query = new URLSearchParams()
+  query.set('is_quote', '0')
   if (search.value.trim()) query.set('search', search.value.trim())
   if (sellerId.value) query.set('seller_id', String(sellerId.value))
   if (dateFrom.value) query.set('date_from', dateFrom.value)

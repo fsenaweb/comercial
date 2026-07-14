@@ -14,9 +14,18 @@ return new class extends Migration
         Schema::create('store_settings', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('trade_name')->nullable();
             $table->string('cnpj')->nullable();
             $table->string('address')->nullable();
             $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->string('mobile_phone')->nullable();
+            $table->string('zip_code')->nullable();
+            $table->string('address_number')->nullable();
+            $table->string('address_complement')->nullable();
+            $table->string('neighborhood')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state', 2)->nullable();
             $table->string('logo_path')->nullable();
             $table->boolean('require_seller_on_sale')->default(false);
             $table->boolean('auto_open_cash_register')->default(false);
