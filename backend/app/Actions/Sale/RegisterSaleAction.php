@@ -11,11 +11,14 @@ use App\Enums\StockMovementType;
 use App\Exceptions\CashRegisterClosedException;
 use App\Models\CashOperation;
 use App\Models\CashRegister;
+use App\Models\PaymentMethod;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SalePayment;
 use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class RegisterSaleAction
 {
@@ -34,6 +37,13 @@ class RegisterSaleAction
 
             [$saleDiscountType, $saleDiscountValue, $saleDiscountAmount, $total] = $this->resolveSaleDiscount($subtotal, $data);
 
+            $paymentsSum = array_reduce($data['payments'], fn ($carry, $payment) => bcadd($carry, (string) $payment['amount'], 2), '0.00');
+            if (bccomp($paymentsSum, $total, 2) !== 0) {
+                throw ValidationException::withMessages([
+                    'payments' => 'A soma das formas de pagamento precisa ser igual ao total da venda.',
+                ]);
+            }
+
             $sellerId = $data['seller_id'] ?? $user->id;
 
             $sale = Sale::create([
@@ -46,7 +56,6 @@ class RegisterSaleAction
                 'discount_value' => $saleDiscountValue,
                 'discount' => $saleDiscountAmount,
                 'total' => $total,
-                'payment_method_id' => $data['payment_method_id'],
                 'notes' => $data['notes'] ?? null,
                 'status' => SaleStatus::Completed,
             ]);
@@ -77,18 +86,28 @@ class RegisterSaleAction
                 ]);
             }
 
-            CashOperation::create([
-                'cash_register_id' => $cashRegister->id,
-                'user_id' => $user->id,
-                'type' => CashOperationType::In,
-                'origin' => CashOperationOrigin::Sale,
-                'reference_id' => $sale->id,
-                'payment_method_id' => $data['payment_method_id'],
-                'amount' => $total,
-                'notes' => "Venda {$sale->number}",
-            ]);
+            $paymentMethods = PaymentMethod::whereIn('id', collect($data['payments'])->pluck('payment_method_id')->unique())->get()->keyBy('id');
 
-            return $sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister']);
+            foreach ($data['payments'] as $payment) {
+                SalePayment::create([
+                    'sale_id' => $sale->id,
+                    'payment_method_id' => $payment['payment_method_id'],
+                    'amount' => $payment['amount'],
+                ]);
+
+                CashOperation::create([
+                    'cash_register_id' => $cashRegister->id,
+                    'user_id' => $user->id,
+                    'type' => CashOperationType::In,
+                    'origin' => CashOperationOrigin::Sale,
+                    'reference_id' => $sale->id,
+                    'payment_method_id' => $payment['payment_method_id'],
+                    'amount' => $payment['amount'],
+                    'notes' => "Venda {$sale->number} — {$paymentMethods[$payment['payment_method_id']]->name}",
+                ]);
+            }
+
+            return $sale->load(['items.productVariation.product', 'customer', 'seller', 'payments.paymentMethod', 'cashRegister']);
         }, 3);
     }
 }

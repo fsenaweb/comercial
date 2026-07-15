@@ -132,7 +132,7 @@ class QuoteTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
         $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
         ]);
 

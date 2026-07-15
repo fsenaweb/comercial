@@ -19,9 +19,13 @@ class RegisterSaleTest extends TestCase
     {
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+        $total = $overrides['total'] ?? 20;
+        unset($overrides['total']);
 
         return array_merge([
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [
+                ['payment_method_id' => $paymentMethod->id, 'amount' => $total],
+            ],
             'items' => [
                 ['product_variation_id' => $variation->id, 'quantity' => 2],
             ],
@@ -40,6 +44,7 @@ class RegisterSaleTest extends TestCase
             ->assertJsonPath('data.total', '20.00');
 
         $this->assertDatabaseCount('sale_items', 1);
+        $this->assertDatabaseCount('sale_payments', 1);
         $saleId = $response->json('data.id');
         $this->assertDatabaseHas('cash_operations', ['origin' => 'sale', 'amount' => 20, 'reference_id' => $saleId]);
     }
@@ -88,7 +93,7 @@ class RegisterSaleTest extends TestCase
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 1]);
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 50]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 5]],
         ]);
 
@@ -110,7 +115,7 @@ class RegisterSaleTest extends TestCase
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 5]);
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 50]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 5]],
         ]);
 
@@ -133,21 +138,21 @@ class RegisterSaleTest extends TestCase
         // Quantidade bate o mínimo, mas sem apply_wholesale o preço normal continua valendo
         // — o operador decide se aplica o atacado (checkbox no PDV), não é automático.
         $notApplied = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 100]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 10]],
         ]);
         $notApplied->assertCreated()->assertJsonPath('data.items.0.unit_price', '10.00')
             ->assertJsonPath('data.items.0.is_wholesale', false);
 
         $belowMinimum = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 90]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 9, 'apply_wholesale' => true]],
         ]);
         $belowMinimum->assertCreated()->assertJsonPath('data.items.0.unit_price', '10.00')
             ->assertJsonPath('data.items.0.is_wholesale', false);
 
         $applied = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 80]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 10, 'apply_wholesale' => true]],
         ]);
         $applied->assertCreated()->assertJsonPath('data.items.0.unit_price', '8.00')
@@ -161,7 +166,7 @@ class RegisterSaleTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 1]],
             'items' => [],
         ]);
 
@@ -175,7 +180,7 @@ class RegisterSaleTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 1]],
             'items' => [['product_variation_id' => 999999, 'quantity' => 1]],
         ]);
 
@@ -190,7 +195,7 @@ class RegisterSaleTest extends TestCase
         $variation = ProductVariation::factory()->create();
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 1]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 0]],
         ]);
 
@@ -251,11 +256,11 @@ class RegisterSaleTest extends TestCase
         $variation = ProductVariation::factory()->create();
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 1]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
         ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['payment_method_id']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['payments.0.payment_method_id']);
     }
 
     public function test_sale_number_is_generated_and_unique(): void
@@ -282,7 +287,7 @@ class RegisterSaleTest extends TestCase
 
         // 3 unidades a R$10 = R$30, desconto de item R$5 -> R$25, desconto de venda R$2 -> R$23
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 23]],
             'discount_type' => 'fixed',
             'discount_value' => 2,
             'items' => [
@@ -305,7 +310,7 @@ class RegisterSaleTest extends TestCase
 
         // 3 unidades a R$12,50 = R$37,50, desconto de item 10% -> R$33,75
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30.38]],
             'discount_type' => 'percentage',
             'discount_value' => 10,
             'items' => [
@@ -352,5 +357,68 @@ class RegisterSaleTest extends TestCase
         $response = $this->actingAs($admin)->getJson("/api/sales/{$saleId}");
 
         $response->assertOk()->assertJsonCount(1, 'data.items');
+    }
+
+    public function test_sale_accepts_multiple_payment_methods_summing_to_total(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $pix = PaymentMethod::factory()->create(['name' => 'Pix', 'active_on_pos' => true]);
+        $cash = PaymentMethod::factory()->create(['name' => 'Dinheiro', 'active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [
+                ['payment_method_id' => $pix->id, 'amount' => 12.50],
+                ['payment_method_id' => $cash->id, 'amount' => 7.50],
+            ],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.total', '20.00')
+            ->assertJsonCount(2, 'data.payments');
+
+        $saleId = $response->json('data.id');
+        $this->assertDatabaseCount('sale_payments', 2);
+        $this->assertDatabaseHas('sale_payments', ['sale_id' => $saleId, 'payment_method_id' => $pix->id, 'amount' => 12.50]);
+        $this->assertDatabaseHas('sale_payments', ['sale_id' => $saleId, 'payment_method_id' => $cash->id, 'amount' => 7.50]);
+        $this->assertDatabaseHas('cash_operations', ['reference_id' => $saleId, 'payment_method_id' => $pix->id, 'amount' => 12.50]);
+        $this->assertDatabaseHas('cash_operations', ['reference_id' => $saleId, 'payment_method_id' => $cash->id, 'amount' => 7.50]);
+    }
+
+    public function test_sale_rejects_payments_sum_that_does_not_match_total(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $pix = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $cash = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [
+                ['payment_method_id' => $pix->id, 'amount' => 12],
+                ['payment_method_id' => $cash->id, 'amount' => 7],
+            ],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['payments']);
+        $this->assertDatabaseCount('sale_payments', 0);
+        $this->assertDatabaseCount('sale_items', 0);
+    }
+
+    public function test_sale_requires_at_least_one_payment(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['payments']);
     }
 }

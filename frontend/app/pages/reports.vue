@@ -53,6 +53,7 @@ const categories: CategoryDefinition[] = [
       { key: 'vendas_produto', title: 'Vendas por Produto', description: 'Classificação detalhada e volume dos produtos mais vendidos.', needsPeriod: true },
       { key: 'vendas_categoria', title: 'Vendas por Categoria', description: 'Performance comparativa das categorias cadastradas na loja.', needsPeriod: true },
       { key: 'vendas_vendedor', title: 'Vendas por Vendedor', description: 'Acompanhamento do volume de vendas faturadas por cada vendedor.', needsPeriod: true },
+      { key: 'vendas_forma_pagamento', title: 'Vendas por Forma de Pagamento', description: 'Composição do faturamento por forma de pagamento, incluindo vendas com pagamento dividido.', needsPeriod: true },
       { key: 'lucro_bruto', title: 'Lucro Bruto por Produto', description: 'Demonstrativo de margem de lucro e rentabilidade unitária.', needsPeriod: true },
     ],
   },

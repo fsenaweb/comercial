@@ -45,7 +45,12 @@
         <tr><td>Data</td><td class="right">{{ $sale->created_at->format('d/m/Y H:i') }}</td></tr>
         <tr><td>Vendedor</td><td class="right">{{ $sale->seller?->name ?? '-' }}</td></tr>
         <tr><td>Cliente</td><td class="right">{{ $sale->customer?->name ?? 'Não informado' }}</td></tr>
-        <tr><td>Forma de pagamento</td><td class="right">{{ $sale->paymentMethod?->name }}</td></tr>
+        @foreach ($sale->payments as $payment)
+            <tr>
+                <td>{{ $loop->first ? 'Forma de pagamento' : '' }}</td>
+                <td class="right">{{ $payment->paymentMethod?->name }} — R$ {{ number_format($payment->amount, 2, ',', '.') }}</td>
+            </tr>
+        @endforeach
     </table>
 
     <div class="line"></div>

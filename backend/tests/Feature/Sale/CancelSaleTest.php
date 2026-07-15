@@ -19,7 +19,7 @@ class CancelSaleTest extends TestCase
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
 
         $response = $this->actingAs($admin)->postJson('/api/sales', [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 3]],
         ]);
 
@@ -144,5 +144,36 @@ class CancelSaleTest extends TestCase
 
         $canceled->assertOk()->assertJsonCount(1, 'data');
         $completed->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_canceling_a_split_payment_sale_reverts_one_cash_operation_per_payment_leg(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $pix = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $cash = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $saleId = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [
+                ['payment_method_id' => $pix->id, 'amount' => 12],
+                ['payment_method_id' => $cash->id, 'amount' => 18],
+            ],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 3]],
+        ])->json('data.id');
+
+        $response = $this->actingAs($admin)->postJson("/api/sales/{$saleId}/cancel", ['reason' => 'Cliente desistiu']);
+
+        $response->assertOk()->assertJsonPath('data.status', 'canceled');
+        $this->assertDatabaseHas('cash_operations', [
+            'reference_id' => $saleId, 'type' => 'out', 'origin' => 'adjustment', 'payment_method_id' => $pix->id, 'amount' => 12,
+        ]);
+        $this->assertDatabaseHas('cash_operations', [
+            'reference_id' => $saleId, 'type' => 'out', 'origin' => 'adjustment', 'payment_method_id' => $cash->id, 'amount' => 18,
+        ]);
+        $this->assertEquals(
+            2,
+            \App\Models\CashOperation::where('reference_id', $saleId)->where('type', 'out')->count(),
+        );
     }
 }

@@ -32,7 +32,6 @@ class RegisterQuoteAction
                 'discount_value' => $saleDiscountValue,
                 'discount' => $saleDiscountAmount,
                 'total' => $total,
-                'payment_method_id' => null,
                 'notes' => $data['notes'] ?? null,
                 'status' => SaleStatus::Pending,
                 'expires_at' => $data['expires_at'] ?? null,

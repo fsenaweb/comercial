@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ban, CheckCircle2, Eye, FileText, Search, TrendingUp } from 'lucide-vue-next'
+import { Ban, CheckCircle2, Eye, FileText, Search, Trash2, TrendingUp } from 'lucide-vue-next'
 
 interface UserOption {
   id: number
@@ -48,7 +48,7 @@ const api = useApi()
 const auth = useAuthStore()
 const cashRegisterStore = useCashRegisterStore()
 const { parse, firstFieldError } = useApiError()
-const { format } = useCurrencyMask()
+const { format, maskInput: maskCurrency, toNumber: currencyToNumber } = useCurrencyMask()
 
 const quotes = ref<QuoteListItem[]>([])
 const sellers = ref<UserOption[]>([])
@@ -146,27 +146,88 @@ async function viewQuote(quoteId: number) {
 }
 
 // ---- Converter em venda ----
+interface ConvertPaymentLine {
+  paymentMethodId: number | null
+  amount: number
+}
+
 const showConvertModal = ref(false)
 const convertQuoteId = ref<number | null>(null)
-const convertPaymentMethodId = ref<number | null>(null)
+const convertQuoteTotal = ref(0)
+const convertSplitPayment = ref(false)
+const convertSinglePaymentMethodId = ref<number | null>(null)
+const convertPayments = ref<ConvertPaymentLine[]>([{ paymentMethodId: null, amount: 0 }])
+const convertPaymentMasked = ref<string[]>(['R$ 0,00'])
 const convertSaving = ref(false)
 const convertError = ref<unknown>(null)
 
+const convertPaymentsTotal = computed(() => convertPayments.value.reduce((sum, p) => sum + Math.round(p.amount * 100), 0) / 100)
+const convertRemaining = computed(() => Math.round((convertQuoteTotal.value - convertPaymentsTotal.value) * 100) / 100)
+const canConfirmConvert = computed(() => {
+  if (!cashRegisterOpen.value) return false
+  if (convertSplitPayment.value) {
+    return convertPayments.value.every((p) => p.paymentMethodId !== null && p.amount > 0)
+      && Math.abs(convertRemaining.value) < 0.005
+  }
+  return convertSinglePaymentMethodId.value !== null
+})
+
 function openConvertModal(quoteId: number) {
   convertQuoteId.value = quoteId
-  convertPaymentMethodId.value = null
+  const quote = quotes.value.find((q) => q.id === quoteId)
+  convertQuoteTotal.value = quote ? Number(quote.total) : 0
+  convertSplitPayment.value = false
+  convertSinglePaymentMethodId.value = null
+  convertPayments.value = [{ paymentMethodId: null, amount: convertQuoteTotal.value }]
+  convertPaymentMasked.value = [maskCurrency(String(Math.round(convertQuoteTotal.value * 100)))]
   convertError.value = null
   showConvertModal.value = true
 }
 
+function toggleConvertSplitPayment(value: boolean) {
+  convertSplitPayment.value = value
+  if (value && convertSinglePaymentMethodId.value !== null && convertPayments.value[0]?.paymentMethodId === null) {
+    convertPayments.value[0].paymentMethodId = convertSinglePaymentMethodId.value
+  }
+}
+
+function addConvertPaymentLine() {
+  convertPayments.value.push({ paymentMethodId: null, amount: 0 })
+  convertPaymentMasked.value.push('R$ 0,00')
+}
+
+function removeConvertPaymentLine(index: number) {
+  if (convertPayments.value.length <= 1) return
+  convertPayments.value.splice(index, 1)
+  convertPaymentMasked.value.splice(index, 1)
+}
+
+function setConvertPaymentAmount(index: number, raw: string) {
+  const masked = maskCurrency(raw)
+  convertPaymentMasked.value[index] = masked
+  const line = convertPayments.value[index]
+  if (line) line.amount = currencyToNumber(masked)
+}
+
+function fillConvertRemaining(index: number) {
+  const line = convertPayments.value[index]
+  if (!line) return
+  line.amount = Math.max(0, Math.round((line.amount + convertRemaining.value) * 100) / 100)
+  convertPaymentMasked.value[index] = maskCurrency(String(Math.round(line.amount * 100)))
+}
+
 async function confirmConvert() {
-  if (!convertQuoteId.value || !convertPaymentMethodId.value) return
+  if (!convertQuoteId.value || !canConfirmConvert.value) return
   convertSaving.value = true
   convertError.value = null
   try {
+    const payments = convertSplitPayment.value
+      ? convertPayments.value.map((p) => ({ payment_method_id: p.paymentMethodId, amount: p.amount }))
+      : [{ payment_method_id: convertSinglePaymentMethodId.value, amount: convertQuoteTotal.value }]
+
     const { data } = await api<{ data: { id: number } }>(`/sales/${convertQuoteId.value}/convert`, {
       method: 'POST',
-      body: { payment_method_id: convertPaymentMethodId.value },
+      body: { payments },
     })
     showConvertModal.value = false
     window.open(`/sales/${data.id}/receipt`, '_blank')
@@ -344,16 +405,86 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
       </div>
     </BaseModal>
 
-    <BaseModal :open="showConvertModal" title="Converter em venda" subtitle="Escolha a forma de pagamento — o orçamento vira uma venda de verdade, com baixa de estoque e lançamento no caixa." @close="showConvertModal = false">
+    <BaseModal :open="showConvertModal" title="Converter em venda" subtitle="Escolha a(s) forma(s) de pagamento — o orçamento vira uma venda de verdade, com baixa de estoque e lançamento no caixa." @close="showConvertModal = false">
       <div class="space-y-4">
         <p v-if="!cashRegisterOpen" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           Nenhum caixa aberto — não é possível converter em venda agora. Abra o caixa e tente novamente.
         </p>
-        <BaseSelect v-model="convertPaymentMethodId" label="Forma de pagamento" :options="paymentMethodOptions" :disabled="!cashRegisterOpen" :error="firstFieldError(convertError, 'payment_method_id')" />
-        <p v-if="convertError && !firstFieldError(convertError, 'payment_method_id')" class="text-sm text-rose-600">{{ parse(convertError).message }}</p>
+
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-txt-secondary">Total do orçamento: {{ formatAmount(convertQuoteTotal) }}</span>
+          <BaseSwitch :model-value="convertSplitPayment" label="Dividir pagamento" :disabled="!cashRegisterOpen" @update:model-value="toggleConvertSplitPayment" />
+        </div>
+
+        <template v-if="!convertSplitPayment">
+          <BaseSelect
+            :model-value="convertSinglePaymentMethodId"
+            label="Forma de pagamento"
+            :options="paymentMethodOptions"
+            :disabled="!cashRegisterOpen"
+            :error="firstFieldError(convertError, 'payments.0.payment_method_id')"
+            @update:model-value="convertSinglePaymentMethodId = Number($event)"
+          />
+        </template>
+
+        <template v-else>
+          <div class="flex items-center justify-end">
+            <span class="text-[11.5px] font-bold" :class="convertRemaining === 0 ? 'text-emerald-600' : 'text-rose-600'">
+              {{ convertRemaining === 0 ? 'Pagamento completo' : `Restante: ${formatAmount(convertRemaining)}` }}
+            </span>
+          </div>
+
+          <div v-for="(line, index) in convertPayments" :key="index" class="rounded-xl border border-border p-3">
+            <div class="flex items-end gap-2">
+              <div class="flex-1">
+                <BaseSelect
+                  :model-value="line.paymentMethodId"
+                  label="Forma"
+                  :options="paymentMethodOptions"
+                  :disabled="!cashRegisterOpen"
+                  :error="firstFieldError(convertError, `payments.${index}.payment_method_id`)"
+                  @update:model-value="line.paymentMethodId = Number($event)"
+                />
+              </div>
+              <div class="w-32 flex-none">
+                <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor</label>
+                <input
+                  :value="convertPaymentMasked[index]"
+                  type="text"
+                  :disabled="!cashRegisterOpen"
+                  class="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  @input="setConvertPaymentAmount(index, ($event.target as HTMLInputElement).value)"
+                >
+              </div>
+              <button
+                v-if="convertPayments.length > 1"
+                type="button"
+                class="mb-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                @click="removeConvertPaymentLine(index)"
+              >
+                <Trash2 :size="15" />
+              </button>
+            </div>
+            <div class="mt-1.5 flex justify-end">
+              <button
+                type="button"
+                class="cursor-pointer rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand transition hover:bg-brand/20"
+                @click="fillConvertRemaining(index)"
+              >
+                Usar restante
+              </button>
+            </div>
+          </div>
+
+          <BaseButton variant="ghost" :block="true" :disabled="!cashRegisterOpen" @click="addConvertPaymentLine">
+            Adicionar forma de pagamento
+          </BaseButton>
+        </template>
+
+        <p v-if="convertError && !firstFieldError(convertError, 'payments')" class="text-sm text-rose-600">{{ parse(convertError).message }}</p>
         <div class="flex justify-end gap-3 border-t border-border pt-4">
           <BaseButton type="button" variant="ghost" :block="false" @click="showConvertModal = false">Voltar</BaseButton>
-          <BaseButton type="button" :loading="convertSaving" :disabled="!cashRegisterOpen || !convertPaymentMethodId" :block="false" @click="confirmConvert">Converter em venda</BaseButton>
+          <BaseButton type="button" :loading="convertSaving" :disabled="!canConfirmConvert" :block="false" @click="confirmConvert">Converter em venda</BaseButton>
         </div>
       </div>
     </BaseModal>

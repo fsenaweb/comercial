@@ -19,7 +19,6 @@ return new class extends Migration
             $table->decimal('discount_value', 10, 2)->default(0);
             $table->decimal('discount', 10, 2)->default(0);
             $table->decimal('total', 10, 2);
-            $table->foreignId('payment_method_id')->nullable()->constrained();
             $table->text('notes')->nullable();
             $table->string('status')->default('completed');
             $table->string('canceled_reason')->nullable();

@@ -31,6 +31,13 @@ export interface SaleItem {
   total: string
 }
 
+export interface SalePayment {
+  id: number
+  payment_method_id: number
+  payment_method_name: string | null
+  amount: string
+}
+
 export interface Sale {
   id: number
   number: string
@@ -45,8 +52,7 @@ export interface Sale {
   discount_value: string
   discount: string
   total: string
-  payment_method_id: number
-  payment_method_name: string | null
+  payments: SalePayment[]
   notes: string | null
   status: 'pending' | 'completed' | 'canceled' | 'converted'
   status_label: string
@@ -67,13 +73,24 @@ function effectiveUnitPrice(item: Pick<CartItem, 'unitPrice' | 'quantity' | 'app
   return item.unitPrice
 }
 
+export interface PaymentLine {
+  paymentMethodId: number | null
+  amount: number
+}
+
+function emptyPaymentLine(): PaymentLine {
+  return { paymentMethodId: null, amount: 0 }
+}
+
 export const useCartStore = defineStore('cart', {
   state: () => ({
     items: [] as CartItem[],
     customerId: null as number | null,
     customerName: null as string | null,
     sellerId: null as number | null,
-    paymentMethodId: null as number | null,
+    splitPayment: false,
+    singlePaymentMethodId: null as number | null,
+    payments: [emptyPaymentLine()] as PaymentLine[],
     saleDiscountType: 'percentage' as DiscountType,
     saleDiscountValue: 0,
     notes: null as string | null,
@@ -102,6 +119,12 @@ export const useCartStore = defineStore('cart', {
     itemCount: (state) => state.items.reduce((sum, item) => sum + item.quantity, 0),
     isEmpty: (state) => state.items.length === 0,
     effectivePrice: () => (item: CartItem) => effectiveUnitPrice(item),
+
+    paymentsTotal: (state) => state.payments.reduce((sum, payment) => sum + Math.round(payment.amount * 100), 0) / 100,
+
+    remainingBalance(): number {
+      return Math.round((this.total - this.paymentsTotal) * 100) / 100
+    },
   },
 
   actions: {
@@ -173,8 +196,37 @@ export const useCartStore = defineStore('cart', {
       this.sellerId = id
     },
 
-    setPaymentMethod(id: number | null) {
-      this.paymentMethodId = id
+    setSplitPayment(value: boolean) {
+      this.splitPayment = value
+    },
+
+    setSinglePaymentMethod(id: number | null) {
+      this.singlePaymentMethodId = id
+    },
+
+    addPaymentLine() {
+      this.payments.push(emptyPaymentLine())
+    },
+
+    removePaymentLine(index: number) {
+      if (this.payments.length <= 1) return
+      this.payments.splice(index, 1)
+    },
+
+    setPaymentMethodAt(index: number, id: number | null) {
+      const line = this.payments[index]
+      if (line) line.paymentMethodId = id
+    },
+
+    setPaymentAmountAt(index: number, amount: number) {
+      const line = this.payments[index]
+      if (line) line.amount = Math.max(0, amount)
+    },
+
+    fillRemainingAt(index: number) {
+      const line = this.payments[index]
+      if (!line) return
+      line.amount = Math.max(0, Math.round((line.amount + this.remainingBalance) * 100) / 100)
     },
 
     setSaleDiscount(type: DiscountType, value: number) {
@@ -194,7 +246,9 @@ export const useCartStore = defineStore('cart', {
       this.items = []
       this.customerId = null
       this.customerName = null
-      this.paymentMethodId = null
+      this.splitPayment = false
+      this.singlePaymentMethodId = null
+      this.payments = [emptyPaymentLine()]
       this.saleDiscountType = 'percentage'
       this.saleDiscountValue = 0
       this.notes = null
@@ -203,12 +257,16 @@ export const useCartStore = defineStore('cart', {
 
     async checkout() {
       const api = useApi()
+      const payments = this.splitPayment
+        ? this.payments.map((payment) => ({ payment_method_id: payment.paymentMethodId, amount: payment.amount }))
+        : [{ payment_method_id: this.singlePaymentMethodId, amount: this.total }]
+
       const { data } = await api<{ data: Sale }>('/sales', {
         method: 'POST',
         body: {
           customer_id: this.customerId,
           seller_id: this.sellerId,
-          payment_method_id: this.paymentMethodId,
+          payments,
           discount_type: this.saleDiscountType,
           discount_value: this.saleDiscountValue,
           notes: this.notes,

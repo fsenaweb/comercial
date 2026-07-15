@@ -14,7 +14,7 @@ class ReceiptController extends Controller
         $generator = new BarcodeGeneratorSVG();
 
         return view('receipts.show', [
-            'sale' => $sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister']),
+            'sale' => $sale->load(['items.productVariation.product', 'customer', 'seller', 'payments.paymentMethod', 'cashRegister']),
             'storeSetting' => StoreSetting::current(),
             'barcodeSvg' => $generator->getBarcode($sale->number, $generator::TYPE_CODE_128, 2, 50),
         ]);

@@ -32,7 +32,7 @@ class ConvertQuoteTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
         ]);
 
         $response->assertCreated()
@@ -52,6 +52,24 @@ class ConvertQuoteTest extends TestCase
         ]);
     }
 
+    public function test_convert_accepts_multiple_payment_methods(): void
+    {
+        $admin = User::factory()->admin()->create();
+        [$quoteId] = $this->makeQuote($admin);
+        CashRegister::factory()->open()->create();
+        $pix = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $cash = PaymentMethod::factory()->create(['active_on_pos' => true]);
+
+        $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
+            'payments' => [
+                ['payment_method_id' => $pix->id, 'amount' => 20],
+                ['payment_method_id' => $cash->id, 'amount' => 10],
+            ],
+        ]);
+
+        $response->assertCreated()->assertJsonCount(2, 'data.payments');
+    }
+
     public function test_convert_requires_open_cash_register(): void
     {
         $admin = User::factory()->admin()->create();
@@ -59,7 +77,7 @@ class ConvertQuoteTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['cash_register']);
@@ -75,7 +93,7 @@ class ConvertQuoteTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
         ]);
 
         $response->assertStatus(422);
@@ -89,9 +107,13 @@ class ConvertQuoteTest extends TestCase
         CashRegister::factory()->open()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
-        $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", ['payment_method_id' => $paymentMethod->id]);
+        $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
+        ]);
 
-        $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", ['payment_method_id' => $paymentMethod->id]);
+        $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
+        ]);
 
         $response->assertStatus(422);
     }
@@ -106,7 +128,7 @@ class ConvertQuoteTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['expires_at']);
@@ -121,7 +143,7 @@ class ConvertQuoteTest extends TestCase
         $seller = User::factory()->create();
 
         $response = $this->actingAs($seller)->postJson("/api/sales/{$quoteId}/convert", [
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
         ]);
 
         $response->assertStatus(403);
@@ -135,6 +157,6 @@ class ConvertQuoteTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", []);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['payment_method_id']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['payments']);
     }
 }

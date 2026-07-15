@@ -21,7 +21,7 @@ class SaleHistoryFilterTest extends TestCase
         $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
 
         $saleId = $this->actingAs($seller)->postJson('/api/sales', array_merge([
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
             'seller_id' => $seller->id,
             'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
         ], $overrides))->json('data.id');

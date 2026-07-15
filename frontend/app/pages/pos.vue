@@ -376,16 +376,14 @@ async function submitNewCustomer() {
   }
 }
 
-// ---- Valor recebido / troco (informativo, não persistido) ----
+// ---- Pagamento único (padrão): mesma UX de antes do split payment — só a
+// forma, sem campo de valor (é sempre o total). "Dividir pagamento" (toggle)
+// é que abre a lista de linhas abaixo.
 const valorRecebidoMasked = ref('R$ 0,00')
 const troco = computed(() => Math.max(0, currencyToNumber(valorRecebidoMasked.value) - cart.total))
 
-// "Valor recebido"/troco só fazem sentido pra pagamento em dinheiro — nas
-// demais formas (cartão, Pix...) o valor é sempre exato, sem troco a calcular.
-// payment_methods é um cadastro livre (Sprint 2), sem um campo que marque
-// "isto é dinheiro", então o critério é o nome informado pela loja.
 const isCashPayment = computed(() => {
-  const method = paymentMethods.value.find((p) => p.id === cart.paymentMethodId)
+  const method = paymentMethods.value.find((p) => p.id === cart.singlePaymentMethodId)
   return method !== undefined && method.name.trim().toLowerCase() === 'dinheiro'
 })
 
@@ -397,16 +395,78 @@ function usarRestante() {
   valorRecebidoMasked.value = maskCurrency(String(Math.round(cart.total * 100)))
 }
 
+function toggleSplitPayment(value: boolean) {
+  cart.setSplitPayment(value)
+  valorRecebidoMasked.value = 'R$ 0,00'
+  // Ao ligar o split com uma forma já escolhida no modo único, aproveita ela
+  // na primeira linha em vez de forçar reescolher do zero.
+  if (value && cart.singlePaymentMethodId !== null && cart.payments[0]?.paymentMethodId === null) {
+    cart.setPaymentMethodAt(0, cart.singlePaymentMethodId)
+  }
+}
+
+// ---- Pagamento dividido: valor/linha e valor recebido/troco por linha em dinheiro (informativo, não persistido) ----
+const paymentAmountMasked = ref<string[]>(['R$ 0,00'])
+const cashReceivedMasked = ref<string[]>(['R$ 0,00'])
+
+function addPaymentLine() {
+  cart.addPaymentLine()
+  paymentAmountMasked.value.push('R$ 0,00')
+  cashReceivedMasked.value.push('R$ 0,00')
+}
+
+function removePaymentLine(index: number) {
+  cart.removePaymentLine(index)
+  paymentAmountMasked.value.splice(index, 1)
+  cashReceivedMasked.value.splice(index, 1)
+}
+
+function setPaymentAmountMasked(index: number, raw: string) {
+  const masked = maskCurrency(raw)
+  paymentAmountMasked.value[index] = masked
+  cart.setPaymentAmountAt(index, currencyToNumber(masked))
+}
+
+function setCashReceivedMasked(index: number, raw: string) {
+  cashReceivedMasked.value[index] = maskCurrency(raw)
+}
+
+function usarRestanteLine(index: number) {
+  cart.fillRemainingAt(index)
+  const line = cart.payments[index]
+  if (line) paymentAmountMasked.value[index] = maskCurrency(String(Math.round(line.amount * 100)))
+}
+
+// "Valor recebido"/troco só fazem sentido pra linha em dinheiro — nas demais
+// formas (cartão, Pix...) o valor é sempre exato, sem troco a calcular.
+// payment_methods é um cadastro livre (Sprint 2), sem um campo que marque
+// "isto é dinheiro", então o critério é o nome informado pela loja.
+function isCashLine(index: number): boolean {
+  const line = cart.payments[index]
+  if (!line || line.paymentMethodId === null) return false
+  const method = paymentMethods.value.find((p) => p.id === line.paymentMethodId)
+  return method !== undefined && method.name.trim().toLowerCase() === 'dinheiro'
+}
+
+function trocoFor(index: number): number {
+  const line = cart.payments[index]
+  if (!line) return 0
+  return Math.max(0, currencyToNumber(cashReceivedMasked.value[index] ?? 'R$ 0,00') - line.amount)
+}
+
 // ---- Finalizar venda ----
 const finalizing = ref(false)
 const checkoutError = ref<unknown>(null)
 
-const canFinalize = computed(() =>
-  cashRegisterOpen.value
-  && !cart.isEmpty
-  && cart.paymentMethodId !== null
-  && (!requireSellerOnSale.value || cart.sellerId !== null),
-)
+const canFinalize = computed(() => {
+  if (!cashRegisterOpen.value || cart.isEmpty) return false
+  if (requireSellerOnSale.value && cart.sellerId === null) return false
+  if (cart.splitPayment) {
+    return cart.payments.every((p) => p.paymentMethodId !== null && p.amount > 0)
+      && Math.abs(cart.remainingBalance) < 0.005
+  }
+  return cart.singlePaymentMethodId !== null
+})
 
 async function handleFinalizarVenda() {
   if (!canFinalize.value) return
@@ -415,6 +475,8 @@ async function handleFinalizarVenda() {
   try {
     const sale = await cart.checkout()
     valorRecebidoMasked.value = 'R$ 0,00'
+    paymentAmountMasked.value = ['R$ 0,00']
+    cashReceivedMasked.value = ['R$ 0,00']
     window.open(`/sales/${sale.id}/receipt`, '_blank')
     await cashRegisterStore.fetchCurrent()
     focusSearch()
@@ -446,6 +508,8 @@ async function confirmSaveQuote() {
   try {
     cart.setExpiresAt(quoteExpiresAt.value || null)
     await cart.saveAsQuote()
+    paymentAmountMasked.value = ['R$ 0,00']
+    cashReceivedMasked.value = ['R$ 0,00']
     showQuoteModal.value = false
     await navigateTo('/quotes')
   } catch (err) {
@@ -789,38 +853,116 @@ async function confirmSaveQuote() {
         </div>
 
         <div v-if="cashRegisterOpen" class="rounded-2xl bg-surface-raised p-4.5 shadow-card">
-          <BaseSelect
-            :model-value="cart.paymentMethodId"
-            label="Forma de pagamento"
-            :options="paymentMethodOptions"
-            :error="firstFieldError(checkoutError, 'payment_method_id')"
-            @update:model-value="cart.setPaymentMethod(Number($event))"
-          />
+          <div class="mb-3 flex items-center justify-between">
+            <p class="font-display text-sm font-bold text-txt-primary">Forma de pagamento</p>
+            <BaseSwitch :model-value="cart.splitPayment" label="Dividir pagamento" @update:model-value="toggleSplitPayment" />
+          </div>
 
-          <template v-if="isCashPayment">
-            <div class="mt-3">
-              <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor recebido</label>
-              <input
-                :value="valorRecebidoMasked"
-                type="text"
-                class="w-full rounded-xl border border-border px-3 py-2 text-sm"
-                @input="valorRecebidoMasked = maskCurrency(($event.target as HTMLInputElement).value)"
-              >
+          <template v-if="!cart.splitPayment">
+            <BaseSelect
+              :model-value="cart.singlePaymentMethodId"
+              label="Forma de pagamento"
+              :options="paymentMethodOptions"
+              :error="firstFieldError(checkoutError, 'payments.0.payment_method_id')"
+              @update:model-value="cart.setSinglePaymentMethod(Number($event))"
+            />
+
+            <template v-if="isCashPayment">
+              <div class="mt-3">
+                <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor recebido</label>
+                <input
+                  :value="valorRecebidoMasked"
+                  type="text"
+                  class="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  @input="valorRecebidoMasked = maskCurrency(($event.target as HTMLInputElement).value)"
+                >
+                <div class="mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand transition hover:bg-brand/20"
+                    @click="usarRestante"
+                  >
+                    Usar restante
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="troco > 0" class="mt-2 flex items-center justify-between text-sm">
+                <span class="text-txt-secondary">Troco</span>
+                <span class="font-bold text-txt-primary">{{ formatCurrency(Math.round(troco * 100)) }}</span>
+              </div>
+            </template>
+          </template>
+
+          <template v-else>
+            <div class="mb-3 flex items-center justify-end">
+              <span class="text-[11.5px] font-bold" :class="cart.remainingBalance === 0 ? 'text-emerald-600' : 'text-rose-600'">
+                {{ cart.remainingBalance === 0 ? 'Pagamento completo' : `Restante: ${formatCurrency(Math.round(cart.remainingBalance * 100))}` }}
+              </span>
+            </div>
+
+            <div v-for="(line, index) in cart.payments" :key="index" class="mb-3 rounded-xl border border-border p-3">
+              <div class="flex items-end gap-2">
+                <div class="flex-1">
+                  <BaseSelect
+                    :model-value="line.paymentMethodId"
+                    label="Forma"
+                    :options="paymentMethodOptions"
+                    :error="firstFieldError(checkoutError, `payments.${index}.payment_method_id`)"
+                    @update:model-value="cart.setPaymentMethodAt(index, Number($event))"
+                  />
+                </div>
+                <div class="w-32 flex-none">
+                  <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor</label>
+                  <input
+                    :value="paymentAmountMasked[index]"
+                    type="text"
+                    class="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    @input="setPaymentAmountMasked(index, ($event.target as HTMLInputElement).value)"
+                  >
+                </div>
+                <button
+                  v-if="cart.payments.length > 1"
+                  type="button"
+                  class="mb-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                  @click="removePaymentLine(index)"
+                >
+                  <Trash2 :size="15" />
+                </button>
+              </div>
+
               <div class="mt-1.5 flex justify-end">
                 <button
                   type="button"
                   class="cursor-pointer rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-bold text-brand transition hover:bg-brand/20"
-                  @click="usarRestante"
+                  @click="usarRestanteLine(index)"
                 >
                   Usar restante
                 </button>
               </div>
+
+              <template v-if="isCashLine(index)">
+                <div class="mt-2">
+                  <label class="mb-1 block text-sm font-medium text-txt-secondary">Valor recebido</label>
+                  <input
+                    :value="cashReceivedMasked[index]"
+                    type="text"
+                    class="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    @input="setCashReceivedMasked(index, ($event.target as HTMLInputElement).value)"
+                  >
+                </div>
+
+                <div v-if="trocoFor(index) > 0" class="mt-1.5 flex items-center justify-between text-sm">
+                  <span class="text-txt-secondary">Troco</span>
+                  <span class="font-bold text-txt-primary">{{ formatCurrency(Math.round(trocoFor(index) * 100)) }}</span>
+                </div>
+              </template>
             </div>
 
-            <div v-if="troco > 0" class="mt-2 flex items-center justify-between text-sm">
-              <span class="text-txt-secondary">Troco</span>
-              <span class="font-bold text-txt-primary">{{ formatCurrency(Math.round(troco * 100)) }}</span>
-            </div>
+            <BaseButton variant="ghost" :block="true" @click="addPaymentLine">
+              <Plus :size="14" />
+              Adicionar forma de pagamento
+            </BaseButton>
           </template>
         </div>
 

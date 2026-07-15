@@ -45,7 +45,9 @@ class CancelQuoteTest extends TestCase
         [$quoteId] = $this->makeQuote($admin);
         CashRegister::factory()->open()->create();
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
-        $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", ['payment_method_id' => $paymentMethod->id]);
+        $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/convert", [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30]],
+        ]);
 
         $response = $this->actingAs($admin)->postJson("/api/sales/{$quoteId}/cancel", ['reason' => 'Motivo qualquer']);
 

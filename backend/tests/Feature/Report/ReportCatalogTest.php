@@ -21,6 +21,7 @@ class ReportCatalogTest extends TestCase
             ['vendas_produto'],
             ['vendas_categoria'],
             ['vendas_vendedor'],
+            ['vendas_forma_pagamento'],
             ['lucro_bruto'],
             ['nivel_estoque'],
             ['valor_estoque'],

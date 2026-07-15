@@ -28,7 +28,6 @@ class Sale extends Model
         'discount_value',
         'discount',
         'total',
-        'payment_method_id',
         'notes',
         'status',
         'canceled_reason',
@@ -74,9 +73,9 @@ class Sale extends Model
         return $this->belongsTo(CashRegister::class);
     }
 
-    public function paymentMethod(): BelongsTo
+    public function payments(): HasMany
     {
-        return $this->belongsTo(PaymentMethod::class);
+        return $this->hasMany(SalePayment::class);
     }
 
     public function canceledBy(): BelongsTo
