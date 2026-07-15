@@ -484,7 +484,7 @@ await loadAll()
           <div class="flex justify-end gap-1">
             <IconButton v-if="operation.origin === 'sale' && operation.reference_id" :icon="ShoppingCart" label="Ver itens da venda" @click="viewSaleItems(operation.reference_id)" />
             <IconButton
-              v-if="canOperate && selected.status === 'open' && operation.origin !== 'sale' && operation.origin !== 'adjustment'"
+              v-if="canOperate && selected.status === 'open' && operation.origin !== 'sale' && operation.origin !== 'adjustment' && operation.origin !== 'accounts_receivable'"
               :icon="Trash2"
               label="Remover"
               tone="danger"

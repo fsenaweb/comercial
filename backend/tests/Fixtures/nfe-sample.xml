@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe Id="NFe35260712345678000199550010000012341123456789" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <nNF>1234</nNF>
+        <serie>1</serie>
+        <dhEmi>2026-07-01T10:00:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>12345678000199</CNPJ>
+        <xNome>Fornecedor XPTO Ltda</xNome>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <cProd>FORN-001</cProd>
+          <cEAN>7891234567890</cEAN>
+          <xProd>Filtro de Óleo</xProd>
+          <qCom>10.0000</qCom>
+          <vUnCom>5.0000</vUnCom>
+          <vProd>50.00</vProd>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>FORN-002</cProd>
+          <cEAN>SEM GTIN</cEAN>
+          <xProd>Produto Não Cadastrado</xProd>
+          <qCom>3.0000</qCom>
+          <vUnCom>10.0000</vUnCom>
+          <vProd>30.00</vProd>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vProd>80.00</vProd>
+          <vFrete>5.00</vFrete>
+          <vNF>85.00</vNF>
+        </ICMSTot>
+      </total>
+      <transp>
+        <vFrete>5.00</vFrete>
+      </transp>
+      <cobr>
+        <fat>
+          <nFat>1234</nFat>
+          <vOrig>85.00</vOrig>
+        </fat>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-08-01</dVenc>
+          <vDup>42.50</vDup>
+        </dup>
+        <dup>
+          <nDup>002</nDup>
+          <dVenc>2026-09-01</dVenc>
+          <vDup>42.50</vDup>
+        </dup>
+      </cobr>
+    </infNFe>
+  </NFe>
+  <protNFe>
+    <infProt>
+      <chNFe>35260712345678000199550010000012341123456789</chNFe>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado o uso da NF-e</xMotivo>
+    </infProt>
+  </protNFe>
+</nfeProc>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, ArrowLeft, PackagePlus, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { AlertTriangle, ArrowLeft, FileUp, PackagePlus, Plus, Search, Trash2 } from 'lucide-vue-next'
 
 interface Variation {
   id: number
@@ -190,10 +190,16 @@ await loadAll()
           <h1 class="font-display text-[30px] font-extrabold text-brand">Entradas de Estoque</h1>
           <p class="text-sm text-txt-secondary">Registre o recebimento de mercadoria de fornecedores, aumentando o saldo de produtos já cadastrados.</p>
         </div>
-        <BaseButton :block="false" @click="openForm">
-          <Plus :size="15" />
-          Nova entrada
-        </BaseButton>
+        <div class="flex gap-2.5">
+          <BaseButton variant="ghost" :block="false" @click="navigateTo('/stock/nfe-import')">
+            <FileUp :size="15" />
+            Importar XML de NF-e
+          </BaseButton>
+          <BaseButton :block="false" @click="openForm">
+            <Plus :size="15" />
+            Nova entrada
+          </BaseButton>
+        </div>
       </div>
 
       <div class="rounded-2xl border border-border bg-surface-raised shadow-card">

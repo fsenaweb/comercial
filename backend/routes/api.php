@@ -1,10 +1,14 @@
 <?php
 
+use App\Http\Controllers\Api\AccountsPayableController;
+use App\Http\Controllers\Api\AccountsReceivableController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CashRegisterController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
@@ -13,6 +17,7 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StoreSettingController;
+use App\Http\Controllers\Api\StockEntryController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UnitController;
@@ -55,6 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/stock-movements/adjustment', [StockMovementController::class, 'adjustment']);
     Route::post('/stock-movements/entries', [StockMovementController::class, 'entry']);
 
+    Route::get('/stock-entries', [StockEntryController::class, 'index']);
+    Route::get('/stock-entries/{stockEntry}', [StockEntryController::class, 'show']);
+    Route::post('/stock-entries/parse-xml', [StockEntryController::class, 'parseXml']);
+    Route::post('/stock-entries', [StockEntryController::class, 'store']);
+
     Route::get('/cash-registers', [CashRegisterController::class, 'index']);
     Route::get('/cash-registers/current', [CashRegisterController::class, 'current']);
     Route::post('/cash-registers/open', [CashRegisterController::class, 'open']);
@@ -63,6 +73,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cash-registers/{cashRegister}', [CashRegisterController::class, 'update']);
     Route::post('/cash-registers/{cashRegister}/close', [CashRegisterController::class, 'close']);
     Route::get('/cash-registers/{cashRegister}/operations', [CashRegisterController::class, 'operations']);
+
+    Route::get('/accounts-receivable', [AccountsReceivableController::class, 'index']);
+    Route::get('/accounts-receivable/{accountsReceivable}', [AccountsReceivableController::class, 'show']);
+    Route::post('/accounts-receivable/debits', [AccountsReceivableController::class, 'storeDebit']);
+    Route::put('/accounts-receivable/debits/{accountEntry}', [AccountsReceivableController::class, 'updateDebit']);
+    Route::post('/accounts-receivable/{accountsReceivable}/payments', [AccountsReceivableController::class, 'storePayment']);
+
+    Route::get('/accounts-payable', [AccountsPayableController::class, 'index']);
+    Route::get('/accounts-payable/{accountsPayable}', [AccountsPayableController::class, 'show']);
+    Route::post('/accounts-payable', [AccountsPayableController::class, 'store']);
+    Route::post('/accounts-payable/installments/{payableInstallment}/settle', [AccountsPayableController::class, 'settleInstallment']);
+
+    Route::get('/financeiro/overview', [FinanceController::class, 'overview']);
+
+    Route::get('/expenses', [ExpenseController::class, 'index']);
+    Route::post('/expenses', [ExpenseController::class, 'store']);
+    Route::post('/expenses/{expense}/settle', [ExpenseController::class, 'settle']);
 
     Route::prefix('reports')->group(function () {
         Route::get('/sales-by-day', [ReportController::class, 'salesByDay']);

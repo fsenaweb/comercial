@@ -17,7 +17,7 @@ export interface CashRegister {
   updated_at: string
 }
 
-export type CashOperationOrigin = 'sale' | 'cash_withdrawal' | 'cash_reinforcement' | 'adjustment'
+export type CashOperationOrigin = 'sale' | 'cash_withdrawal' | 'cash_reinforcement' | 'adjustment' | 'accounts_receivable'
 
 export interface CashOperation {
   id: number

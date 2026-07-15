@@ -15,9 +15,9 @@ class RemoveCashOperationAction
     public function execute(CashOperation $cashOperation): void
     {
         DB::transaction(function () use ($cashOperation) {
-            if (in_array($cashOperation->origin, [CashOperationOrigin::Sale, CashOperationOrigin::Adjustment], true)) {
+            if (in_array($cashOperation->origin, [CashOperationOrigin::Sale, CashOperationOrigin::Adjustment, CashOperationOrigin::AccountsReceivable], true)) {
                 throw ValidationException::withMessages([
-                    'origin' => 'Lançamentos gerados por vendas ou cancelamentos não podem ser removidos — cancele a venda em vez de excluir o lançamento.',
+                    'origin' => 'Lançamentos gerados por vendas, cancelamentos ou baixa de crediário não podem ser removidos.',
                 ]);
             }
 

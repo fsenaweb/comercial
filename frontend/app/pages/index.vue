@@ -218,14 +218,20 @@ await load()
     </div>
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <div title="Em breve" class="flex cursor-not-allowed items-center gap-3 rounded-2xl border border-dashed border-border bg-surface-raised p-4 opacity-60">
-        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted"><TrendingUp :size="16" /></span>
+      <NuxtLink
+        to="/sales-history"
+        class="flex items-center gap-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card transition hover:border-border-strong hover:shadow-md"
+      >
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600"><TrendingUp :size="16" /></span>
         <span class="text-xs font-bold tracking-wide text-txt-secondary uppercase">Vendas</span>
-      </div>
-      <div title="Em breve" class="flex cursor-not-allowed items-center gap-3 rounded-2xl border border-dashed border-border bg-surface-raised p-4 opacity-60">
-        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-muted"><Banknote :size="16" /></span>
+      </NuxtLink>
+      <NuxtLink
+        to="/financeiro/accounts-receivable"
+        class="flex items-center gap-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card transition hover:border-border-strong hover:shadow-md"
+      >
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600"><Banknote :size="16" /></span>
         <span class="text-xs font-bold tracking-wide text-txt-secondary uppercase">Contas</span>
-      </div>
+      </NuxtLink>
       <NuxtLink
         to="/reports"
         class="flex items-center gap-3 rounded-2xl border border-border bg-surface-raised p-4 shadow-card transition hover:border-border-strong hover:shadow-md"

@@ -2,11 +2,14 @@
 
 namespace App\Actions\Sale\Concerns;
 
+use App\Actions\Concerns\ResolvesDiscounts;
 use App\Enums\DiscountType;
 use App\Models\ProductVariation;
 
 trait BuildsSaleItems
 {
+    use ResolvesDiscounts;
+
     /**
      * Trava (quando aplicável) as variações envolvidas e monta o preço/desconto/atacado
      * de cada item — mesma lógica usada tanto para registrar uma venda quanto um orçamento.
@@ -58,20 +61,6 @@ trait BuildsSaleItems
         }
 
         return ['subtotal' => $subtotal, 'itemsToInsert' => $itemsToInsert];
-    }
-
-    /**
-     * Resolve o valor absoluto do desconto a partir do tipo escolhido pelo
-     * operador: fixo usa o valor direto, percentual multiplica e só arredonda
-     * pra 2 casas no final (evita erro de arredondamento intermediário).
-     */
-    private function resolveDiscountAmount(string $base, DiscountType $type, string $value): string
-    {
-        if ($type === DiscountType::Percentage) {
-            return bcdiv(bcmul($base, $value, 4), '100', 2);
-        }
-
-        return bcadd($value, '0', 2);
     }
 
     private function resolveSaleDiscount(string $subtotal, array $data): array

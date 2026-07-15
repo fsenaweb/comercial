@@ -8,6 +8,7 @@ enum CashOperationOrigin: string
     case CashWithdrawal = 'cash_withdrawal';
     case CashReinforcement = 'cash_reinforcement';
     case Adjustment = 'adjustment';
+    case AccountsReceivable = 'accounts_receivable';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum CashOperationOrigin: string
             self::CashWithdrawal => 'Sangria',
             self::CashReinforcement => 'Reforço',
             self::Adjustment => 'Ajuste',
+            self::AccountsReceivable => 'Recebimento de crediário',
         };
     }
 }

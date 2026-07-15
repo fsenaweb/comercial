@@ -22,6 +22,7 @@ class RegisterStockEntryAction
                 'type' => StockMovementType::In,
                 'quantity' => $data['quantity'],
                 'origin' => $data['origin'],
+                'reference_id' => $data['reference_id'] ?? null,
                 'user_id' => $user->id,
             ]);
         });
