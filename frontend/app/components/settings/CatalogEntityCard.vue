@@ -105,8 +105,16 @@ async function handleSubmit() {
   }
 }
 
+const { confirmDialog } = useConfirmDialog()
+
 async function handleDelete(item: CatalogItem) {
-  if (!confirm(`Excluir ${props.title.toLowerCase()} "${resolveLabel(item)}"?`)) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir registro',
+    message: `Excluir ${props.title.toLowerCase()} "${resolveLabel(item)}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await api.remove(item.id)
   await load()

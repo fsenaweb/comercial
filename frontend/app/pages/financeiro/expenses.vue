@@ -87,9 +87,15 @@ async function handleSubmit() {
 }
 
 const settlingId = ref<number | null>(null)
+const { confirmDialog } = useConfirmDialog()
 
 async function handleSettle(expense: Expense) {
-  if (!confirm(`Confirmar a baixa da despesa "${expense.description}"?`)) return
+  const confirmed = await confirmDialog({
+    title: 'Baixar despesa',
+    message: `Confirmar a baixa da despesa "${expense.description}"?`,
+    confirmLabel: 'Confirmar baixa',
+  })
+  if (!confirmed) return
   settlingId.value = expense.id
   try {
     await api(`/expenses/${expense.id}/settle`, { method: 'POST' })

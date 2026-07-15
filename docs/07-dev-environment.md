@@ -92,7 +92,9 @@ docker compose exec php-fpm php artisan storage:link   # idempotente; só precis
 ./deploy-frontend.sh   # build --no-cache + publica a SPA + restart nginx
 ```
 
-> Um `deploy.sh` cobrindo o ciclo completo (git pull + migrate + `deploy-frontend.sh`) ainda está no backlog (`05-sprints.md`, melhorias transversais) — hoje só a parte de frontend (a mais repetitiva) está encapsulada.
+> `./deploy.sh` (raiz do repo) encapsula o ciclo completo acima (`git pull` + rebuild + `up -d` + `migrate --force` + `storage:link` + `./deploy-frontend.sh`) — não precisa rodar os passos manualmente.
+>
+> **Servidor Windows:** o SO definitivo da máquina da loja ainda não está fechado (`01-architecture.md`) — pode ser Linux (plano principal) ou um Windows 10 já existente na loja. Para esse segundo caso, `deploy.bat`/`deploy-frontend.bat` (raiz do repo) fazem exatamente o mesmo ciclo via **Docker Desktop com backend WSL2** — mesmo `docker-compose.yml`, sem UID/GID (esse truque é só para bind mount Linux; o Docker Desktop mapeia permissão por fora disso, os defaults `1000` do compose bastam). Rodar direto num `cmd.exe`/Prompt de Comando, mesma pasta do repo.
 
 ### Configuração de produção (LAN) — checklist do `.env`
 - `APP_ENV=production`, `APP_DEBUG=false`.

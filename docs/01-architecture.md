@@ -60,7 +60,7 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
 ```
         Loja (rede interna 192.168.x.x)
  ┌───────────────────────────────────────────────┐
- │  Máquina servidor (Linux)                      │
+ │  Máquina servidor (Linux ou Windows)           │
  │  ┌─────────────────────────────────────────┐  │
  │  │  Docker Compose                          │  │
  │  │   • nginx      (80: serve SPA + fastcgi  │  │
@@ -78,7 +78,7 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
    └─────────────┴─────────────┘   nada instalado localmente)
 ```
 
-- Servidor: **Linux**, Docker como serviço (sobe no boot).
+- Servidor: **SO ainda não fechado com o cliente** — plano principal é **Linux** (provavelmente Ubuntu), mas o hardware final pode acabar sendo um **Windows 10** já existente na loja; Docker Desktop (WSL2 backend) cobre esse segundo caso sem mudança na stack (mesmo `docker-compose.yml`, mesmas imagens). Decisão de manter os dois planos viáveis (2026-07-15) — ver `deploy.sh` (Linux/macOS) e `deploy.bat` (Windows) em `07-dev-environment.md`. Docker como serviço (sobe no boot) em qualquer um dos dois.
 - Topologia inicial: 1 servidor + 3 terminais (navegador), expansível — terminais não instalam nada, apenas abrem o navegador no IP do servidor.
 - Latência é de LAN (rápida); não há dependência de internet para vender.
 - Mobile (terminal de consulta via WiFi) é **roadmap futuro** — exige HTTPS local para uso de câmera e não terá função de impressão.
@@ -102,7 +102,7 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
 
 ## Manutenção e atualização
 
-- Processo de atualização do sistema na máquina da loja: `git pull` + `docker compose build` + `docker compose up -d` + `migrate --force` + rebuild da SPA. O passo a passo exato (incluindo o restart do nginx) está em `07-dev-environment.md`; deve futuramente ser encapsulado em um script (`deploy.sh`) para reduzir erro humano.
+- Processo de atualização do sistema na máquina da loja: `git pull` + `docker compose build` + `docker compose up -d` + `migrate --force` + rebuild da SPA. Encapsulado em `deploy.sh` (Linux/macOS) e `deploy.bat` (Windows, caso o servidor final seja Windows 10 + Docker Desktop) — ver `07-dev-environment.md`.
 
 ## Riscos e mitigações
 

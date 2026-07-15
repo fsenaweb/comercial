@@ -132,10 +132,19 @@ async function handleSubmit() {
   }
 }
 
+const { confirmDialog } = useConfirmDialog()
+
 async function handleModalDelete() {
   if (!editingId.value) return
   const customer = customers.value.find((c) => c.id === editingId.value)
-  if (!customer || !confirm(`Excluir o cliente "${customer.name}"?`)) return
+  if (!customer) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir cliente',
+    message: `Excluir o cliente "${customer.name}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await api.remove(editingId.value)
   closeModal()

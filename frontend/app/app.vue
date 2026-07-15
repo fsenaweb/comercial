@@ -4,5 +4,6 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <ConfirmDialogHost />
   </div>
 </template>
