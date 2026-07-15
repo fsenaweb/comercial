@@ -65,16 +65,18 @@ class CancelSaleAction
                 ]);
             }
 
-            CashOperation::create([
-                'cash_register_id' => $cashRegister->id,
-                'user_id' => $user->id,
-                'type' => CashOperationType::Out,
-                'origin' => CashOperationOrigin::Adjustment,
-                'reference_id' => $sale->id,
-                'payment_method_id' => $sale->payment_method_id,
-                'amount' => $sale->total,
-                'notes' => "Cancelamento venda {$sale->number}: {$reason}",
-            ]);
+            foreach ($sale->payments()->with('paymentMethod')->get() as $payment) {
+                CashOperation::create([
+                    'cash_register_id' => $cashRegister->id,
+                    'user_id' => $user->id,
+                    'type' => CashOperationType::Out,
+                    'origin' => CashOperationOrigin::Adjustment,
+                    'reference_id' => $sale->id,
+                    'payment_method_id' => $payment->payment_method_id,
+                    'amount' => $payment->amount,
+                    'notes' => "Cancelamento venda {$sale->number} — {$payment->paymentMethod->name}: {$reason}",
+                ]);
+            }
 
             $sale->update([
                 'status' => SaleStatus::Canceled,
@@ -83,7 +85,7 @@ class CancelSaleAction
                 'canceled_by' => $user->id,
             ]);
 
-            return $sale->load(['items.productVariation.product', 'customer', 'seller', 'paymentMethod', 'cashRegister', 'canceledBy']);
+            return $sale->load(['items.productVariation.product', 'customer', 'seller', 'payments.paymentMethod', 'cashRegister', 'canceledBy']);
         }, 3);
     }
 }

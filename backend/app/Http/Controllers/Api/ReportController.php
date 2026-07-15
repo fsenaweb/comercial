@@ -9,6 +9,7 @@ use App\Http\Resources\LowStockVariationResource;
 use App\Models\ProductVariation;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SalePayment;
 use App\Models\StoreSetting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,7 @@ class ReportController extends Controller
         'vendas_produto' => 'buildSalesByProductReport',
         'vendas_categoria' => 'buildSalesByCategoryReport',
         'vendas_vendedor' => 'buildSalesBySellerReport',
+        'vendas_forma_pagamento' => 'buildSalesByPaymentMethodReport',
         'lucro_bruto' => 'buildGrossProfitByProduct',
         'nivel_estoque' => 'buildLowStockReport',
         'valor_estoque' => 'buildStockValue',
@@ -265,6 +267,37 @@ class ReportController extends Controller
             ],
             'rows' => $rows->map(fn ($row) => [
                 'seller_name' => $row->seller_name,
+                'sales_count' => (string) $row->sales_count,
+                'total' => $this->money($row->total),
+            ])->all(),
+        ];
+    }
+
+    private function buildSalesByPaymentMethodReport(Request $request): array
+    {
+        $query = SalePayment::query()
+            ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
+            ->join('payment_methods', 'payment_methods.id', '=', 'sale_payments.payment_method_id')
+            ->where('sales.status', SaleStatus::Completed->value);
+
+        $this->applyDateFilter($query, $request, 'sales.created_at');
+
+        $rows = $query->selectRaw('payment_methods.id as payment_method_id, payment_methods.name as payment_method_name,
+                COUNT(DISTINCT sale_payments.sale_id) as sales_count,
+                COALESCE(SUM(sale_payments.amount), 0) as total')
+            ->groupBy('payment_methods.id', 'payment_methods.name')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'title' => 'Vendas por Forma de Pagamento',
+            'headers' => [
+                ['key' => 'payment_method_name', 'label' => 'Forma de Pagamento'],
+                ['key' => 'sales_count', 'label' => 'Qtd. de vendas'],
+                ['key' => 'total', 'label' => 'Total'],
+            ],
+            'rows' => $rows->map(fn ($row) => [
+                'payment_method_name' => $row->payment_method_name,
                 'sales_count' => (string) $row->sales_count,
                 'total' => $this->money($row->total),
             ])->all(),

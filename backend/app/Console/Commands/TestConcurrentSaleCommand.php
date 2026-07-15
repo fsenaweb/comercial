@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\Sale\RegisterSaleAction;
 use App\Models\PaymentMethod;
+use App\Models\ProductVariation;
 use App\Models\User;
 use Illuminate\Console\Command;
 
@@ -31,11 +32,16 @@ class TestConcurrentSaleCommand extends Command
 
         $user = User::find((int) $this->argument('userId'));
         $paymentMethod = PaymentMethod::first();
+        $variation = ProductVariation::findOrFail((int) $this->argument('variationId'));
+        $quantity = (int) $this->argument('quantity');
+        $total = bcmul((string) $variation->sale_price, (string) $quantity, 2);
 
         $sale = $action->execute([
-            'payment_method_id' => $paymentMethod->id,
+            'payments' => [
+                ['payment_method_id' => $paymentMethod->id, 'amount' => $total],
+            ],
             'items' => [
-                ['product_variation_id' => (int) $this->argument('variationId'), 'quantity' => (int) $this->argument('quantity')],
+                ['product_variation_id' => (int) $this->argument('variationId'), 'quantity' => $quantity],
             ],
         ], $user);
 

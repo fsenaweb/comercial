@@ -20,10 +20,12 @@ class StoreSaleRequest extends FormRequest
         return [
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'seller_id' => [$requireSeller ? 'required' : 'nullable', 'integer', 'exists:users,id'],
-            'payment_method_id' => [
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.payment_method_id' => [
                 'required', 'integer',
                 Rule::exists('payment_methods', 'id')->where('active_on_pos', true),
             ],
+            'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
             'discount_type' => ['nullable', Rule::in(['fixed', 'percentage'])],
             'discount_value' => [
                 'nullable', 'numeric', 'min:0',
@@ -55,8 +57,12 @@ class StoreSaleRequest extends FormRequest
     {
         return [
             'seller_id.required' => 'Selecione o vendedor responsável pela venda.',
-            'payment_method_id.required' => 'Selecione a forma de pagamento.',
-            'payment_method_id.exists' => 'A forma de pagamento selecionada não está disponível no PDV.',
+            'payments.required' => 'Adicione ao menos uma forma de pagamento.',
+            'payments.min' => 'Adicione ao menos uma forma de pagamento.',
+            'payments.*.payment_method_id.required' => 'Selecione a forma de pagamento.',
+            'payments.*.payment_method_id.exists' => 'Uma das formas de pagamento selecionadas não está disponível no PDV.',
+            'payments.*.amount.required' => 'Informe o valor de cada forma de pagamento.',
+            'payments.*.amount.min' => 'O valor de cada forma de pagamento deve ser maior que zero.',
             'discount_value.max' => 'O desconto percentual não pode ser maior que 100%.',
             'items.required' => 'Adicione ao menos um item à venda.',
             'items.min' => 'Adicione ao menos um item à venda.',

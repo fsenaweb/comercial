@@ -18,6 +18,13 @@ interface SaleItemDetail {
   total: string
 }
 
+interface SalePaymentDetail {
+  id: number
+  payment_method_id: number
+  payment_method_name: string | null
+  amount: string
+}
+
 interface SaleDetail {
   id: number
   number: string
@@ -26,7 +33,7 @@ interface SaleDetail {
   subtotal: string
   discount: string
   total: string
-  payment_method_name: string | null
+  payments: SalePaymentDetail[]
   items: SaleItemDetail[]
 }
 
@@ -506,7 +513,13 @@ await loadAll()
         <div class="grid grid-cols-2 gap-3 text-sm">
           <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ saleDetail.customer_name ?? 'Não informado' }}</strong></span>
           <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ saleDetail.seller_name ?? '—' }}</strong></span>
-          <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ saleDetail.payment_method_name ?? '—' }}</strong></span>
+          <div class="col-span-2 text-txt-secondary">
+            Forma de pagamento:
+            <span v-if="saleDetail.payments.length === 0" class="font-bold text-txt-primary">—</span>
+            <span v-for="(payment, index) in saleDetail.payments" :key="payment.id" class="font-bold text-txt-primary">
+              {{ payment.payment_method_name ?? '—' }} ({{ formatAmount(payment.amount) }})<span v-if="index < saleDetail.payments.length - 1">, </span>
+            </span>
+          </div>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border">

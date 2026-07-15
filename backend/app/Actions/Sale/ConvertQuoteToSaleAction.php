@@ -36,7 +36,7 @@ class ConvertQuoteToSaleAction
             $sale = $this->registerSaleAction->execute([
                 'customer_id' => $quote->customer_id,
                 'seller_id' => $quote->seller_id,
-                'payment_method_id' => $data['payment_method_id'],
+                'payments' => $data['payments'],
                 'discount_type' => $quote->discount_type->value,
                 'discount_value' => (string) $quote->discount_value,
                 'notes' => $quote->notes,
