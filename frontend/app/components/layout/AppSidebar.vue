@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import {
   BarChart3,
+  Banknote,
   Briefcase,
   Building2,
   ChevronDown,
   ClipboardEdit,
   CreditCard,
   DollarSign,
+  Gauge,
   History,
   Landmark,
   LayoutGrid,
@@ -58,6 +60,13 @@ const cadastrosLinks = [
 ]
 const cadastrosComingSoon = [{ label: 'Vendedores', icon: UserCog }]
 
+const financeiroLinks = [
+  { to: '/financeiro', label: 'Visão Financeira', icon: Gauge },
+  { to: '/financeiro/accounts-receivable', label: 'Crediário', icon: CreditCard },
+  { to: '/financeiro/accounts-payable', label: 'Contas a Pagar', icon: Banknote },
+  { to: '/financeiro/expenses', label: 'Despesas', icon: Receipt },
+]
+
 const gestaoItems = computed(() => [
   { key: 'relatorios', label: 'Relatórios', icon: BarChart3, to: '/reports' },
   ...(auth.isAdmin ? [{ key: 'dados-empresa', label: 'Dados da Empresa', icon: Landmark, to: '/settings/store' }] : []),
@@ -72,6 +81,7 @@ function matches(label: string) {
 
 const isCadastrosActive = computed(() => cadastrosLinks.some((link) => route.path.startsWith(link.to)))
 const isEstoqueActive = computed(() => estoqueLinks.some((link) => route.path.startsWith(link.to)))
+const isFinanceiroActive = computed(() => financeiroLinks.some((link) => route.path.startsWith(link.to)))
 const isGestaoActive = computed(() => gestaoItems.value.some((item) => item.to && route.path.startsWith(item.to)))
 
 async function handleLogout() {
@@ -211,18 +221,34 @@ async function handleLogout() {
         </div>
       </div>
 
-      <button
-        type="button"
-        class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle"
-        @click="financeiroOpen = !financeiroOpen"
-      >
-        <span class="flex items-center gap-3">
-          <CreditCard :size="17" />
-          Financeiro
-        </span>
-        <ChevronDown :size="15" class="transition-transform" :class="{ '-rotate-90': !financeiroOpen }" />
-      </button>
-      <p v-if="financeiroOpen" class="px-2.5 py-1.5 pl-9 text-xs text-txt-muted italic">Em breve</p>
+      <div>
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          :class="isFinanceiroActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
+          @click="financeiroOpen = !financeiroOpen"
+        >
+          <span class="flex items-center gap-3">
+            <CreditCard :size="17" />
+            Financeiro
+          </span>
+          <ChevronDown :size="15" class="transition-transform" :class="{ '-rotate-90': !financeiroOpen }" />
+        </button>
+
+        <div v-show="financeiroOpen" class="mt-0.5 ml-3.5 space-y-0.5 border-l border-border pl-2.5">
+          <NuxtLink
+            v-for="link in financeiroLinks"
+            v-show="matches(link.label)"
+            :key="link.to"
+            :to="link.to"
+            class="flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle hover:text-txt-primary"
+            active-class="!bg-brand !text-brand-ink !shadow-card"
+          >
+            <component :is="link.icon" :size="16" />
+            {{ link.label }}
+          </NuxtLink>
+        </div>
+      </div>
 
       <div>
         <button

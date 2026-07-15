@@ -10,7 +10,7 @@ Entrega incremental, priorizando chegar o quanto antes ao **núcleo de venda** (
 | **Fase 3 — Estoque avançado & histórico** | Entradas de estoque, ajustes manuais, Kardex por variação, histórico de vendas e de caixa (consulta e filtros) | ⬜ Próxima |
 | **Fase 3.5 — Pedidos (Orçamento/Cotação)** | Fluxo de orçamento: monta um carrinho igual ao do PDV, mas sem baixar estoque nem lançar no caixa (`SaleStatus::Pending`); tela própria de listagem, prazo de validade do orçamento, e um botão "Converter em venda" que só então chama o `RegisterSaleAction`, criando uma venda nova vinculada ao orçamento original (`SaleStatus::Converted`). Substitui o item de menu "Pedidos" (antes "Em breve" na sidebar) por "Orçamentos". Impressão/envio do orçamento ficou fora do escopo (não pedido pelo usuário) | ✅ **Concluída** (Sprint 4.2, 2026-07-13, branch `feat/sprint-4.2-cotacao-orcamento`) |
 | **Fase 4 — Relatórios** | Vendas por dia/produto/vendedor/categoria, alertas de estoque mínimo, dashboard de fechamento de caixa | ✅ **Concluída** (Sprint 5, 2026-07-14, branch `feat/sprint-5-relatorios-dashboard`) |
-| **Fase 5 (opcional)** | Crediário/contas a receber com parcelas, contas a pagar, despesas, entrada de estoque via XML | ⬜ |
+| **Fase 5 (opcional)** | Crediário/contas a receber com parcelas, contas a pagar, despesas, entrada de estoque via XML | ✅ **Concluída** (Sprint 6, 2026-07-15, branch `feat/sprint-6-financeiro-nfe`) |
 
 Pendências conscientes da Fase 0 (não bloqueiam as próximas fases):
 - Upload do backup ao **Google Drive** (camada 2) — plugar como disk adicional do laravel-backup quando conveniente; a camada local já opera.
