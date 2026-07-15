@@ -136,10 +136,19 @@ async function handleSubmit() {
   }
 }
 
+const { confirmDialog } = useConfirmDialog()
+
 async function handleModalDelete() {
   if (!editingId.value) return
   const supplier = suppliers.value.find((s) => s.id === editingId.value)
-  if (!supplier || !confirm(`Excluir o fornecedor "${supplier.corporate_name}"?`)) return
+  if (!supplier) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir fornecedor',
+    message: `Excluir o fornecedor "${supplier.corporate_name}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await api.remove(editingId.value)
   closeModal()

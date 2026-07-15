@@ -400,10 +400,19 @@ async function handleModalSubmit() {
   }
 }
 
+const { confirmDialog } = useConfirmDialog()
+
 async function handleModalDelete() {
   if (!editingProductId.value) return
   const product = products.value.find((p) => p.id === editingProductId.value)
-  if (!product || !confirm(`Excluir o produto "${product.name}"?`)) return
+  if (!product) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir produto',
+    message: `Excluir o produto "${product.name}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await productsApi.remove(editingProductId.value)
   closeModal()
@@ -494,7 +503,13 @@ async function handleQuickSubmit() {
 }
 
 async function handleDelete(product: Product) {
-  if (!confirm(`Excluir o produto "${product.name}"?`)) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir produto',
+    message: `Excluir o produto "${product.name}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await productsApi.remove(product.id)
   await load()
@@ -625,7 +640,14 @@ async function handleSkuSubmit() {
 }
 
 async function handleSkuDelete(variation: Variation) {
-  if (!skuModalProduct.value || !confirm(`Excluir a variação "${variation.product_code}"?`)) return
+  if (!skuModalProduct.value) return
+  const confirmed = await confirmDialog({
+    title: 'Excluir variação',
+    message: `Excluir a variação "${variation.product_code}"?`,
+    confirmLabel: 'Excluir',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   await api(`/products/${skuModalProduct.value.id}/variations/${variation.id}`, { method: 'DELETE' })
   await loadSkuModalProduct(skuModalProduct.value.id)

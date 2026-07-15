@@ -185,9 +185,16 @@ async function handleSave() {
   }
 }
 
+const { confirmDialog } = useConfirmDialog()
+
 async function handleClose() {
   if (!selected.value) return
-  if (!confirm(`Confirma o fechamento do caixa #${selected.value.id}?`)) return
+  const confirmed = await confirmDialog({
+    title: 'Fechar caixa',
+    message: `Confirma o fechamento do caixa #${selected.value.id}?`,
+    confirmLabel: 'Fechar caixa',
+  })
+  if (!confirmed) return
 
   closeSaving.value = true
   closeError.value = null
@@ -233,7 +240,13 @@ async function handleAddOperation() {
 }
 
 async function handleRemoveOperation(operationId: number) {
-  if (!confirm('Remover este lançamento?')) return
+  const confirmed = await confirmDialog({
+    title: 'Remover lançamento',
+    message: 'Remover este lançamento?',
+    confirmLabel: 'Remover',
+    variant: 'danger',
+  })
+  if (!confirmed) return
   await store.removeOperation(operationId)
   await Promise.all([store.fetchList(), store.fetchCurrent()])
 }
