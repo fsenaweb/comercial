@@ -29,6 +29,7 @@ return new class extends Migration
             $table->string('logo_path')->nullable();
             $table->boolean('require_seller_on_sale')->default(false);
             $table->boolean('auto_open_cash_register')->default(false);
+            $table->json('label_settings')->nullable();
             $table->timestamps();
         });
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LabelController;
 use App\Http\Controllers\ReceiptController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,3 +20,10 @@ Route::get('/', function () {
 Route::middleware('auth:sanctum')
     ->get('/sales/{sale}/receipt', [ReceiptController::class, 'show'])
     ->name('sales.receipt');
+
+// Mesma lógica do comentário acima: 'auth:sanctum' sozinho basta, sem
+// EnsureFrontendRequestsAreStateful. Impressão de etiquetas fica aberta a
+// qualquer usuário autenticado (sem policy de papel), igual ao recibo.
+Route::middleware('auth:sanctum')
+    ->post('/labels/print', [LabelController::class, 'print'])
+    ->name('labels.print');

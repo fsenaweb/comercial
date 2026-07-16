@@ -171,4 +171,62 @@ class StoreSettingTest extends TestCase
 
         $response->assertStatus(422)->assertJsonValidationErrors(['logo']);
     }
+
+    private function validLabelSettingsPayload(): array
+    {
+        return [
+            'page_width' => 210,
+            'page_height' => 297,
+            'margin_top' => 4.23,
+            'margin_bottom' => 4.3,
+            'margin_left' => 6.01,
+            'margin_right' => 6.05,
+            'columns' => 3,
+            'rows' => 9,
+            'label_width' => 63.5,
+            'label_height' => 31,
+            'content_fields' => [
+                'name' => true,
+                'price' => true,
+                'code' => true,
+                'barcode' => true,
+                'store_name' => false,
+            ],
+            'font_sizes' => [
+                'name' => 9,
+                'price' => 12,
+                'barcode' => 8,
+            ],
+        ];
+    }
+
+    public function test_admin_can_save_label_settings(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->putJson('/api/store-settings/label-settings', $this->validLabelSettingsPayload());
+
+        $response->assertOk()->assertJsonPath('data.label_settings.columns', 3);
+        $this->assertDatabaseHas('store_settings', ['id' => 1]);
+    }
+
+    public function test_seller_cannot_save_label_settings(): void
+    {
+        $seller = User::factory()->create();
+
+        $response = $this->actingAs($seller)->putJson('/api/store-settings/label-settings', $this->validLabelSettingsPayload());
+
+        $response->assertStatus(403);
+    }
+
+    public function test_label_settings_requires_columns(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $payload = $this->validLabelSettingsPayload();
+        unset($payload['columns']);
+
+        $response = $this->actingAs($admin)->putJson('/api/store-settings/label-settings', $payload);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['columns']);
+    }
 }

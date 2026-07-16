@@ -90,6 +90,7 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
 - Documento marcado **"DOCUMENTO NÃO FISCAL"** no topo — o sistema não emite NFC-e/NFe.
 - Conteúdo: cabeçalho da loja, nº da venda, data/hora, itens (nome, qtd, unitário, total), subtotal, desconto, total, forma de pagamento, vendedor, cliente (se houver), observações. Sugestão: incluir um código de barras/QR do nº da venda para facilitar localização em outro sistema (ex.: o sistema fiscal separado).
 - **Risco conhecido:** impressão térmica via navegador é historicamente instável entre drivers/SOs. Plano B: **QZ Tray** ou envio direto **ESC/POS** via helper local. Reservar tempo de implementação para esse risco na Sprint em que o comprovante for construído.
+- A impressão de etiquetas de preço/código de barras (Sub-sprint B) segue a mesma abordagem: rota Blade própria (`POST /labels/print`), com `@page` ajustado ao tamanho de página/etiqueta configurado pelo usuário e `window.print()` no load. É a segunda (e, junto com o comprovante, única) rota Blade do sistema — ambas listadas no bloco `location ~ ^/(api|sales|sanctum|labels)(/|$)` do `docker/nginx/default.conf`.
 
 ## Backup e Recuperação (crítico)
 
