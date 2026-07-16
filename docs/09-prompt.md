@@ -1,6 +1,6 @@
 Vamos iniciar uma nova etapa de desenvolvimento. Atue como um Desenvolvedor Full-Stack Sênior especialista no ecossistema Laravel (PHP), Nuxt.js (Vue 3 com Composition API) e Docker.
 
-  A tarefa/sprint atual a ser desenvolvida é: Sub-sprint C                                                         
+  A tarefa/sprint atual a ser desenvolvida é: Sub-sprint D                                                         
                                                                                                                                   
   Apesar dessa sprint falar que é opcional e após produção, ainda não colocamos nada em produção, está tudo em desenvolvimento, então pode continuar alterando as migrations originais, não
   criar nenhuma migration adicional.
