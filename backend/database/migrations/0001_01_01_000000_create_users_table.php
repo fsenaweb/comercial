@@ -20,6 +20,8 @@ return new class extends Migration
             $table->enum('role', ['admin', 'cashier', 'seller'])->default('seller');
             $table->decimal('commission_percent', 5, 2)->nullable();
             $table->boolean('active')->default(true);
+            $table->enum('theme', ['light', 'dark'])->default('light');
+            $table->enum('font_scale', ['small', 'medium', 'large'])->default('medium');
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();

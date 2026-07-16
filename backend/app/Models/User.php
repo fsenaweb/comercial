@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\FontScale;
+use App\Enums\Theme;
 use App\Enums\UserRole;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +18,19 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
+     * Defaults do PHP para o model recém-instanciado em memória (ex.:
+     * User::factory()->make()/->create() sem fresh()) bater com os defaults de
+     * coluna do banco — sem isso, um model criado e usado sem refetch (ex.:
+     * actingAs() direto na factory) tem theme/font_scale nulos até ser recarregado.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'theme' => 'light',
+        'font_scale' => 'medium',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -27,6 +42,8 @@ class User extends Authenticatable
         'role',
         'commission_percent',
         'active',
+        'theme',
+        'font_scale',
     ];
 
     /**
@@ -52,6 +69,8 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'commission_percent' => 'decimal:2',
             'active' => 'boolean',
+            'theme' => Theme::class,
+            'font_scale' => FontScale::class,
         ];
     }
 

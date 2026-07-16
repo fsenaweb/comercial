@@ -14,8 +14,20 @@ export default defineNuxtConfig({
       // aberta no balcão), via useHead direto em pos.vue.
       title: 'JP Parafusos - Sistema Comercial',
       // Tema sempre claro por decisão de produto — não seguir o SO (ver
-      // docs/08-design-system.md e app/assets/css/main.css).
+      // docs/08-design-system.md e app/assets/css/main.css). O CSS
+      // (:root[data-theme="dark"]) sobrescreve isso assim que o usuário
+      // escolhe o tema escuro explicitamente.
       meta: [{ name: 'color-scheme', content: 'light' }],
+      script: [
+        {
+          // Roda no <head>, antes do Vue montar — lê o hint de cookie (gravado
+          // pela usePreferencesStore a cada mudança) e já aplica data-theme/
+          // classe de fonte no <html>, evitando o flash de tema errado no
+          // primeiro paint. O valor autoritativo (via /api/me) sobrescreve
+          // isso logo em seguida, no middleware de autenticação.
+          innerHTML: `(function(){try{var m=document.cookie.match(/(?:^|; )ui_theme=([^;]*)/);var t=m?decodeURIComponent(m[1]):'light';var f=document.cookie.match(/(?:^|; )ui_font_scale=([^;]*)/);var s=f?decodeURIComponent(f[1]):'medium';document.documentElement.dataset.theme=t;document.documentElement.classList.add('font-scale-'+s);}catch(e){}})();`,
+        },
+      ],
     },
   },
 

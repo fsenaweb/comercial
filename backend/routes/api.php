@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccountsPayableController;
 use App\Http\Controllers\Api\AccountsReceivableController;
+use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CashRegisterController;
@@ -29,6 +30,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me/appearance', [AppearanceController::class, 'update']);
 
     Route::get('/store-settings', [StoreSettingController::class, 'show']);
     Route::put('/store-settings', [StoreSettingController::class, 'update'])

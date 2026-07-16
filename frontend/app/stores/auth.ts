@@ -6,6 +6,8 @@ export interface AuthUser {
   role_label: string
   commission_percent: string | null
   active: boolean
+  theme: 'light' | 'dark'
+  font_scale: 'small' | 'medium' | 'large'
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -30,12 +32,14 @@ export const useAuthStore = defineStore('auth', {
       })
 
       this.user = data
+      usePreferencesStore().applyFromUser(data)
     },
 
     async logout() {
       const api = useApi()
       await api('/logout', { method: 'POST' })
       this.user = null
+      usePreferencesStore().applyFromUser(null)
     },
 
     async fetchCurrentUser() {
@@ -44,6 +48,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await api<{ data: AuthUser }>('/me')
         this.user = data
+        usePreferencesStore().applyFromUser(data)
       } catch {
         this.user = null
       }

@@ -17,6 +17,8 @@ class UserResource extends JsonResource
             'role_label' => $this->role->label(),
             'commission_percent' => $this->commission_percent,
             'active' => $this->active,
+            'theme' => $this->theme->value,
+            'font_scale' => $this->font_scale->value,
         ];
     }
 }
