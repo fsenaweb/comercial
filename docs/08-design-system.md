@@ -14,23 +14,28 @@ Isso evita dois problemas: (1) parecer clone da AppLoja (cor de marca é só nos
 
 ## Cores
 
-Tokens como CSS custom properties. **Tema sempre claro por padrão — decisão de produto, não segue `prefers-color-scheme` do sistema operacional.** Um sistema de loja usado por vendedores/caixa não deve mudar de aparência sozinho conforme o SO de quem está logado; isso já causou confusão numa validação da Sprint 0 (tela renderizou escura sem ninguém ter pedido). Dark mode só muda via **toggle explícito do usuário** (pedido em 2026-07-13, ver "Melhorias transversais" em `05-sprints.md`) — os tokens escuros ainda não foram derivados aqui; entram junto com a implementação dessa melhoria.
+Tokens como CSS custom properties. **Tema sempre claro por padrão — decisão de produto, não segue `prefers-color-scheme` do sistema operacional.** Um sistema de loja usado por vendedores/caixa não deve mudar de aparência sozinho conforme o SO de quem está logado; isso já causou confusão numa validação da Sprint 0 (tela renderizou escura sem ninguém ter pedido). Dark mode só muda via **toggle explícito do usuário** (implementado na Sub-sprint C, 2026-07-16) — persistido por usuário (`users.theme`), não por navegador/localStorage.
 
-| Token | Uso | Valor (claro, único tema) |
-|---|---|---|
-| `--brand` | CTA principal, ativo do menu, foco, chrome | amarelo da logo (**amostrar hex exato do arquivo do logo** — usar `amber-400`/`yellow-400` do Tailwind como ponto de partida) |
-| `--brand-ink` | Texto sobre `--brand` | preto/`slate-900` (amarelo não escurece o suficiente pra exigir texto claro) |
-| `--surface` | Fundo da página | `slate-50` |
-| `--surface-raised` | Cards, modais | branco |
-| `--surface-subtle` | Hover de linha, fundo de seção | `slate-100` |
-| `--border` / `--border-strong` | Bordas | `slate-200` / `slate-300` |
-| `--txt-primary` / `--txt-secondary` / `--txt-muted` | Texto | `slate-900` / `slate-600` / `slate-400` |
-| `success` (status) | Badge "Aberto", confirmações | `emerald-500`/`emerald-600` |
-| `danger` (status) | Erros, "Fechado com pendência", exclusão | `rose-500`/`rose-600` |
-| `info` (status) | Links secundários, badges informativos | `sky-600` |
-| `warning` (status) | Estoque baixo, atenção — **não usa o amarelo de marca** | `amber-600` (mais escuro/alaranjado que o amarelo de marca) |
+| Token | Uso | Valor (claro) | Valor (escuro) |
+|---|---|---|---|
+| `--brand` | CTA principal, ativo do menu, foco, chrome | amarelo da logo (**amostrar hex exato do arquivo do logo** — usar `amber-400`/`yellow-400` do Tailwind como ponto de partida) | mesmo valor — o amarelo mantém contraste alto com `--brand-ink` em qualquer tema |
+| `--brand-ink` | Texto sobre `--brand` | preto/`slate-900` (amarelo não escurece o suficiente pra exigir texto claro) | mesmo valor |
+| `--surface` | Fundo da página | `slate-50` (`#f8fafc`) | `slate-900` (`#0f172a`) |
+| `--surface-raised` | Cards, modais | branco (`#ffffff`) | `slate-800` (`#1e293b`) |
+| `--surface-subtle` | Hover de linha, fundo de seção | `slate-100` (`#f1f5f9`) | `slate-700` (`#334155`) |
+| `--border` / `--border-strong` | Bordas | `slate-200` (`#e2e8f0`) / `slate-300` (`#cbd5e1`) | `slate-700` (`#334155`) / `slate-600` (`#475569`) |
+| `--txt-primary` / `--txt-secondary` / `--txt-muted` | Texto | `slate-900` (`#0f172a`) / `slate-600` (`#475569`) / `slate-400` (`#94a3b8`) | `slate-100` (`#f1f5f9`) / `slate-300` (`#cbd5e1`) / `slate-500` (`#64748b`) |
+| `success` (status) | Badge "Aberto", confirmações | `emerald-500`/`emerald-600` | mesmo valor em ambos os temas — badge é um chip com fundo tingido próprio, não depende do fundo da página pra ter contraste (ver "Princípio: marca vs. semântica") |
+| `danger` (status) | Erros, "Fechado com pendência", exclusão | `rose-500`/`rose-600` | mesmo valor |
+| `info` (status) | Links secundários, badges informativos | `sky-600` | mesmo valor |
+| `warning` (status) | Estoque baixo, atenção — **não usa o amarelo de marca** | `amber-600` (mais escuro/alaranjado que o amarelo de marca) | mesmo valor |
 
 > Ação pendente: abrir o arquivo do logo num seletor de cor e cravar o hex exato de `--brand` aqui (hoje é uma aproximação).
+
+Implementação: `frontend/app/assets/css/main.css` define os tokens claros no `@theme` e os escuros num bloco `:root[data-theme="dark"]` (sobrescreve as mesmas custom properties — como todos os componentes já usam utilitários gerados a partir delas, tipo `bg-surface`/`text-txt-primary`, o tema propaga sem precisar de variantes `dark:` do Tailwind espalhadas pelo código). O atributo `data-theme` é setado por `usePreferencesStore` (`frontend/app/stores/preferences.ts`), aplicado assim que `/api/me` resolve e também via um cookie leve (hint) lido por um script inline no `<head>`, pra evitar flash do tema errado antes do Vue montar.
+
+### Tamanho de fonte
+3 passos (P/M/G), persistidos por usuário (`users.font_scale`) junto com o tema, aplicados via `font-size` no `<html>` (classes `font-scale-small`/`font-scale-large` em `main.css`; "médio" é o tamanho-base do sistema, sem classe) — escala texto e espaçamento em `rem` do Tailwind junto, não é zoom do navegador. Controles "A-"/"A+" ficam sempre visíveis na topbar (`components/layout/AppearanceControls.vue`), ao lado do toggle de tema — inclusive no PDV, que tem seu próprio cabeçalho fora do layout padrão.
 
 ## Tipografia
 A referência usa um par display/body, não uma fonte só:

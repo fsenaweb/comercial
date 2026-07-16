@@ -538,6 +538,8 @@ async function confirmSaveQuote() {
 
       <div class="flex-1" />
 
+      <AppearanceControls />
+
       <button
         type="button"
         class="flex flex-none cursor-pointer items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-[12.5px] font-bold text-white transition hover:brightness-95"

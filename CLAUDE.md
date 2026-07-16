@@ -1,5 +1,7 @@
 # Sistema Comercial - Loja Local (On-Premise)
 
+> **Instrução nº 1 (sempre válida, todo prompt):** toda resposta em texto ao usuário (mensagens de chat, resumos, perguntas de esclarecimento) deve ser em português — independente do idioma em que o usuário escrever. Isso é além da regra já existente de "interface 100% em português"/"código 100% em inglês" abaixo, que trata do conteúdo do sistema, não da conversa com o desenvolvedor.
+
 ## Descrição do Projeto
 Desenvolvimento de um sistema de gestão comercial e PDV (Ponto de Venda) projetado para rodar exclusivamente em rede local (LAN). O sistema gerencia cadastros, estoque, caixa e fluxo de venda/atendimento para uma única loja, não sendo SaaS e não emitindo cupons fiscais (apenas comprovante interno não fiscal).
 

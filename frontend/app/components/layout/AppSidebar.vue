@@ -29,10 +29,6 @@ import {
 const auth = useAuthStore()
 const route = useRoute()
 
-const cadastrosOpen = ref(true)
-const estoqueOpen = ref(true)
-const financeiroOpen = ref(false)
-const gestaoOpen = ref(false)
 const sidebarQuery = ref('')
 
 const quickAccessLinks = [
@@ -83,6 +79,34 @@ const isCadastrosActive = computed(() => cadastrosLinks.some((link) => route.pat
 const isEstoqueActive = computed(() => estoqueLinks.some((link) => route.path.startsWith(link.to)))
 const isFinanceiroActive = computed(() => financeiroLinks.some((link) => route.path.startsWith(link.to)))
 const isGestaoActive = computed(() => gestaoItems.value.some((item) => item.to && route.path.startsWith(item.to)))
+
+// Só um grupo aberto por vez: abrir um fecha os outros (clique manual) e a
+// navegação ressincroniza pro grupo da rota ativa (ou nenhum, se a página não
+// pertencer a nenhum grupo).
+type SidebarGroup = 'cadastros' | 'estoque' | 'financeiro' | 'gestao'
+
+function activeGroup(): SidebarGroup | null {
+  if (isCadastrosActive.value) return 'cadastros'
+  if (isEstoqueActive.value) return 'estoque'
+  if (isFinanceiroActive.value) return 'financeiro'
+  if (isGestaoActive.value) return 'gestao'
+  return null
+}
+
+const openGroup = ref<SidebarGroup | null>(activeGroup())
+
+function toggleGroup(group: SidebarGroup) {
+  openGroup.value = openGroup.value === group ? null : group
+}
+
+const cadastrosOpen = computed(() => openGroup.value === 'cadastros')
+const estoqueOpen = computed(() => openGroup.value === 'estoque')
+const financeiroOpen = computed(() => openGroup.value === 'financeiro')
+const gestaoOpen = computed(() => openGroup.value === 'gestao')
+
+watch(() => route.path, () => {
+  openGroup.value = activeGroup()
+})
 
 async function handleLogout() {
   await auth.logout()
@@ -146,7 +170,7 @@ async function handleLogout() {
           type="button"
           class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isCadastrosActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
-          @click="cadastrosOpen = !cadastrosOpen"
+          @click="toggleGroup('cadastros')"
         >
           <span class="flex items-center gap-3">
             <Users :size="17" />
@@ -186,7 +210,7 @@ async function handleLogout() {
           type="button"
           class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isEstoqueActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
-          @click="estoqueOpen = !estoqueOpen"
+          @click="toggleGroup('estoque')"
         >
           <span class="flex items-center gap-3">
             <Warehouse :size="17" />
@@ -226,7 +250,7 @@ async function handleLogout() {
           type="button"
           class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isFinanceiroActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
-          @click="financeiroOpen = !financeiroOpen"
+          @click="toggleGroup('financeiro')"
         >
           <span class="flex items-center gap-3">
             <CreditCard :size="17" />
@@ -255,7 +279,7 @@ async function handleLogout() {
           type="button"
           class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isGestaoActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
-          @click="gestaoOpen = !gestaoOpen"
+          @click="toggleGroup('gestao')"
         >
           <span class="flex items-center gap-3">
             <Building2 :size="17" />
