@@ -8,11 +8,11 @@ O banco segue o padrão do Eloquent ORM. Nomes de tabela e coluna em **inglês**
 
 ## 1. Controle de Acesso
 - ✅ **users**: id, name, email, password, `role` (enum: `admin`, `cashier`, `seller` — enum PHP `App\Enums\UserRole`), commission_percent (nullable — comissão do vendedor), active (boolean), soft deletes, timestamps.
-  - Não existe tabela `sellers` separada: o vendedor **é** o usuário logado (decisão fechada).
+  - Não existe tabela `sellers` separada: o vendedor **é** o usuário logado (decisão fechada; reconfirmada em 2026-07-15 ao planejar a Sub-sprint B, quando uma tabela `sellers` separada chegou a ser cogitada e foi descartada — ver nota em `05-sprints.md`).
   - Autorização por papel via Policies do Laravel + middleware `role:`, não por tabela de permissões.
 
 ## 2. Configuração da Loja
-- ✅ **store_settings**: registro único (id fixo = 1, acessado via `StoreSetting::current()`). name, trade_name (nullable), cnpj (nullable), email (nullable), phone (nullable), mobile_phone (nullable), endereço estruturado (zip_code, address, address_number, address_complement, neighborhood, city, state — mesmo padrão de `customers`/`suppliers`), logo_path (nullable, upload real via `POST /store-settings/logo`, disco `public`, servido pelo nginx em `/storage/...`), `require_seller_on_sale` (boolean — se a seleção de vendedor no PDV é obrigatória), `auto_open_cash_register` (boolean — se o caixa abre automaticamente ao iniciar o expediente).
+- ✅ **store_settings**: registro único (id fixo = 1, acessado via `StoreSetting::current()`). name, trade_name (nullable), cnpj (nullable), email (nullable), phone (nullable), mobile_phone (nullable), endereço estruturado (zip_code, address, address_number, address_complement, neighborhood, city, state — mesmo padrão de `customers`/`suppliers`), logo_path (nullable, upload real via `POST /store-settings/logo`, disco `public`, servido pelo nginx em `/storage/...`), `require_seller_on_sale` (boolean — se a seleção de vendedor no PDV é obrigatória), `auto_open_cash_register` (boolean — se o caixa abre automaticamente ao iniciar o expediente), `label_settings` (json, nullable — layout salvo da tela "Etiquetas": página/margens/grade/tamanho da etiqueta/campos exibidos/tamanho de fonte por campo; admin-only via `PUT /store-settings/label-settings`, ver Sub-sprint B em `05-sprints.md`).
 
 ## 3. Tabelas de framework (criadas pelo Laravel — Sprint 0)
 - ✅ **sessions** — obrigatória: a autenticação é por cookie de sessão com driver `database` (ver `01-architecture.md`).

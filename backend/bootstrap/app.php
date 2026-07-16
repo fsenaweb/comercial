@@ -30,10 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => '/login');
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // API-only por decisão de arquitetura (ver docs/01-architecture.md) — a
-        // única exceção é a rota Blade do comprovante térmico, que não passa por
-        // fluxos de autenticação/erro que precisariam de HTML. Sem isso, o guest
-        // que bate num endpoint protegido recebe um redirect para uma rota
-        // "login" que não existe (500), em vez de 401 JSON.
-        $exceptions->shouldRenderJsonWhen(fn (Request $request) => ! $request->routeIs('sales.receipt'));
+        // API-only por decisão de arquitetura (ver docs/01-architecture.md) — as
+        // únicas exceções são as rotas Blade (comprovante térmico e impressão de
+        // etiquetas), que não passam por fluxos de autenticação/erro que
+        // precisariam de HTML. Sem isso, o guest que bate num endpoint protegido
+        // recebe um redirect para uma rota "login" que não existe (500), em vez
+        // de 401 JSON.
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => ! $request->routeIs('sales.receipt', 'labels.print'));
     })->create();

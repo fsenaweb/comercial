@@ -14,35 +14,10 @@ import {
 } from 'lucide-vue-next'
 import { lineTotalCents } from '~/utils/cartMath'
 import type { CartItem } from '~/stores/cart'
+import type { ProductVariationRow as SkuRow } from '~/composables/useProductVariationSearch'
 
 definePageMeta({ layout: 'pos' })
 useHead({ title: 'PDV — JP Parafusos' })
-
-interface Variation {
-  id: number
-  color: string | null
-  size: string | null
-  ean_gtin: string | null
-  product_code: string
-  sale_price: string
-  current_quantity: number
-  wholesale_min_qty: number | null
-  wholesale_price: string | null
-}
-
-interface Product {
-  id: number
-  name: string
-  active: boolean
-  variations?: Variation[]
-}
-
-interface SkuRow {
-  key: string
-  productName: string
-  variationLabel: string | null
-  variation: Variation
-}
 
 interface Customer {
   id: number
@@ -70,7 +45,7 @@ const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurre
 const { maskInput: maskCep } = useCepMask()
 
 const loading = ref(true)
-const products = ref<Product[]>([])
+const { rows: skuRows, loadProducts, findExact, findFuzzy, filter: filterSkuRows } = useProductVariationSearch()
 const paymentMethods = ref<PaymentMethod[]>([])
 const users = ref<UserOption[]>([])
 const customers = ref<Customer[]>([])
@@ -79,15 +54,14 @@ const requireSellerOnSale = ref(false)
 async function loadAll() {
   loading.value = true
   const api = useApi()
-  const [productsRes, paymentMethodsRes, usersRes, customersRes, storeSettingsRes] = await Promise.all([
-    api<{ data: Product[] }>('/products'),
+  const [, paymentMethodsRes, usersRes, customersRes, storeSettingsRes] = await Promise.all([
+    loadProducts(),
     api<{ data: PaymentMethod[] }>('/payment-methods'),
     api<{ data: UserOption[] }>('/users/active'),
     api<{ data: Customer[] }>('/customers'),
     api<{ data: { require_seller_on_sale: boolean } }>('/store-settings'),
     cashRegisterStore.fetchCurrent(),
   ])
-  products.value = productsRes.data
   paymentMethods.value = paymentMethodsRes.data
   users.value = usersRes.data
   customers.value = customersRes.data
@@ -106,40 +80,6 @@ const paymentMethodOptions = computed(() =>
   paymentMethods.value.filter((p) => p.active_on_pos).map((p) => ({ value: p.id, label: p.name })),
 )
 const sellerOptions = computed(() => users.value.map((u) => ({ value: u.id, label: u.name })))
-
-// ---- Índice de busca por SKU (código/EAN em Map para lookup O(1); nome/código via includes) ----
-const skuRows = computed<SkuRow[]>(() => {
-  const rows: SkuRow[] = []
-  for (const product of products.value) {
-    if (!product.active) continue
-    for (const variation of product.variations ?? []) {
-      const label = [variation.color, variation.size].filter(Boolean).join(' / ') || null
-      rows.push({ key: `${variation.id}`, productName: product.name, variationLabel: label, variation })
-    }
-  }
-  return rows
-})
-
-const exactMatchIndex = computed(() => {
-  const map = new Map<string, SkuRow>()
-  for (const row of skuRows.value) {
-    if (row.variation.ean_gtin) map.set(row.variation.ean_gtin.toLowerCase(), row)
-    map.set(row.variation.product_code.toLowerCase(), row)
-  }
-  return map
-})
-
-function findExact(query: string): SkuRow | null {
-  return exactMatchIndex.value.get(query.trim().toLowerCase()) ?? null
-}
-
-function findFuzzy(query: string): SkuRow | null {
-  const q = query.trim().toLowerCase()
-  if (!q) return null
-  return skuRows.value.find(
-    (row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q),
-  ) ?? null
-}
 
 // ---- Card "Adicionar item" ----
 const searchQuery = ref('')
@@ -252,13 +192,7 @@ function handleIncluirItem() {
 const showProductPicker = ref(false)
 const productPickerSearch = ref('')
 
-const filteredProductPickerRows = computed(() => {
-  const q = productPickerSearch.value.trim().toLowerCase()
-  if (!q) return skuRows.value
-  return skuRows.value.filter(
-    (row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q),
-  )
-})
+const filteredProductPickerRows = computed(() => filterSkuRows(productPickerSearch.value))
 
 function openProductPicker() {
   productPickerSearch.value = ''

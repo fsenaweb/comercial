@@ -35,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('can:update,App\Models\StoreSetting');
     Route::post('/store-settings/logo', [StoreSettingController::class, 'logo'])
         ->middleware('can:update,App\Models\StoreSetting');
+    Route::put('/store-settings/label-settings', [StoreSettingController::class, 'labelSettings'])
+        ->middleware('can:update,App\Models\StoreSetting');
 
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('subcategories', SubcategoryController::class);

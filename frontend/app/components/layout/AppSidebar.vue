@@ -22,7 +22,6 @@ import {
   ShoppingCart,
   Tag,
   UserCheck,
-  UserCog,
   Users,
   Warehouse,
 } from 'lucide-vue-next'
@@ -50,15 +49,16 @@ const estoqueLinks = [
   { to: '/stock/entries', label: 'Entradas de Estoque', icon: PackagePlus },
   { to: '/stock/adjustments', label: 'Ajuste de Estoque', icon: ClipboardEdit },
   { to: '/stock/kardex', label: 'Kardex', icon: History },
+  { to: '/stock/labels', label: 'Etiquetas', icon: Tag },
 ]
-const estoqueComingSoon = [{ label: 'Etiquetas', icon: Tag }]
+const estoqueComingSoon: { label: string, icon: typeof Tag }[] = []
 
 const cadastrosLinks = [
   { to: '/products', label: 'Produtos', icon: Package },
   { to: '/customers', label: 'Clientes', icon: Users },
   { to: '/suppliers', label: 'Fornecedores', icon: Briefcase },
 ]
-const cadastrosComingSoon = [{ label: 'Vendedores', icon: UserCog }]
+const cadastrosComingSoon: { label: string, icon: typeof Tag }[] = []
 
 const financeiroLinks = [
   { to: '/financeiro', label: 'Visão Financeira', icon: Gauge },

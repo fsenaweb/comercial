@@ -28,6 +28,7 @@ class StoreSettingResource extends JsonResource
             'logo_url' => $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null,
             'require_seller_on_sale' => $this->require_seller_on_sale,
             'auto_open_cash_register' => $this->auto_open_cash_register,
+            'label_settings' => $this->label_settings,
         ];
     }
 }

@@ -27,6 +27,7 @@ class StoreSetting extends Model
         'logo_path',
         'require_seller_on_sale',
         'auto_open_cash_register',
+        'label_settings',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class StoreSetting extends Model
         return [
             'require_seller_on_sale' => 'boolean',
             'auto_open_cash_register' => 'boolean',
+            'label_settings' => 'array',
         ];
     }
 
