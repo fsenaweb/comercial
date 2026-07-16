@@ -53,6 +53,7 @@ const products = ref<{ id: number }[]>([])
 const customers = ref<Customer[]>([])
 const summary = ref<DashboardSummary | null>(null)
 const refreshing = ref(false)
+const latestBackupAt = ref<string | null>(null)
 
 function money(value: string | number): string {
   return format(Math.round(Number(value) * 100))
@@ -73,7 +74,17 @@ async function load() {
   products.value = productsResult
   customers.value = customersResult
   summary.value = summaryResult.data
+
+  if (auth.isAdmin) {
+    const backupsResult = await api<{ data: { local: { created_at: string }[] } }>('/backups')
+    latestBackupAt.value = backupsResult.data.local[0]?.created_at ?? null
+  }
 }
+
+const hasBackupToday = computed(() => {
+  if (!latestBackupAt.value) return false
+  return new Date(latestBackupAt.value).toDateString() === new Date().toDateString()
+})
 
 async function handleRefresh() {
   refreshing.value = true
@@ -128,6 +139,18 @@ await load()
         </BaseButton>
       </div>
     </div>
+
+    <NuxtLink
+      v-if="auth.isAdmin"
+      to="/settings/backup"
+      class="flex items-center justify-between gap-3 rounded-2xl border p-4 shadow-card transition hover:shadow-md"
+      :class="hasBackupToday ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
+    >
+      <p class="text-sm font-bold" :class="hasBackupToday ? 'text-emerald-700' : 'text-amber-700'">
+        {{ hasBackupToday ? 'Backup de hoje disponível' : 'Nenhum backup encontrado hoje' }}
+      </p>
+      <span class="text-xs font-semibold underline" :class="hasBackupToday ? 'text-emerald-700' : 'text-amber-700'">Ver backups</span>
+    </NuxtLink>
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
       <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card" :class="{ '!border-l-4 !border-l-amber-400': lowStockCount > 0 }">

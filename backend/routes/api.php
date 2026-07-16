@@ -4,12 +4,14 @@ use App\Http\Controllers\Api\AccountsPayableController;
 use App\Http\Controllers\Api\AccountsReceivableController;
 use App\Http\Controllers\Api\AppearanceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CashRegisterController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FinanceController;
+use App\Http\Controllers\Api\GoogleDriveBackupController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductVariationController;
@@ -39,6 +41,19 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('can:update,App\Models\StoreSetting');
     Route::put('/store-settings/label-settings', [StoreSettingController::class, 'labelSettings'])
         ->middleware('can:update,App\Models\StoreSetting');
+
+    Route::middleware('can:update,App\Models\StoreSetting')->group(function () {
+        Route::get('/store-settings/google-drive/connect', [GoogleDriveBackupController::class, 'connect']);
+        Route::get('/store-settings/google-drive/status', [GoogleDriveBackupController::class, 'status']);
+        Route::delete('/store-settings/google-drive', [GoogleDriveBackupController::class, 'destroy']);
+
+        Route::get('/backups', [BackupController::class, 'index']);
+        Route::get('/backups/{filename}/download', [BackupController::class, 'download'])
+            ->where('filename', '.*');
+        Route::post('/backups/upload-latest', [BackupController::class, 'uploadLatest']);
+        Route::get('/backups/restore/confirmation-code', [BackupController::class, 'confirmationCode']);
+        Route::post('/backups/restore', [BackupController::class, 'restore']);
+    });
 
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('subcategories', SubcategoryController::class);

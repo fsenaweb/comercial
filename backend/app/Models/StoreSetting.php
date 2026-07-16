@@ -36,6 +36,8 @@ class StoreSetting extends Model
             'require_seller_on_sale' => 'boolean',
             'auto_open_cash_register' => 'boolean',
             'label_settings' => 'array',
+            'google_drive_refresh_token' => 'encrypted',
+            'google_drive_connected_at' => 'datetime',
         ];
     }
 

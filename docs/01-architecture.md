@@ -102,12 +102,36 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
 
 ## Backup e Recuperação (crítico)
 
-- Agendamento via `spatie/laravel-backup` (`backup:clean` 01:30, `backup:run` 02:00, diários), disparado pelo container `scheduler`, gerando dump do PostgreSQL (`pg_dump` — o `postgresql-client` está instalado na imagem PHP).
+- Agendamento via `spatie/laravel-backup` (`backup:clean` 09:45, `backup:run` 10:00, diários — horário definido pelo PM; `pg_dump` não trava o sistema em uso, seguro em horário comercial), disparado pelo container `scheduler`, gerando dump do PostgreSQL (`pg_dump` — o `postgresql-client` está instalado na imagem PHP).
 - **Camadas:**
   1. Cópia local sempre — disco dedicado `backups` (`storage/app/backup`, dentro do bind mount do backend) — não depende de internet.
-  2. Upload para **Google Drive quando houver internet** (rclone ou API do Drive, plugado como disk adicional do laravel-backup) — é bônus, não pré-requisito. *Ainda não implementado; previsto para depois do núcleo.*
+  2. **Upload automático para o Google Drive** (bônus, não pré-requisito — falha aqui nunca compromete a camada 1). *Implementado na Sub-sprint E (2026-07-16), ver `05-sprints.md`.*
 - Retenção: política padrão do laravel-backup (`backup:clean` diário remove versões antigas).
+
+### Backup remoto — Google Drive (camada 2)
+
+- **Conta pessoal, não Workspace:** a loja usa uma conta Google One (pessoal, paga só por espaço extra), sem Unidade Compartilhada — uma Service Account sozinha não teria cota própria para receber arquivos. A autenticação é **OAuth com o usuário real** (o admin da loja autoriza uma vez; o app guarda um refresh token e renova o acesso sozinho depois).
+- **Fluxo de dispositivo (device flow, RFC 8628), não redirect padrão:** o sistema roda on-premise, acessado por IP puro na LAN (`http://<ip-do-servidor>`, sem HTTPS, sem domínio). O OAuth com `redirect_uri` exige HTTPS ou `http://localhost` — inviável aqui. Por isso o backend usa o fluxo pensado para TVs/dispositivos de entrada limitada: pede um código à Google, mostra esse código + um link (`google.com/device`) na tela "Backup e restauração" (`/settings/backup`), e o admin autoriza em **qualquer aparelho com internet** (celular, notebook) — sem nenhum redirect envolvido.
+- **Escopo mínimo:** `drive.file` — o app só enxerga/gerencia os arquivos que ele mesmo cria (uma pasta "Backups - <nome da loja>"), nunca o Drive inteiro da conta.
+- **Sem pacote novo do Google:** todas as chamadas (device code, poll de token, refresh, criar pasta, upload, listar) usam `Illuminate\Support\Facades\Http` (Guzzle já é dependência do Laravel) — sem `google/apiclient`.
+- **Sem fila/worker:** o projeto não tem `queue:work` rodando (só o `scheduler` com `schedule:run`). O upload ao Drive é síncrono, via comando `backups:sync-google-drive`, agendado às 10:15 (logo depois do `backup:run` às 10:00).
+- **Setup único, por ambiente** (feito uma vez pelo desenvolvedor/mantenedor, não pelo lojista):
+  1. Criar um projeto no [Google Cloud Console](https://console.cloud.google.com/).
+  2. Ativar a **Google Drive API** (menu "APIs e serviços" → "Biblioteca").
+  3. Configurar a "Tela de consentimento OAuth" (tipo Externo, com o e-mail de suporte da loja).
+  4. Em "Credenciais" → "+ Criar cliente" → **"ID do cliente OAuth"**, escolher **exatamente** o tipo **"TVs e dispositivos de entrada limitada"** ("TVs and Limited Input devices") — esse tipo não pede `redirect_uri`, é o que habilita o device flow.
+     - **Armadilha real (achada na validação da Sub-sprint E):** é fácil escolher **"Aplicativo da Web"** por engano — a tela de criação não deixa óbvio que só o tipo "TVs e dispositivos de entrada limitada" libera o grant de device flow. Com o tipo errado, a chamada ao endpoint de device code da Google falha. Se isso acontecer, não dá para só "editar o tipo" do cliente já criado — é preciso criar um cliente novo com o tipo certo (pode excluir o antigo depois).
+     - O Client Secret **não aparece na lista** de credenciais (só um trecho truncado do Client ID) — para vê-lo por completo, clicar no **nome** do cliente na listagem, que abre a tela de detalhes com o Client Secret completo e um botão de copiar.
+  5. Copiar o Client ID/Secret gerados para `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` no `.env` da loja e reiniciar o `php-fpm` (`docker compose restart php-fpm`) para carregar o `.env` novo.
+  6. **Publicar o app** (mesma tela "Tela de consentimento OAuth" → botão "PUBLICAR APP", muda o status de "Em testes" para "Produção"). **Passo obrigatório, não opcional:** enquanto o app está "Em testes", só e-mails cadastrados como "usuário de teste" conseguem autorizar, **e o refresh token expira sozinho a cada 7 dias** — inviável para um backup diário automático. Publicando (sem precisar da verificação formal da Google, que só é exigida acima de certos limites de uso), o token deixa de expirar sozinho; o preço é que a primeira autorização mostra um aviso "O Google não verificou este app" — normal para apps internos não verificados, resolve-se clicando em "Avançado" → "Acessar (nome do app) (não seguro)".
+- Sem essas duas variáveis configuradas, o botão "Conectar Google Drive" fica indisponível (422 com mensagem clara) — o backup local (camada 1) continua funcionando normalmente.
+- Token de refresh fica guardado em `store_settings` (campos `google_drive_*`), criptografado (cast `encrypted`) — nunca em `.env` (é credencial da conta do lojista, não do ambiente).
 - **Regra inegociável (já cumprida por teste automatizado):** o processo de **restore** é validado pelo teste `BackupRestoreTest`, que gera um backup real, restaura o dump em um banco descartável e confere os dados — não apenas verifica que o comando rodou. Esse teste roda em toda suíte; além dele, fazer um restore manual periódico na máquina da loja continua sendo boa prática.
+- **Restauração pela própria tela** (`/settings/backup`, Sub-sprint E, 2026-07-16): antes só existia o restore manual via terminal (runbook em `07-dev-environment.md`) — agora admin pode restaurar direto pela UI, a partir de um backup local ou de um `.zip` enviado manualmente (baixado do Drive, de um pendrive etc.). Deliberadamente cheio de fricção, dado o tanto de gente que pode acessar o sistema e o quanto essa operação é destrutiva:
+  - Bloqueado se houver caixa aberto (`RestoreBlockedByOpenCashRegisterException`, 409).
+  - Exige um **código de confirmação aleatório de uso único** (`GenerateRestoreConfirmationCodeAction`, 6 caracteres, expira em 5 minutos, `Cache::pull` atômico) — gerado pelo servidor a cada abertura do modal e exibido na tela; validado no backend (`BackupController::restore`), não só no front, para não virar "teatro" (uma palavra fixa poderia ser cravada num script que chamasse a API sem passar pela UI).
+  - `RestoreBackupAction`: extrai o zip, corrige um problema real de compatibilidade (dump gerado pelo cliente `psql`/`pg_dump` 17.x da imagem PHP inclui `SET transaction_timeout`, parâmetro que só existe a partir do Postgres 17 — o servidor do projeto é 16.x e rejeita; a linha é removida do dump antes de restaurar), encerra outras conexões ativas com o banco (`pg_terminate_backend`), derruba e recria o banco (`DROP`/`CREATE DATABASE`) e recarrega o dump — e por fim `TRUNCATE sessions`, derrubando as sessões de outros terminais (a do próprio operador é reescrita normalmente ao fim da requisição).
+  - Validado por `tests/Feature/Backup/RestoreBackupTest.php` com o mesmo rigor do `BackupRestoreTest` (restaura de verdade contra o banco de teste via `DatabaseMigrations`, não um mock).
 
 ## Manutenção e atualização
 
