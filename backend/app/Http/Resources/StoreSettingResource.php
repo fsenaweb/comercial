@@ -29,6 +29,9 @@ class StoreSettingResource extends JsonResource
             'require_seller_on_sale' => $this->require_seller_on_sale,
             'auto_open_cash_register' => $this->auto_open_cash_register,
             'label_settings' => $this->label_settings,
+            'google_drive_connected' => (bool) $this->google_drive_refresh_token,
+            'google_drive_account_email' => $this->google_drive_account_email,
+            'google_drive_connected_at' => $this->google_drive_connected_at?->toIso8601String(),
         ];
     }
 }

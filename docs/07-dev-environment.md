@@ -105,10 +105,17 @@ docker compose exec php-fpm php artisan storage:link   # idempotente; só precis
 
 ## Backup
 - Onde ficam: `backend/storage/app/backup/` (disco `backups`), no host da loja — apontar essa pasta para um HD externo/segundo disco é recomendado.
-- Agendamento: `backup:clean` 01:30 e `backup:run` 02:00 (diários), via container `scheduler`.
+- Agendamento: `backup:clean` 09:45 e `backup:run` 10:00 (diários, horário definido pelo PM), via container `scheduler`.
 - Restore manual (para teste periódico ou desastre):
   ```bash
   unzip <arquivo>.zip -d /tmp/restore
   docker compose exec -T postgres psql -U comercial -d comercial < /tmp/restore/db-dumps/postgresql-comercial.sql
   ```
 - O teste automatizado `BackupRestoreTest` valida o ciclo completo (backup → restore → conferência de dados) em toda execução da suíte.
+- **Restauração pela tela** (`/settings/backup`, Sub-sprint E): alternativa ao restore manual acima — exige código de confirmação (gerado na hora, expira em 5 min) e bloqueia com caixa aberto. Ver `01-architecture.md` para os detalhes técnicos.
+- **Achado real:** o cliente `psql`/`pg_dump` da imagem PHP é 17.x, mas o servidor do projeto é `postgres:16-alpine` — um dump gerado por esse cliente inclui `SET transaction_timeout = 0;` (parâmetro só do PG17), que o PG16 rejeita ao restaurar (`ERROR: unrecognized configuration parameter`). A restauração pela tela já remove essa linha automaticamente; ao restaurar manualmente via `psql -f` (comando acima), se aparecer esse erro, edite o `.sql` removendo a linha `SET transaction_timeout...` antes de rodar de novo.
+
+### Backup remoto — Google Drive (camada 2, Sub-sprint E)
+- `.env`: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` — Client ID OAuth do tipo "TVs e dispositivos de entrada limitada" (setup detalhado em `01-architecture.md`). Em dev local, deixar em branco é normal: o botão "Conectar Google Drive" (`/settings/backup`) fica desabilitado (422 claro), sem quebrar nada.
+- Testar sem esperar o cron das 10:15: `docker compose exec php-fpm php artisan backups:sync-google-drive` — envia o backup local mais recente se a loja já tiver conectado uma conta (via `/settings/backup`).
+- Testes automatizados (`tests/Feature/Backup/`) usam `Http::fake()` para simular toda a API do Google — não precisam de credenciais reais nem de internet. Só a autorização humana do fluxo de dispositivo (abrir `google.com/device` e digitar o código) não dá para automatizar; validar manualmente ao menos uma vez com uma conta Google real.

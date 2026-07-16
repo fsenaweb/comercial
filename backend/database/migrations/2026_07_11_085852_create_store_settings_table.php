@@ -30,6 +30,10 @@ return new class extends Migration
             $table->boolean('require_seller_on_sale')->default(false);
             $table->boolean('auto_open_cash_register')->default(false);
             $table->json('label_settings')->nullable();
+            $table->text('google_drive_refresh_token')->nullable();
+            $table->string('google_drive_account_email')->nullable();
+            $table->string('google_drive_folder_id')->nullable();
+            $table->timestamp('google_drive_connected_at')->nullable();
             $table->timestamps();
         });
     }
