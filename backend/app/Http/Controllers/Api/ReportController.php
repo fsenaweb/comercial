@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Mpdf\Mpdf;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -142,6 +143,19 @@ class ReportController extends Controller
         $report = $this->reportData($key, $request);
 
         return (new ReportArrayExport($report, $this->letterhead()))->download($key.'.xlsx');
+    }
+
+    /**
+     * Impressão direta em A4 (distinta da exportação PDF/Excel acima): reaproveita a
+     * mesma view de export, mas renderizada pra abrir no navegador com `window.print()`
+     * em vez de gerar o PDF via mPDF — sem seletor de formato, relatório tabular não
+     * cabe em bobina térmica (Sub-sprint D, docs/05-sprints.md).
+     */
+    public function print(string $key, Request $request): View
+    {
+        $report = $this->reportData($key, $request);
+
+        return view('reports.export', ['report' => $report, 'letterhead' => $this->letterhead(), 'autoPrint' => true]);
     }
 
     /**

@@ -35,7 +35,7 @@ class QuoteTest extends TestCase
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.total', '20.00');
 
-        $this->assertMatchesRegularExpression('/^O\d{6}$/', $response->json('data.number'));
+        $this->assertMatchesRegularExpression('/^C\d{6}$/', $response->json('data.number'));
     }
 
     public function test_quote_does_not_touch_stock_or_cash(): void

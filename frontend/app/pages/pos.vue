@@ -41,6 +41,7 @@ const auth = useAuthStore()
 const cart = useCartStore()
 const cashRegisterStore = useCashRegisterStore()
 const { parse, firstFieldError } = useApiError()
+const { printFormatDialog } = usePrintFormatDialog()
 const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurrency } = useCurrencyMask()
 const { maskInput: maskCep } = useCepMask()
 
@@ -411,7 +412,8 @@ async function handleFinalizarVenda() {
     valorRecebidoMasked.value = 'R$ 0,00'
     paymentAmountMasked.value = ['R$ 0,00']
     cashReceivedMasked.value = ['R$ 0,00']
-    window.open(`/sales/${sale.id}/receipt`, '_blank')
+    const format = await printFormatDialog()
+    if (format) window.open(`/sales/${sale.id}/receipt?format=${format}`, '_blank')
     await cashRegisterStore.fetchCurrent()
     focusSearch()
   } catch (err) {

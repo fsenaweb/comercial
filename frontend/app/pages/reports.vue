@@ -5,6 +5,7 @@ import {
   Boxes,
   Download,
   FileText,
+  Printer,
   ShoppingCart,
 } from 'lucide-vue-next'
 
@@ -130,6 +131,16 @@ function exportReport(format: 'pdf' | 'excel') {
   const url = `${apiBase}/reports/catalog/${activeReport.value.key}/export/${format}${qs ? `?${qs}` : ''}`
   window.open(url, '_blank')
 }
+
+// Impressão direta sempre em A4 — tabela de relatório não cabe em bobina
+// térmica, então não passa pelo seletor de formato (Sub-sprint D).
+function printReport() {
+  if (!activeReport.value) return
+  const qs = buildQuery()
+  const apiBase = (config.public.apiBase as string).replace(/\/$/, '')
+  const url = `${apiBase}/reports/catalog/${activeReport.value.key}/print${qs ? `?${qs}` : ''}`
+  window.open(url, '_blank')
+}
 </script>
 
 <template>
@@ -214,6 +225,10 @@ function exportReport(format: 'pdf' | 'excel') {
             <BaseButton variant="ghost" :block="false" @click="exportReport('pdf')">
               <FileText :size="15" />
               Exportar PDF
+            </BaseButton>
+            <BaseButton variant="ghost" :block="false" @click="printReport">
+              <Printer :size="15" />
+              Imprimir
             </BaseButton>
             <BaseButton :block="false" :loading="loading" loading-text="Gerando…" @click="generateReport">
               Gerar Relatório

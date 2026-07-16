@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ban, CheckCircle2, Eye, FileText, Search, Trash2, TrendingUp } from 'lucide-vue-next'
+import { Ban, CheckCircle2, Eye, FileText, Printer, Search, Trash2, TrendingUp } from 'lucide-vue-next'
 
 interface UserOption {
   id: number
@@ -49,6 +49,7 @@ const auth = useAuthStore()
 const cashRegisterStore = useCashRegisterStore()
 const { parse, firstFieldError } = useApiError()
 const { format, maskInput: maskCurrency, toNumber: currencyToNumber } = useCurrencyMask()
+const { printFormatDialog } = usePrintFormatDialog()
 
 const quotes = ref<QuoteListItem[]>([])
 const sellers = ref<UserOption[]>([])
@@ -145,6 +146,11 @@ async function viewQuote(quoteId: number) {
   detailLoading.value = false
 }
 
+async function printQuote(quoteId: number) {
+  const printFormat = await printFormatDialog()
+  if (printFormat) window.open(`/sales/${quoteId}/receipt?format=${printFormat}`, '_blank')
+}
+
 // ---- Converter em venda ----
 interface ConvertPaymentLine {
   paymentMethodId: number | null
@@ -230,7 +236,8 @@ async function confirmConvert() {
       body: { payments },
     })
     showConvertModal.value = false
-    window.open(`/sales/${data.id}/receipt`, '_blank')
+    const printFormat = await printFormatDialog()
+    if (printFormat) window.open(`/sales/${data.id}/receipt?format=${printFormat}`, '_blank')
     await load()
   } catch (err) {
     convertError.value = err
@@ -343,6 +350,7 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
         </span>
         <div class="flex justify-end gap-1">
           <IconButton :icon="Eye" label="Ver detalhes" @click="viewQuote(quote.id)" />
+          <IconButton :icon="Printer" label="Imprimir orçamento" @click="printQuote(quote.id)" />
           <IconButton
             v-if="canManageQuote && quote.status === 'pending' && !isExpired(quote)"
             :icon="CheckCircle2"
