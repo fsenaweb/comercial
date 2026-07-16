@@ -105,5 +105,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/catalog/{key}', [ReportController::class, 'show']);
         Route::get('/catalog/{key}/export/pdf', [ReportController::class, 'exportPdf']);
         Route::get('/catalog/{key}/export/excel', [ReportController::class, 'exportExcel']);
+        Route::get('/catalog/{key}/print', [ReportController::class, 'print']);
     });
 });

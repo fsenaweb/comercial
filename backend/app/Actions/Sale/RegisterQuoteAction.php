@@ -36,7 +36,9 @@ class RegisterQuoteAction
                 'status' => SaleStatus::Pending,
                 'expires_at' => $data['expires_at'] ?? null,
             ]);
-            $sale->update(['number' => 'O'.str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT)]);
+            // Prefixo 'C' (Cotação) em vez de 'O' (Orçamento) — decisão do usuário,
+            // 'O' fica ambíguo com zero em fonte monoespaçada/térmica.
+            $sale->update(['number' => 'C'.str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT)]);
 
             foreach ($itemsToInsert as $row) {
                 SaleItem::create([

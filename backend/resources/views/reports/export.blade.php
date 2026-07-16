@@ -77,6 +77,11 @@
         border-top: 1px solid #000;
         border-bottom: 1px solid #000;
     }
+    @if (! empty($autoPrint))
+        @media print {
+            @page { size: A4; margin: 15mm; }
+        }
+    @endif
 </style>
 </head>
 <body>
@@ -136,5 +141,11 @@
             @endforelse
         </tbody>
     </table>
+
+    @if (! empty($autoPrint))
+        <script>
+            window.onload = () => window.print();
+        </script>
+    @endif
 </body>
 </html>

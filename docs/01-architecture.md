@@ -91,6 +91,14 @@ Comandos prontos e o runbook completo estão em `07-dev-environment.md`.
 - Conteúdo: cabeçalho da loja, nº da venda, data/hora, itens (nome, qtd, unitário, total), subtotal, desconto, total, forma de pagamento, vendedor, cliente (se houver), observações. Sugestão: incluir um código de barras/QR do nº da venda para facilitar localização em outro sistema (ex.: o sistema fiscal separado).
 - **Risco conhecido:** impressão térmica via navegador é historicamente instável entre drivers/SOs. Plano B: **QZ Tray** ou envio direto **ESC/POS** via helper local. Reservar tempo de implementação para esse risco na Sprint em que o comprovante for construído.
 - A impressão de etiquetas de preço/código de barras (Sub-sprint B) segue a mesma abordagem: rota Blade própria (`POST /labels/print`), com `@page` ajustado ao tamanho de página/etiqueta configurado pelo usuário e `window.print()` no load. É a segunda (e, junto com o comprovante, única) rota Blade do sistema — ambas listadas no bloco `location ~ ^/(api|sales|sanctum|labels)(/|$)` do `docker/nginx/default.conf`.
+- **Impressão sem diálogo do navegador (`--kiosk-printing`):** por decisão de segurança do próprio Chromium, `window.print()` chamado por uma página **sempre** abre a caixa de diálogo de impressão — não existe API JS para imprimir silenciosamente. A solução padrão pra terminais dedicados (PDV, back-office) é abrir o navegador com a flag `--kiosk-printing`: com ela, `window.print()` manda direto pra impressora padrão do SO, sem diálogo nem preview. Funciona igual em **Windows, Linux e macOS** (é uma flag do Chromium/Chrome, não do SO) — único requisito é que a impressora térmica esteja configurada como impressora padrão do Windows/Linux no terminal.
+  - **Windows:** criar um atalho apontando pro Chrome com esse alvo (ajustar o caminho do `chrome.exe` e o IP/host do servidor conforme o ambiente):
+    ```
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --kiosk http://<ip-do-servidor>
+    ```
+    Colocar o atalho na pasta de inicialização do Windows (`shell:startup`) pra abrir sozinho no boot do terminal. `--kiosk` (tela cheia, sem barra de endereço) é opcional — pode ser removido se o operador precisar da UI normal do navegador.
+  - **Linux:** `google-chrome --kiosk-printing --kiosk http://<ip-do-servidor>` (ou `chromium-browser`, conforme o pacote instalado).
+  - Isso é **configuração do terminal, não do sistema** — nenhuma mudança de código, só o comando/atalho usado pra abrir o navegador nas máquinas da loja. Documentar esse atalho no runbook de instalação de terminal quando a Sprint 7 (Manual do Usuário) cobrir a configuração de PDV/terminal.
 
 ## Backup e Recuperação (crítico)
 

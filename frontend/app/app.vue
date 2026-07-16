@@ -5,5 +5,6 @@
       <NuxtPage />
     </NuxtLayout>
     <ConfirmDialogHost />
+    <PrintFormatDialogHost />
   </div>
 </template>

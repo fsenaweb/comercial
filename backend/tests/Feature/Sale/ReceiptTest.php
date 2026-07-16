@@ -74,4 +74,93 @@ class ReceiptTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_receipt_defaults_to_roll80_format(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt");
+
+        $response->assertOk();
+        $response->assertSee('80mm auto', false);
+    }
+
+    public function test_receipt_accepts_roll58_format(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt?format=roll58");
+
+        $response->assertOk();
+        $response->assertSee('58mm auto', false);
+    }
+
+    public function test_receipt_accepts_a4_format(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt?format=a4");
+
+        $response->assertOk();
+        $response->assertSee('size: A4', false);
+    }
+
+    public function test_receipt_rejects_invalid_format(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt?format=invalid");
+
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors('format');
+    }
+
+    public function test_pending_sale_prints_as_quote_without_payment_block(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $quote = $this->actingAs($admin)->postJson('/api/quotes', [
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ])->json('data');
+
+        $response = $this->actingAs($admin)->get("/sales/{$quote['id']}/receipt");
+
+        $response->assertOk();
+        $response->assertSee('ORÇAMENTO');
+        $response->assertDontSee('DOCUMENTO NÃO FISCAL');
+        $response->assertDontSee('Forma de pagamento');
+    }
 }
