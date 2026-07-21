@@ -5,7 +5,7 @@ export interface SplitInstallment {
 }
 
 /**
- * Sugestão inicial de divisão de parcelas — espelha (em JS, só pra preview)
+ * Sugestão inicial de divisão de parcelas - espelha (em JS, só pra preview)
  * o bcmath do backend (Actions/Concerns/SplitsInstallments.php): divide em
  * partes iguais arredondadas a centavos e joga a sobra na última parcela.
  * O operador pode editar cada linha depois; o backend sempre revalida a

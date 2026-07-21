@@ -14,7 +14,12 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+            // Nullable (2026-07-21, decisão do cliente): nem todo "vendedor" cadastrado
+            // pra aparecer no seletor do PDV (F3) precisa logar no sistema — o e-mail só
+            // é obrigatório pra quem realmente precisa de acesso. Postgres não aplica a
+            // constraint UNIQUE entre múltiplos NULLs, então vários usuários sem e-mail
+            // convivem sem colisão.
+            $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'cashier', 'seller'])->default('seller');

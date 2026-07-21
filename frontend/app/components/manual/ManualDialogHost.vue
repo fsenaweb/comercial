@@ -21,7 +21,7 @@ function goNext() {
 }
 
 // F4 abre/fecha o manual em qualquer tela (padrão de ajuda de aplicativo
-// desktop, pedido do usuário) — preventDefault() pra não disputar com
+// desktop, pedido do usuário) - preventDefault() pra não disputar com
 // atalhos do navegador. F1 foi descartado: em muitas máquinas Windows é
 // interceptado pelo fabricante do notebook/teclado ou por política de TI
 // antes mesmo de chegar à página, fora do alcance de qualquer

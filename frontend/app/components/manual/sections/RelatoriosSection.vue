@@ -27,7 +27,7 @@
       <h4 class="font-display text-sm font-bold text-txt-primary">Exportar e imprimir</h4>
       <p class="mt-1.5">
         Cada relatório pode ser exportado em PDF ou Excel (com o cabeçalho/logo da loja, prontos
-        para impressão em papel timbrado) ou impresso diretamente — a impressão de relatório é
+        para impressão em papel timbrado) ou impresso diretamente - a impressão de relatório é
         sempre em papel A4, já que uma tabela larga não cabe numa bobina térmica.
       </p>
     </div>

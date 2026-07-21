@@ -178,6 +178,7 @@ sistema — NCM, CFOP, ICMS, PIS/COFINS, SPED etc., **ignorar**):
 | `PRECO_ATACADO` / `QTD_ATACADO` | `product_variations.wholesale_price` / `wholesale_min_qty` |
 | `ATIVO` (`S`/`N`) | `products.active` |
 | `SERVICO` (`S`/`N`) | `products.type = service` |
+| `LOCALIZACAO` | `products.location` — **achado em 2026-07-21** (cliente reportou que a localização não veio na importação): campo já existia em `products` desde a modelagem original, mas tinha ficado de fora do mapeamento inicial por não ter sido identificado na tabela `PRODUTO` do legado durante o levantamento de 2026-07-18. Confirmado inspecionando o `.fbk` real: `VARCHAR(40)`, só 377 dos 13.280 produtos preenchidos (2,8%), formato livre tipo `"C02 BA05"` (corredor/prateleira) — importado como texto puro, vazio vira `null` |
 
 **Decisão do cliente sobre `REFERENCIA` vs. `CODIGO` (2026-07-18):** ele
 usa os dois no dia a dia — a `REFERENCIA` tem prioridade e precisa estar

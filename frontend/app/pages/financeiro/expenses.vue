@@ -113,7 +113,7 @@ await loadExpenses()
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="font-display text-[30px] font-extrabold text-brand">Despesas</h1>
-        <p class="text-sm text-txt-secondary">Despesas administrativas avulsas (aluguel, energia, internet...) — controle financeiro, não sai do caixa da loja.</p>
+        <p class="text-sm text-txt-secondary">Despesas administrativas avulsas (aluguel, energia, internet...) - controle financeiro, não sai do caixa da loja.</p>
       </div>
       <BaseButton :block="false" @click="openModal">
         <Plus :size="15" />
@@ -127,7 +127,7 @@ await loadExpenses()
         :key="option.value"
         type="button"
         class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
-        :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
+        :class="statusFilter === option.value ? 'border-ink bg-ink text-white' : 'border-border text-txt-secondary'"
         @click="statusFilter = option.value as typeof statusFilter"
       >
         {{ option.label }}
@@ -153,7 +153,7 @@ await loadExpenses()
         class="grid grid-cols-[1.6fr_1.2fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
         <span class="truncate text-sm font-medium text-txt-primary">{{ expense.description }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ expense.category ?? '—' }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ expense.category ?? '-' }}</span>
         <span class="text-right text-sm font-bold text-txt-primary">{{ formatAmount(expense.amount) }}</span>
         <span class="text-sm text-txt-secondary">{{ formatDate(expense.due_date) }}</span>
         <span class="flex items-center gap-1.5">

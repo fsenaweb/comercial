@@ -13,7 +13,7 @@ describe('useDocumentMask', () => {
     expect(maskInput('1234', 'cpf')).toBe('123.4')
   })
 
-  it('caps CPF at 11 digits — does not turn into CNPJ if the user keeps typing', () => {
+  it('caps CPF at 11 digits - does not turn into CNPJ if the user keeps typing', () => {
     expect(maskInput('123456789001234', 'cpf')).toBe('123.456.789-00')
   })
 

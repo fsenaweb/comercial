@@ -15,7 +15,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 // Campos com máscara (moeda, CEP, CPF/CNPJ) recalculam o valor a cada tecla e
 // às vezes o resultado não muda de uma tecla pra outra (ex.: já bateu o limite
-// de dígitos) — nesse caso o Vue não teria motivo pra re-patchar o DOM (o prop
+// de dígitos) - nesse caso o Vue não teria motivo pra re-patchar o DOM (o prop
 // "modelValue" ficou igual), e o navegador deixa o caractere digitado "grudado"
 // na tela mesmo o estado real (form.x) já estando correto. Forçamos a
 // sincronização do elemento nativo após o próximo tick pra nunca deixar a tela

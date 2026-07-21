@@ -4,7 +4,7 @@ import { Pencil, Plus, Search, UserCheck } from 'lucide-vue-next'
 interface User {
   id: number
   name: string
-  email: string
+  email: string | null
   role: 'admin' | 'cashier' | 'seller'
   role_label: string
   commission_percent: string | null
@@ -34,7 +34,7 @@ async function load() {
 const filteredUsers = computed(() => {
   const query = search.value.trim().toLowerCase()
   if (!query) return users.value
-  return users.value.filter((u) => u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
+  return users.value.filter((u) => u.name.toLowerCase().includes(query) || (u.email ?? '').toLowerCase().includes(query))
 })
 
 // ---- Modal "Novo Usuário" / "Editar Usuário" ----
@@ -68,7 +68,7 @@ function openCreateModal() {
 
 function openEditModal(user: User) {
   editingId.value = user.id
-  Object.assign(form, { ...user, password: '' })
+  Object.assign(form, { ...user, email: user.email ?? '', password: '' })
   modalError.value = null
   modalOpen.value = true
 }
@@ -82,7 +82,7 @@ async function handleSubmit() {
   modalError.value = null
 
   try {
-    const payload: Record<string, unknown> = { ...form }
+    const payload: Record<string, unknown> = { ...form, email: form.email.trim() || null }
     if (editingId.value && !form.password) delete payload.password
 
     if (editingId.value) {
@@ -106,7 +106,7 @@ await load()
   <div class="space-y-5">
     <div>
       <h1 class="font-display text-[30px] font-extrabold text-brand">Usuários e Permissões</h1>
-      <p class="text-sm text-txt-secondary">Contas de acesso ao sistema — administradores, caixas e vendedores.</p>
+      <p class="text-sm text-txt-secondary">Contas de acesso ao sistema - administradores, caixas e vendedores.</p>
     </div>
 
     <StatCard label="Usuários" :value="users.length" subtext="contas cadastradas" :icon="UserCheck" tone="violet" class="max-w-xs" />
@@ -143,7 +143,7 @@ await load()
         class="grid grid-cols-[1.4fr_1.6fr_1fr_0.8fr_60px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
         <span class="text-sm font-medium text-txt-primary">{{ user.name }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ user.email }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ user.email ?? '-' }}</span>
         <span><StatusBadge :label="user.role_label" tone="info" /></span>
         <span><StatusBadge :label="user.active ? 'Ativo' : 'Inativo'" :tone="user.active ? 'success' : 'danger'" /></span>
         <div class="flex justify-end">
@@ -167,7 +167,7 @@ await load()
     >
       <form class="space-y-4" @submit.prevent="handleSubmit">
         <BaseInput v-model="form.name" label="Nome" :error="firstFieldError(modalError, 'name')" />
-        <BaseInput v-model="form.email" type="email" label="E-mail" :error="firstFieldError(modalError, 'email')" />
+        <BaseInput v-model="form.email" type="email" label="E-mail (opcional - só quem faz login precisa de um)" :error="firstFieldError(modalError, 'email')" />
         <BaseInput
           v-model="form.password"
           type="password"

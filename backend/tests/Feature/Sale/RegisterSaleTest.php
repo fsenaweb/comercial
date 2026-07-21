@@ -9,6 +9,7 @@ use App\Models\ProductVariation;
 use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class RegisterSaleTest extends TestCase
@@ -454,5 +455,96 @@ class RegisterSaleTest extends TestCase
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['payments']);
+    }
+
+    public function test_sale_discount_above_20_percent_requires_admin_password(): void
+    {
+        CashRegister::factory()->open()->create();
+        User::factory()->admin()->create();
+        $seller = User::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($seller)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 15]],
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['admin_password']);
+        $this->assertDatabaseCount('sales', 0);
+    }
+
+    public function test_sale_item_discount_above_20_percent_requires_admin_password(): void
+    {
+        CashRegister::factory()->open()->create();
+        User::factory()->admin()->create();
+        $seller = User::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($seller)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 15]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2, 'discount_type' => 'percentage', 'discount_value' => 25]],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['admin_password']);
+        $this->assertDatabaseCount('sales', 0);
+    }
+
+    public function test_sale_discount_above_20_percent_with_wrong_admin_password_is_rejected(): void
+    {
+        CashRegister::factory()->open()->create();
+        User::factory()->admin()->create();
+        $seller = User::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($seller)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 15]],
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'admin_password' => 'senha-errada',
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['admin_password']);
+    }
+
+    public function test_sale_discount_above_20_percent_with_valid_admin_password_succeeds(): void
+    {
+        CashRegister::factory()->open()->create();
+        User::factory()->admin()->create(['password' => Hash::make('senha-do-dono')]);
+        $seller = User::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($seller)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 15]],
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'admin_password' => 'senha-do-dono',
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.total', '15.00');
+    }
+
+    public function test_sale_discount_at_exactly_20_percent_does_not_require_admin_password(): void
+    {
+        CashRegister::factory()->open()->create();
+        $seller = User::factory()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($seller)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 16]],
+            'discount_type' => 'percentage',
+            'discount_value' => 20,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.total', '16.00');
     }
 }

@@ -87,13 +87,60 @@ class UserTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_create_requires_name_email_password_and_role(): void
+    public function test_create_requires_name_password_and_role(): void
     {
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->postJson('/api/users', []);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['name', 'email', 'password', 'role', 'active']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['name', 'password', 'role', 'active']);
+    }
+
+    public function test_create_does_not_require_email(): void
+    {
+        // Pedido do cliente (2026-07-21): nem todo "vendedor" cadastrado só
+        // pra aparecer no seletor do PDV (F3) precisa logar no sistema — o
+        // e-mail só é obrigatório pra quem realmente precisa de acesso.
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/users', [
+            'name' => 'Vendedor Sem E-mail',
+            'password' => 'senha',
+            'role' => 'seller',
+            'active' => true,
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.email', null);
+        $this->assertDatabaseHas('users', ['name' => 'Vendedor Sem E-mail', 'email' => null]);
+    }
+
+    public function test_create_allows_multiple_users_without_email(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $first = $this->actingAs($admin)->postJson('/api/users', [
+            'name' => 'Vendedor A', 'password' => 'senha', 'role' => 'seller', 'active' => true,
+        ]);
+        $second = $this->actingAs($admin)->postJson('/api/users', [
+            'name' => 'Vendedor B', 'password' => 'senha', 'role' => 'seller', 'active' => true,
+        ]);
+
+        $first->assertCreated();
+        $second->assertCreated();
+    }
+
+    public function test_create_does_not_require_minimum_password_length(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $response = $this->actingAs($admin)->postJson('/api/users', [
+            'name' => 'Vendedor Senha Curta',
+            'password' => '123',
+            'role' => 'seller',
+            'active' => true,
+        ]);
+
+        $response->assertCreated();
     }
 
     public function test_create_rejects_duplicate_email(): void

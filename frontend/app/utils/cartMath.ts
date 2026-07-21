@@ -14,7 +14,7 @@ function toCents(value: number): number {
 /**
  * Resolve o valor absoluto (em centavos) do desconto sobre uma base, espelhando
  * o resolveDiscountAmount() do RegisterSaleAction: fixo usa o valor direto,
- * percentual multiplica e trunca (nunca arredonda pra cima) no final — decisão
+ * percentual multiplica e trunca (nunca arredonda pra cima) no final - decisão
  * do usuário (2026-07-19): quando o desconto exato cai em fração de centavo,
  * o comerciante fica com o valor cheio, nunca o cliente. Precisa truncar
  * igual aqui e no backend, senão o total mostrado no PDV diverge do total

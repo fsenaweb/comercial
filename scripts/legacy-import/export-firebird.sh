@@ -110,7 +110,7 @@ FROM UNIDADE;"
 
 # produto.csv: codigo|codbarra|descricao|referencia|grupo|unidade|fk_marca|
 #              pr_custo|margem|pr_venda|qtd_atual|qtd_min|preco_atacado|
-#              qtd_atacado|ativo|servico
+#              qtd_atacado|ativo|servico|localizacao
 export_table "produto" "
 SELECT TRIM(CAST(CODIGO AS VARCHAR(20))) || '|' ||
        REPLACE(COALESCE(TRIM(CODBARRA), ''), '|', ' ') || '|' ||
@@ -127,7 +127,8 @@ SELECT TRIM(CAST(CODIGO AS VARCHAR(20))) || '|' ||
        TRIM(CAST(COALESCE(PRECO_ATACADO, 0) AS VARCHAR(20))) || '|' ||
        TRIM(CAST(COALESCE(QTD_ATACADO, 0) AS VARCHAR(20))) || '|' ||
        COALESCE(ATIVO, 'S') || '|' ||
-       COALESCE(SERVICO, 'N')
+       COALESCE(SERVICO, 'N') || '|' ||
+       REPLACE(COALESCE(TRIM(LOCALIZACAO), ''), '|', ' ')
 FROM PRODUTO;"
 
 # pessoa.csv (só clientes, CLI='S'): codigo|razao|fantasia|cnpj|tipo|endereco|

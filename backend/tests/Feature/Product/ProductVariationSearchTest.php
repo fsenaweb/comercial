@@ -73,6 +73,58 @@ class ProductVariationSearchTest extends TestCase
         $this->assertEquals('Parafuso Sextavado M8', $response->json('data.0.product_name'));
     }
 
+    public function test_search_includes_max_quantity_and_markup(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['name' => 'Parafuso Com Limite']);
+        ProductVariation::factory()->create(['product_id' => $product->id, 'max_quantity' => 50, 'markup' => 30]);
+
+        $response = $this->actingAs($user)->getJson('/api/product-variations/search?q=Limite');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.max_quantity', 50)
+            ->assertJsonPath('data.0.markup', '30.00');
+    }
+
+    public function test_search_matches_multiple_words_regardless_of_order_or_adjacency(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['name' => 'Parafuso Sextavado M8 X100']);
+        ProductVariation::factory()->create(['product_id' => $product->id]);
+        $other = Product::factory()->create(['name' => 'Parafuso Allen M8 X50']);
+        ProductVariation::factory()->create(['product_id' => $other->id]);
+
+        // "paraf" e "x100" não são contíguos no nome ("Sextavado M8" fica no
+        // meio) — cada palavra precisa bater em qualquer lugar, não a frase
+        // inteira em sequência.
+        $response = $this->actingAs($user)->getJson('/api/product-variations/search?q=paraf x100');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+        $this->assertEquals('Parafuso Sextavado M8 X100', $response->json('data.0.product_name'));
+    }
+
+    public function test_search_word_order_does_not_matter(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['name' => 'Filtro de Ar Condicionado']);
+        ProductVariation::factory()->create(['product_id' => $product->id]);
+
+        $response = $this->actingAs($user)->getJson('/api/product-variations/search?q=condicionado filtro');
+
+        $response->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_search_requires_all_words_to_match(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['name' => 'Parafuso Sextavado M8']);
+        ProductVariation::factory()->create(['product_id' => $product->id]);
+
+        $response = $this->actingAs($user)->getJson('/api/product-variations/search?q=parafuso inexistente');
+
+        $response->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_search_respects_limit(): void
     {
         $user = User::factory()->create();

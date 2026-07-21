@@ -64,7 +64,7 @@ export interface Sale {
 }
 
 // Preço efetivo de um item: só usa o preço de atacado quando o operador marcou
-// o checkbox E a quantidade ainda bate o mínimo — nunca automático (espelha a
+// o checkbox E a quantidade ainda bate o mínimo - nunca automático (espelha a
 // regra do RegisterSaleAction no backend, que exige `apply_wholesale` explícito).
 function effectiveUnitPrice(item: Pick<CartItem, 'unitPrice' | 'quantity' | 'applyWholesale' | 'wholesaleMinQty' | 'wholesalePrice'>): number {
   if (item.applyWholesale && item.wholesaleMinQty !== null && item.wholesalePrice !== null && item.quantity >= item.wholesaleMinQty) {
@@ -255,7 +255,7 @@ export const useCartStore = defineStore('cart', {
       this.expiresAt = null
     },
 
-    async checkout() {
+    async checkout(adminPassword?: string) {
       const api = useApi()
       const payments = this.splitPayment
         ? this.payments.map((payment) => ({ payment_method_id: payment.paymentMethodId, amount: payment.amount }))
@@ -269,6 +269,7 @@ export const useCartStore = defineStore('cart', {
           payments,
           discount_type: this.saleDiscountType,
           discount_value: this.saleDiscountValue,
+          admin_password: adminPassword || null,
           notes: this.notes,
           items: this.items.map((item) => ({
             product_variation_id: item.productVariationId,
@@ -284,7 +285,7 @@ export const useCartStore = defineStore('cart', {
       return data
     },
 
-    async saveAsQuote() {
+    async saveAsQuote(adminPassword?: string) {
       const api = useApi()
       const { data } = await api<{ data: Sale }>('/quotes', {
         method: 'POST',
@@ -294,6 +295,7 @@ export const useCartStore = defineStore('cart', {
           expires_at: this.expiresAt,
           discount_type: this.saleDiscountType,
           discount_value: this.saleDiscountValue,
+          admin_password: adminPassword || null,
           notes: this.notes,
           items: this.items.map((item) => ({
             product_variation_id: item.productVariationId,

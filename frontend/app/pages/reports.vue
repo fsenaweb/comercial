@@ -132,7 +132,7 @@ function exportReport(format: 'pdf' | 'excel') {
   window.open(url, '_blank')
 }
 
-// Impressão direta sempre em A4 — tabela de relatório não cabe em bobina
+// Impressão direta sempre em A4 - tabela de relatório não cabe em bobina
 // térmica, então não passa pelo seletor de formato (Sub-sprint D).
 function printReport() {
   if (!activeReport.value) return

@@ -126,7 +126,7 @@ await load()
     <div class="flex flex-wrap items-start justify-between gap-4">
       <p class="max-w-2xl text-[15px] leading-relaxed text-txt-secondary">
         Olá, <strong class="text-txt-primary">{{ auth.user?.name }}</strong>. Aqui você acompanha o que pede
-        atenção hoje — vendas do dia, estoque baixo e a base de clientes.
+        atenção hoje - vendas do dia, estoque baixo e a base de clientes.
       </p>
       <div class="flex shrink-0 gap-2.5">
         <BaseButton variant="ghost" :block="false" :loading="refreshing" loading-text="Atualizando…" @click="handleRefresh">

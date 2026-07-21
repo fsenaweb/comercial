@@ -4,7 +4,7 @@
       <h3 class="font-display text-base font-bold text-txt-primary">Instalação e primeiro acesso</h3>
       <p class="mt-1.5">
         O sistema roda inteiro dentro da rede da loja (não é um serviço na internet). Esta seção é
-        um resumo para o Administrador — o passo a passo técnico completo fica no repositório do
+        um resumo para o Administrador - o passo a passo técnico completo fica no repositório do
         projeto, em <code class="rounded bg-surface-subtle px-1.5 py-0.5 text-xs">docs/07-dev-environment.md</code>.
       </p>
     </div>
@@ -35,7 +35,7 @@
       <h4 class="font-display text-sm font-bold text-txt-primary">Impressão sem diálogo do navegador</h4>
       <p class="mt-1.5">
         No terminal do caixa/PDV, configure o atalho do Chrome com a flag
-        <code class="rounded bg-surface-subtle px-1.5 py-0.5 text-xs">--kiosk-printing</code> —
+        <code class="rounded bg-surface-subtle px-1.5 py-0.5 text-xs">--kiosk-printing</code> -
         assim, o comprovante e as etiquetas imprimem direto na impressora térmica padrão do sistema
         operacional, sem abrir a janela de impressão do navegador a cada venda. O passo a passo
         completo (Windows/Linux) está em

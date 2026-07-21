@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowLeft, CheckCircle2, Edit2, Plus, Search, ShoppingBag, Trash2 } from 'lucide-vue-next'
 import { lineTotalCents, saleTotalCents, subtotalCents, type DiscountType } from '~/utils/cartMath'
+import type { ProductVariationRow } from '~/composables/useProductVariationSearch'
 
 interface Customer {
   id: number
@@ -52,24 +53,7 @@ interface AccountsReceivable {
   notes: string | null
 }
 
-interface Variation {
-  id: number
-  product_code: string
-  sale_price: string
-  current_quantity: number
-}
-
-interface Product {
-  id: number
-  name: string
-  variations?: Variation[]
-}
-
-interface SkuOption {
-  key: string
-  productName: string
-  variation: Variation
-}
+type SkuOption = ProductVariationRow
 
 interface FormItem {
   key: number
@@ -84,7 +68,7 @@ interface FormItem {
 }
 
 const api = useApi()
-const productsApi = useResourceApi<Product>('products')
+const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
 const { maskInput, toNumber, format } = useCurrencyMask()
 
@@ -93,31 +77,18 @@ const loading = ref(true)
 const accounts = ref<AccountsReceivable[]>([])
 const customers = ref<Customer[]>([])
 const paymentMethods = ref<PaymentMethod[]>([])
-const products = ref<Product[]>([])
 const statusFilter = ref<'all' | 'open' | 'paid'>('open')
-
-const skuOptions = computed<SkuOption[]>(() => {
-  const rows: SkuOption[] = []
-  for (const product of products.value) {
-    for (const variation of product.variations ?? []) {
-      rows.push({ key: `${product.id}-${variation.id}`, productName: product.name, variation })
-    }
-  }
-  return rows
-})
 
 async function loadAll() {
   loading.value = true
-  const [accountsRes, customersRes, paymentMethodsRes, productsResult] = await Promise.all([
+  const [accountsRes, customersRes, paymentMethodsRes] = await Promise.all([
     api<{ data: AccountsReceivable[] }>('/accounts-receivable'),
     api<{ data: Customer[] }>('/customers'),
     api<{ data: PaymentMethod[] }>('/payment-methods'),
-    productsApi.list(),
   ])
   accounts.value = accountsRes.data
   customers.value = customersRes.data
   paymentMethods.value = paymentMethodsRes.data
-  products.value = productsResult
   loading.value = false
 }
 
@@ -172,21 +143,32 @@ function itemLineTotal(item: FormItem): number {
   return lineTotalCents(cartLine(item))
 }
 
-// ---- Modal de busca de produto (F2), mesmo padrão do PDV/Entradas de Estoque ----
+// ---- Modal de busca de produto (F2), mesmo padrão do PDV/Entradas de Estoque
+// - busca no banco (debounced). Antes filtrava uma lista fixa carregada no
+// mount (só a primeira página de `GET /products`, que virou paginado -
+// achado do cliente, 2026-07-21: a busca não encontrava produto fora dela).
 const showPicker = ref(false)
 const pickerSearch = ref('')
 const pickerTarget = ref<FormItem | null>(null)
+const filteredPickerRows = ref<SkuOption[]>([])
+let pickerDebounce: ReturnType<typeof setTimeout> | null = null
 
-const filteredPickerRows = computed(() => {
-  const q = pickerSearch.value.trim().toLowerCase()
-  if (!q) return skuOptions.value
-  return skuOptions.value.filter((row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q))
+watch(pickerSearch, (query) => {
+  if (pickerDebounce) clearTimeout(pickerDebounce)
+  if (!query.trim()) {
+    filteredPickerRows.value = []
+    return
+  }
+  pickerDebounce = setTimeout(async () => {
+    filteredPickerRows.value = await searchProductVariations(query, 20)
+  }, 200)
 })
 
 function openPicker(item: FormItem) {
   if (item.locked) return
   pickerTarget.value = item
   pickerSearch.value = ''
+  filteredPickerRows.value = []
   showPicker.value = true
 }
 
@@ -372,7 +354,7 @@ await loadAll()
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 class="font-display text-[30px] font-extrabold text-brand">Crediário</h1>
-          <p class="text-sm text-txt-secondary">Conta corrente por cliente ("caderneta") — compras acumulam durante o mês, pagamento total ou parcial a qualquer momento. Lançamento manual, fora do PDV.</p>
+          <p class="text-sm text-txt-secondary">Conta corrente por cliente ("caderneta") - compras acumulam durante o mês, pagamento total ou parcial a qualquer momento. Lançamento manual, fora do PDV.</p>
         </div>
         <BaseButton :block="false" @click="openDebitModal">
           <Plus :size="15" />
@@ -386,7 +368,7 @@ await loadAll()
           :key="option.value"
           type="button"
           class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
-          :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
+          :class="statusFilter === option.value ? 'border-ink bg-ink text-white' : 'border-border text-txt-secondary'"
           @click="statusFilter = option.value as typeof statusFilter"
         >
           {{ option.label }}
@@ -410,11 +392,11 @@ await loadAll()
           class="cursor-pointer grid w-full grid-cols-[2fr_1fr_1.4fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
           @click="openDetail(account)"
         >
-          <span class="truncate text-sm font-medium text-txt-primary">{{ account.customer_name ?? '—' }}</span>
+          <span class="truncate text-sm font-medium text-txt-primary">{{ account.customer_name ?? '-' }}</span>
           <span class="text-right text-sm font-bold" :class="Number(account.balance) > 0 ? 'text-txt-primary' : 'text-emerald-700'">
             {{ formatAmount(account.balance) }}
           </span>
-          <span class="text-sm text-txt-secondary">{{ account.last_entry_at ? formatDateTime(account.last_entry_at) : '—' }}</span>
+          <span class="text-sm text-txt-secondary">{{ account.last_entry_at ? formatDateTime(account.last_entry_at) : '-' }}</span>
         </button>
       </div>
     </div>
@@ -476,7 +458,7 @@ await loadAll()
     </div>
 
     <!-- MODAL: LANÇAR COMPRA -->
-    <BaseModal :open="showDebitModal" size="lg" title="Lançar compra" subtitle="Registra os itens levados pelo cliente — dá baixa no estoque, sem mexer no caixa." @close="showDebitModal = false">
+    <BaseModal :open="showDebitModal" size="lg" title="Lançar compra" subtitle="Registra os itens levados pelo cliente - dá baixa no estoque, sem mexer no caixa." @close="showDebitModal = false">
       <form class="space-y-5" @submit.prevent="handleSubmitDebit">
         <div class="grid grid-cols-2 gap-4">
           <BaseSelect
@@ -558,7 +540,7 @@ await loadAll()
     </BaseModal>
 
     <!-- MODAL: EDITAR COMPRA -->
-    <BaseModal :open="showEditModal" size="lg" title="Editar compra" subtitle="Revise preço ou aplique desconto — produto e quantidade já foram baixados do estoque e não mudam aqui." @close="showEditModal = false">
+    <BaseModal :open="showEditModal" size="lg" title="Editar compra" subtitle="Revise preço ou aplique desconto - produto e quantidade já foram baixados do estoque e não mudam aqui." @close="showEditModal = false">
       <form class="space-y-5" @submit.prevent="handleSubmitEdit">
         <div v-for="item in formItems" :key="item.key" class="rounded-xl border border-border p-4">
           <div class="mb-3 flex items-center gap-2 text-sm font-medium text-txt-primary">
@@ -636,13 +618,14 @@ await loadAll()
         <div
           v-for="row in filteredPickerRows"
           :key="row.key"
-          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          @click="choosePickerRow(row)"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque · {{ formatAmount(row.variation.sale_price) }}</p>
           </div>
-          <BaseButton :block="false" @click="choosePickerRow(row)">Escolher</BaseButton>
+          <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
       </div>

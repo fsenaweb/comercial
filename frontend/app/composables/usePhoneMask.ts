@@ -1,5 +1,5 @@
 /**
- * Máscara de telefone. O tipo é explícito (não adivinhado pelo tamanho) —
+ * Máscara de telefone. O tipo é explícito (não adivinhado pelo tamanho) -
  * celular sempre trava em 11 dígitos/(XX) XXXXX-XXXX, telefone fixo em 10
  * dígitos/(XX) XXXX-XXXX, sem um "roubar" dígito do outro durante a digitação.
  */

@@ -148,7 +148,7 @@ await load()
           <div v-for="(row, index) in overview.top_payables_this_month" v-else :key="index" class="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-0">
             <div class="min-w-0">
               <p class="truncate text-sm font-medium text-txt-primary">{{ row.description }}</p>
-              <p class="text-[11px] text-txt-muted">{{ row.person_name ?? '—' }} · vence {{ formatDate(row.due_date) }}</p>
+              <p class="text-[11px] text-txt-muted">{{ row.person_name ?? '-' }} · vence {{ formatDate(row.due_date) }}</p>
             </div>
             <span class="shrink-0 text-sm font-bold text-txt-primary">{{ formatAmount(row.amount) }}</span>
           </div>
@@ -168,7 +168,7 @@ await load()
             to="/financeiro/accounts-receivable"
             class="flex items-center justify-between gap-3 border-b border-border py-2.5 text-left last:border-0 hover:bg-surface-subtle"
           >
-            <span class="truncate text-sm font-medium text-txt-primary">{{ row.customer_name ?? '—' }}</span>
+            <span class="truncate text-sm font-medium text-txt-primary">{{ row.customer_name ?? '-' }}</span>
             <span class="shrink-0 text-sm font-bold text-txt-primary">{{ formatAmount(row.balance) }}</span>
           </NuxtLink>
         </div>

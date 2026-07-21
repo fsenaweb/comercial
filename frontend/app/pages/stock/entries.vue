@@ -1,24 +1,8 @@
 <script setup lang="ts">
 import { AlertTriangle, ArrowLeft, FileUp, PackagePlus, Plus, Search, Trash2 } from 'lucide-vue-next'
+import type { ProductVariationRow } from '~/composables/useProductVariationSearch'
 
-interface Variation {
-  id: number
-  product_code: string
-  current_quantity: number
-  max_quantity: number | null
-}
-
-interface Product {
-  id: number
-  name: string
-  variations?: Variation[]
-}
-
-interface SkuOption {
-  key: string
-  productName: string
-  variation: Variation
-}
+type SkuOption = ProductVariationRow
 
 interface StockMovement {
   id: number
@@ -36,11 +20,10 @@ interface FormItem {
   quantity: number | null
 }
 
-const productsApi = useResourceApi<Product>('products')
 const api = useApi()
+const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
 
-const products = ref<Product[]>([])
 const entries = ref<StockMovement[]>([])
 const loading = ref(true)
 const view = ref<'list' | 'form'>('list')
@@ -52,16 +35,6 @@ function openOriginModal(entry: StockMovement) {
   originModalEntry.value = entry
   showOriginModal.value = true
 }
-
-const skuOptions = computed<SkuOption[]>(() => {
-  const rows: SkuOption[] = []
-  for (const product of products.value) {
-    for (const variation of product.variations ?? []) {
-      rows.push({ key: `${product.id}-${variation.id}`, productName: product.name, variation })
-    }
-  }
-  return rows
-})
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -75,8 +48,7 @@ async function loadEntries() {
 }
 
 async function loadAll() {
-  const [productsResult] = await Promise.all([productsApi.list(), loadEntries()])
-  products.value = productsResult
+  await loadEntries()
 }
 
 let itemKeySeq = 0
@@ -110,20 +82,31 @@ function removeItem(key: number) {
   if (items.value.length === 0) items.value.push(emptyItem())
 }
 
-// ---- Modal de busca de produto (F2), mesmo padrão do PDV ----
+// ---- Modal de busca de produto (F2), mesmo padrão do PDV - busca no banco
+// (debounced). Antes filtrava uma lista fixa carregada no mount (só a
+// primeira página de `GET /products`, que virou paginado - achado do
+// cliente, 2026-07-21: a busca não encontrava produto fora dela).
 const showPicker = ref(false)
 const pickerSearch = ref('')
 const pickerTarget = ref<FormItem | null>(null)
+const filteredPickerRows = ref<SkuOption[]>([])
+let pickerDebounce: ReturnType<typeof setTimeout> | null = null
 
-const filteredPickerRows = computed(() => {
-  const q = pickerSearch.value.trim().toLowerCase()
-  if (!q) return skuOptions.value
-  return skuOptions.value.filter((row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q))
+watch(pickerSearch, (query) => {
+  if (pickerDebounce) clearTimeout(pickerDebounce)
+  if (!query.trim()) {
+    filteredPickerRows.value = []
+    return
+  }
+  pickerDebounce = setTimeout(async () => {
+    filteredPickerRows.value = await searchProductVariations(query, 20)
+  }, 200)
 })
 
 function openPicker(item: FormItem) {
   pickerTarget.value = item
   pickerSearch.value = ''
+  filteredPickerRows.value = []
   showPicker.value = true
 }
 
@@ -150,7 +133,7 @@ function excessWarning(item: FormItem): string | null {
   if (max === null) return null
   const resulting = item.selected.variation.current_quantity + item.quantity
   if (resulting <= max) return null
-  return `Estoque máximo cadastrado é ${max} — esta entrada deixará o saldo em ${resulting} (acima do limite).`
+  return `Estoque máximo cadastrado é ${max} - esta entrada deixará o saldo em ${resulting} (acima do limite).`
 }
 
 async function handleSubmit() {
@@ -221,14 +204,14 @@ await loadAll()
         >
           <span class="text-sm text-txt-secondary">{{ formatDateTime(entry.created_at) }}</span>
           <div class="min-w-0">
-            <p class="truncate text-sm font-medium text-txt-primary">{{ entry.product_name ?? '—' }}</p>
-            <p class="text-[11px] text-txt-muted">Cód. {{ entry.product_code ?? '—' }}</p>
+            <p class="truncate text-sm font-medium text-txt-primary">{{ entry.product_name ?? '-' }}</p>
+            <p class="text-[11px] text-txt-muted">Cód. {{ entry.product_code ?? '-' }}</p>
           </div>
           <span class="text-right text-sm font-bold text-emerald-700">+{{ entry.quantity }}</span>
           <button type="button" class="min-w-0 cursor-pointer truncate text-left text-sm text-txt-secondary hover:text-txt-primary hover:underline" @click="openOriginModal(entry)">
             {{ entry.origin }}
           </button>
-          <span class="min-w-0 truncate text-sm text-txt-secondary">{{ entry.user_name ?? '—' }}</span>
+          <span class="min-w-0 truncate text-sm text-txt-secondary">{{ entry.user_name ?? '-' }}</span>
         </div>
       </div>
     </div>
@@ -332,13 +315,14 @@ await loadAll()
         <div
           v-for="row in filteredPickerRows"
           :key="row.key"
-          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          @click="choosePickerRow(row)"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
-          <BaseButton :block="false" @click="choosePickerRow(row)">Escolher</BaseButton>
+          <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
       </div>
@@ -349,10 +333,10 @@ await loadAll()
       <div v-if="originModalEntry" class="space-y-3 text-sm">
         <p class="text-txt-primary">{{ originModalEntry.origin }}</p>
         <div class="grid grid-cols-2 gap-3 border-t border-border pt-3 text-txt-secondary">
-          <span>Produto: <strong class="text-txt-primary">{{ originModalEntry.product_name ?? '—' }}</strong></span>
+          <span>Produto: <strong class="text-txt-primary">{{ originModalEntry.product_name ?? '-' }}</strong></span>
           <span>Data: <strong class="text-txt-primary">{{ formatDateTime(originModalEntry.created_at) }}</strong></span>
           <span>Quantidade: <strong class="text-emerald-700">+{{ originModalEntry.quantity }}</strong></span>
-          <span>Usuário: <strong class="text-txt-primary">{{ originModalEntry.user_name ?? '—' }}</strong></span>
+          <span>Usuário: <strong class="text-txt-primary">{{ originModalEntry.user_name ?? '-' }}</strong></span>
         </div>
       </div>
     </BaseModal>

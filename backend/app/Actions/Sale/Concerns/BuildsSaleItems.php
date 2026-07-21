@@ -4,7 +4,11 @@ namespace App\Actions\Sale\Concerns;
 
 use App\Actions\Concerns\ResolvesDiscounts;
 use App\Enums\DiscountType;
+use App\Enums\UserRole;
 use App\Models\ProductVariation;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 trait BuildsSaleItems
 {
@@ -55,6 +59,7 @@ trait BuildsSaleItems
                 'discount_type' => $lineDiscountType,
                 'discount_value' => $lineDiscountValue,
                 'discount' => $lineDiscountAmount,
+                'gross' => $lineGross,
                 'total' => $lineTotal,
                 'is_wholesale' => $isWholesale,
             ];
@@ -74,5 +79,39 @@ trait BuildsSaleItems
         }
 
         return [$saleDiscountType, $saleDiscountValue, $saleDiscountAmount, $total];
+    }
+
+    /**
+     * Barra a venda/orçamento se algum desconto (de item ou da venda) passar do
+     * teto de MAX_DISCOUNT_PERCENT sem uma senha de admin válida — checa todos
+     * os itens antes de decidir, pra não vazar "qual item específico" passou do
+     * teto numa mensagem de erro (o operador só sabe que precisa da senha).
+     */
+    private function assertDiscountAuthorized(array $itemsToInsert, string $subtotal, string $saleDiscountAmount, ?string $adminPassword): void
+    {
+        $exceedsCap = $this->discountExceedsCap($subtotal, $saleDiscountAmount);
+
+        foreach ($itemsToInsert as $row) {
+            if ($this->discountExceedsCap($row['gross'], $row['discount'])) {
+                $exceedsCap = true;
+                break;
+            }
+        }
+
+        if (! $exceedsCap) {
+            return;
+        }
+
+        if (! $adminPassword || ! $this->isValidAdminPassword($adminPassword)) {
+            throw ValidationException::withMessages([
+                'admin_password' => 'Desconto acima de '.self::MAX_DISCOUNT_PERCENT.'% requer a senha do administrador.',
+            ]);
+        }
+    }
+
+    private function isValidAdminPassword(string $password): bool
+    {
+        return User::where('role', UserRole::Admin)->where('active', true)->get()
+            ->contains(fn (User $admin) => Hash::check($password, $admin->password));
     }
 }

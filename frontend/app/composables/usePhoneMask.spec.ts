@@ -13,7 +13,7 @@ describe('usePhoneMask', () => {
     expect(maskInput('119', 'mobile')).toBe('(11) 9')
   })
 
-  it('caps mobile at 11 digits — does not keep growing if the user keeps typing', () => {
+  it('caps mobile at 11 digits - does not keep growing if the user keeps typing', () => {
     expect(maskInput('119888877771234', 'mobile')).toBe('(11) 98888-7777')
   })
 

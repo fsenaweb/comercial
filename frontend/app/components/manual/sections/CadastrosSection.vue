@@ -17,7 +17,7 @@
     <div>
       <h4 class="font-display text-sm font-bold text-txt-primary">Produtos e variações</h4>
       <p class="mt-1.5">
-        Cada produto pode ter uma ou mais variações (cor, tamanho, medida — o que fizer sentido para
+        Cada produto pode ter uma ou mais variações (cor, tamanho, medida - o que fizer sentido para
         o item), cada uma com seu próprio código, código de barras, custo, preço de venda e
         estoque. O campo "Margem" calcula o preço de venda automaticamente a partir do custo
         (continua editável manualmente depois). Preço de atacado é opcional, por quantidade mínima.
@@ -30,7 +30,7 @@
       <h4 class="font-display text-sm font-bold text-txt-primary">Clientes</h4>
       <p class="mt-1.5">
         Qualquer papel pode cadastrar e editar cliente (inclusive direto no PDV, no cadastro
-        rápido) — só a exclusão é restrita ao Administrador.
+        rápido) - só a exclusão é restrita ao Administrador.
       </p>
     </div>
 

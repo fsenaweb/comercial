@@ -25,6 +25,7 @@ Tokens como CSS custom properties. **Tema sempre claro por padrão — decisão 
 | `--surface-subtle` | Hover de linha, fundo de seção | `slate-100` (`#f1f5f9`) | `slate-700` (`#334155`) |
 | `--border` / `--border-strong` | Bordas | `slate-200` (`#e2e8f0`) / `slate-300` (`#cbd5e1`) | `slate-700` (`#334155`) / `slate-600` (`#475569`) |
 | `--txt-primary` / `--txt-secondary` / `--txt-muted` | Texto | `slate-900` (`#0f172a`) / `slate-600` (`#475569`) / `slate-400` (`#94a3b8`) | `slate-100` (`#f1f5f9`) / `slate-300` (`#cbd5e1`) / `slate-500` (`#64748b`) |
+| `--ink` | Painéis/chips "sempre escuros com texto branco" (painel de marca do login, filtro ativo do financeiro) — **fixo, não inverte com o tema** | `slate-900` (`#0f172a`) | mesmo valor (achado 2026-07-21: usar `--txt-primary` pra isso quebra no escuro, porque esse token inverte pra claro) |
 | `success` (status) | Badge "Aberto", confirmações | `emerald-500`/`emerald-600` | mesmo valor em ambos os temas — badge é um chip com fundo tingido próprio, não depende do fundo da página pra ter contraste (ver "Princípio: marca vs. semântica") |
 | `danger` (status) | Erros, "Fechado com pendência", exclusão | `rose-500`/`rose-600` | mesmo valor |
 | `info` (status) | Links secundários, badges informativos | `sky-600` | mesmo valor |

@@ -80,7 +80,7 @@ function formatAmount(value: string | number): string {
 }
 
 // A API serializa `expires_at` como datetime ISO completo (cast `date` do
-// Laravel ainda inclui a meia-noite no fuso da app) — extrai só a parte da
+// Laravel ainda inclui a meia-noite no fuso da app) - extrai só a parte da
 // data antes de remontar, senão concatenar T00:00:00 gera uma string inválida.
 function toDateOnly(value: string): string {
   return value.slice(0, 10)
@@ -337,10 +337,10 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
         <span class="text-sm font-bold text-emerald-700">{{ quote.number }}</span>
         <span class="text-sm text-txt-secondary">{{ formatDateTime(quote.created_at) }}</span>
         <span class="truncate text-sm text-txt-secondary">{{ quote.customer_name ?? 'Não informado' }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ quote.seller_name ?? '—' }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ quote.seller_name ?? '-' }}</span>
         <span class="text-right text-sm font-semibold text-txt-primary">{{ formatAmount(quote.total) }}</span>
         <span class="text-sm" :class="quote.status === 'pending' && isExpired(quote) ? 'font-semibold text-rose-600' : 'text-txt-secondary'">
-          {{ quote.expires_at ? formatDate(quote.expires_at) : '—' }}
+          {{ quote.expires_at ? formatDate(quote.expires_at) : '-' }}
         </span>
         <span>
           <StatusBadge
@@ -374,7 +374,7 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
       <div v-else-if="detail" class="space-y-4">
         <div class="grid grid-cols-2 gap-3 text-sm">
           <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ detail.customer_name ?? 'Não informado' }}</strong></span>
-          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '—' }}</strong></span>
+          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '-' }}</strong></span>
           <span class="text-txt-secondary">Validade: <strong class="text-txt-primary">{{ detail.expires_at ? formatDate(detail.expires_at) : 'Sem validade definida' }}</strong></span>
           <span class="text-txt-secondary">Data: <strong class="text-txt-primary">{{ formatDateTime(detail.created_at) }}</strong></span>
         </div>
@@ -396,8 +396,8 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
           </div>
           <div v-for="item in detail.items" :key="item.id" class="grid grid-cols-[2fr_0.6fr_1fr_1fr] gap-2 border-b border-border px-4 py-2.5 text-sm last:border-0">
             <div class="min-w-0">
-              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '—' }}</p>
-              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '—' }}</p>
+              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '-' }}</p>
+              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '-' }}</p>
             </div>
             <span class="text-center text-txt-secondary">{{ item.quantity }}</span>
             <span class="text-right text-txt-secondary">{{ formatAmount(item.unit_price) }}</span>
@@ -413,10 +413,10 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
       </div>
     </BaseModal>
 
-    <BaseModal :open="showConvertModal" title="Converter em venda" subtitle="Escolha a(s) forma(s) de pagamento — o orçamento vira uma venda de verdade, com baixa de estoque e lançamento no caixa." @close="showConvertModal = false">
+    <BaseModal :open="showConvertModal" title="Converter em venda" subtitle="Escolha a(s) forma(s) de pagamento - o orçamento vira uma venda de verdade, com baixa de estoque e lançamento no caixa." @close="showConvertModal = false">
       <div class="space-y-4">
         <p v-if="!cashRegisterOpen" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          Nenhum caixa aberto — não é possível converter em venda agora. Abra o caixa e tente novamente.
+          Nenhum caixa aberto - não é possível converter em venda agora. Abra o caixa e tente novamente.
         </p>
 
         <div class="flex items-center justify-between">
@@ -497,7 +497,7 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
       </div>
     </BaseModal>
 
-    <BaseModal :open="showCancelModal" title="Cancelar orçamento" subtitle="O orçamento fica marcado como cancelado — como nunca baixou estoque nem caixa, nada precisa ser estornado." @close="showCancelModal = false">
+    <BaseModal :open="showCancelModal" title="Cancelar orçamento" subtitle="O orçamento fica marcado como cancelado - como nunca baixou estoque nem caixa, nada precisa ser estornado." @close="showCancelModal = false">
       <div class="space-y-4">
         <BaseInput v-model="cancelReason" label="Motivo do cancelamento" placeholder="Ex.: cliente recusou, orçamento vencido..." :error="firstFieldError(cancelError, 'reason')" />
         <p v-if="cancelError && !firstFieldError(cancelError, 'reason')" class="text-sm text-rose-600">{{ parse(cancelError).message }}</p>

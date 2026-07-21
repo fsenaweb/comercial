@@ -26,7 +26,7 @@ export interface ManualSection {
 
 // Manifesto único do Manual do Usuário (F1): define a ordem do índice e o
 // componente de conteúdo de cada seção. Cada seção é um componente Vue em
-// components/manual/sections/ — texto simples, sem CMS/editor, porque o
+// components/manual/sections/ - texto simples, sem CMS/editor, porque o
 // conteúdo muda tão devagar quanto o próprio sistema (ver 05-sprints.md,
 // Sprint 7).
 export const manualSections: ManualSection[] = [

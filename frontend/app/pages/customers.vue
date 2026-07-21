@@ -151,7 +151,7 @@ async function handleModalDelete() {
   await load()
 }
 
-// ---- Modal "Importar planilha" — UI presente, processamento ainda não existe ----
+// ---- Modal "Importar planilha" - UI presente, processamento ainda não existe ----
 const importOpen = ref(false)
 
 await load()
@@ -207,8 +207,8 @@ await load()
           <StatusBadge :label="customer.is_company ? 'PJ' : 'PF'" tone="info" />
         </span>
         <span class="text-sm text-txt-secondary">{{ customer.mobile_phone }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ customer.email ?? '—' }}</span>
-        <span class="text-sm text-txt-secondary">{{ customer.document ?? '—' }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ customer.email ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ customer.document ?? '-' }}</span>
         <div class="flex justify-end">
           <IconButton :icon="Pencil" label="Editar" @click="openEditModal(customer)" />
         </div>
@@ -304,7 +304,7 @@ await load()
             <span class="text-sm font-bold">Antes de importar</span>
           </div>
           <p class="mt-2 text-xs text-txt-secondary">
-            Essa importação em massa ainda não foi implementada — por enquanto, cadastre pelo "Novo Cliente".
+            Essa importação em massa ainda não foi implementada - por enquanto, cadastre pelo "Novo Cliente".
           </p>
           <BaseButton variant="ghost" :block="false" disabled class="mt-3">Baixar modelo XLSX</BaseButton>
         </div>

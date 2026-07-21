@@ -1,5 +1,5 @@
 /**
- * Máscara de CPF/CNPJ. O tipo é explícito (não adivinhado pelo tamanho) —
+ * Máscara de CPF/CNPJ. O tipo é explícito (não adivinhado pelo tamanho) -
  * cada campo trava no formato certo (11 dígitos pra CPF, 14 pra CNPJ) em vez
  * de virar CNPJ sozinho quando o usuário continua digitando um CPF longo.
  */

@@ -17,10 +17,10 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('user'))],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('user'))],
             // Em branco = mantém a senha atual (ver UpdateUserAction, que remove a
             // chave do payload quando vazia em vez de sobrescrever com null).
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string'],
             'role' => ['required', Rule::enum(UserRole::class)],
             'commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'active' => ['required', 'boolean'],
@@ -31,10 +31,8 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'name.required' => 'Informe o nome do usuário.',
-            'email.required' => 'Informe o e-mail do usuário.',
             'email.email' => 'Informe um e-mail válido.',
             'email.unique' => 'Já existe um usuário com esse e-mail.',
-            'password.min' => 'A senha precisa ter pelo menos 8 caracteres.',
             'role.required' => 'Selecione o papel do usuário.',
         ];
     }

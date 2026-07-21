@@ -201,7 +201,7 @@ await Promise.all([load(), loadSellers()])
         <span class="text-sm font-bold text-emerald-700">{{ sale.number }}</span>
         <span class="text-sm text-txt-secondary">{{ formatDateTime(sale.created_at) }}</span>
         <span class="truncate text-sm text-txt-secondary">{{ sale.customer_name ?? 'Não informado' }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ sale.seller_name ?? '—' }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ sale.seller_name ?? '-' }}</span>
         <span class="text-right text-sm font-semibold text-txt-primary">{{ formatAmount(sale.total) }}</span>
         <span>
           <StatusBadge :label="sale.status_label" :tone="sale.status === 'canceled' ? 'danger' : 'success'" />
@@ -224,8 +224,8 @@ await Promise.all([load(), loadSellers()])
       <div v-else-if="detail" class="space-y-4">
         <div class="grid grid-cols-2 gap-3 text-sm">
           <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ detail.customer_name ?? 'Não informado' }}</strong></span>
-          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '—' }}</strong></span>
-          <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ detail.payment_method_name ?? '—' }}</strong></span>
+          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '-' }}</strong></span>
+          <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ detail.payment_method_name ?? '-' }}</strong></span>
           <span class="text-txt-secondary">Data: <strong class="text-txt-primary">{{ formatDateTime(detail.created_at) }}</strong></span>
         </div>
 
@@ -243,8 +243,8 @@ await Promise.all([load(), loadSellers()])
           </div>
           <div v-for="item in detail.items" :key="item.id" class="grid grid-cols-[2fr_0.6fr_1fr_1fr] gap-2 border-b border-border px-4 py-2.5 text-sm last:border-0">
             <div class="min-w-0">
-              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '—' }}</p>
-              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '—' }}</p>
+              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '-' }}</p>
+              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '-' }}</p>
             </div>
             <span class="text-center text-txt-secondary">{{ item.quantity }}</span>
             <span class="text-right text-txt-secondary">{{ formatAmount(item.unit_price) }}</span>
@@ -260,7 +260,7 @@ await Promise.all([load(), loadSellers()])
       </div>
     </BaseModal>
 
-    <BaseModal :open="showCancelModal" title="Cancelar venda" subtitle="A venda fica marcada como cancelada, com estorno automático de estoque e caixa — nada é apagado." @close="showCancelModal = false">
+    <BaseModal :open="showCancelModal" title="Cancelar venda" subtitle="A venda fica marcada como cancelada, com estorno automático de estoque e caixa - nada é apagado." @close="showCancelModal = false">
       <div class="space-y-4">
         <BaseInput v-model="cancelReason" label="Motivo do cancelamento" placeholder="Ex.: cliente desistiu, erro de digitação..." :error="firstFieldError(cancelError, 'reason')" />
         <p v-if="cancelError && !firstFieldError(cancelError, 'reason')" class="text-sm text-rose-600">{{ parse(cancelError).message }}</p>

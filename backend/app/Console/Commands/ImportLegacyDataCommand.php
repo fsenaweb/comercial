@@ -155,7 +155,7 @@ class ImportLegacyDataCommand extends Command
             [
                 $codigo, $codbarra, $descricao, $referencia, $grupo, $unidade, $fkMarca,
                 $prCusto, $margem, $prVenda, $qtdAtual, $qtdMin, $precoAtacado, $qtdAtacado,
-                $ativo, $servico,
+                $ativo, $servico, $localizacao,
             ] = $row;
 
             if ($descricao === '' || in_array($descricao, self::IGNORED_PRODUCT_NAMES, true)) {
@@ -174,6 +174,7 @@ class ImportLegacyDataCommand extends Command
                 'unit_id' => $this->unitMap[$unidade] ?? $this->fallbackUnitId,
                 'category_id' => $this->categoryMap[$grupo] ?? $this->fallbackCategoryId,
                 'brand_id' => $this->brandMap[$fkMarca] ?? null,
+                'location' => $localizacao !== '' ? $localizacao : null,
             ];
 
             $variationAttributes = [

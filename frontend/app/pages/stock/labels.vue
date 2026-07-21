@@ -65,9 +65,9 @@ function defaultLabelSettings(): LabelSettings {
 const presets: Preset[] = [
   { key: 'termica50x30', title: 'Térmica 50x30mm', desc: 'Etiqueta adesiva 50x30mm em bobina térmica (uma por página)', w: 50, h: 30, cols: 1 },
   { key: 'termica40x30', title: 'Térmica 40x30mm', desc: 'Etiqueta adesiva 40x30mm (mais comum em lojas)', w: 40, h: 30, cols: 1 },
-  { key: 'termica80', title: 'Térmica 80mm — 2 colunas (40x30mm)', desc: 'Bobina térmica de 80mm com 2 etiquetas de 40x30mm lado a lado', w: 40, h: 30, cols: 2 },
+  { key: 'termica80', title: 'Térmica 80mm - 2 colunas (40x30mm)', desc: 'Bobina térmica de 80mm com 2 etiquetas de 40x30mm lado a lado', w: 40, h: 30, cols: 2 },
   { key: 'termica30x20', title: 'Térmica 30x20mm', desc: 'Etiqueta pequena 30x20mm (só código de barras e preço)', w: 30, h: 20, cols: 1 },
-  { key: 'a43col', title: 'A4 — 3 colunas', desc: 'Folha A4 tradicional com 3 colunas de etiquetas', w: 63.5, h: 31, cols: 3 },
+  { key: 'a43col', title: 'A4 - 3 colunas', desc: 'Folha A4 tradicional com 3 colunas de etiquetas', w: 63.5, h: 31, cols: 3 },
 ]
 
 const contentFieldDefs: { key: keyof ContentFields, label: string }[] = [

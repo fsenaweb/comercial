@@ -45,7 +45,7 @@ function formatSize(bytes: number): string {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) return '—'
+  if (!value) return '-'
   return new Date(value).toLocaleString('pt-BR')
 }
 
@@ -236,7 +236,7 @@ async function confirmRestore() {
   try {
     await api('/backups/restore', { method: 'POST', body })
     // O restore derruba a sessão de todo mundo, inclusive quem restaurou
-    // (a tabela sessions é truncada) — continuar nesta tela só geraria
+    // (a tabela sessions é truncada) - continuar nesta tela só geraria
     // erros de "Unauthenticated" em qualquer chamada seguinte. Redireciona
     // direto pro login em vez de tentar recarregar a página normalmente.
     restoreSucceeded.value = true
@@ -244,7 +244,7 @@ async function confirmRestore() {
   } catch (error) {
     restoreError.value = parse(error).message
     // O código já foi consumido no servidor mesmo com a restauração
-    // rejeitada (ex.: caixa aberto) — gera um novo pra não travar o usuário.
+    // rejeitada (ex.: caixa aberto) - gera um novo pra não travar o usuário.
     restoreConfirmationText.value = ''
     await fetchRestoreConfirmationCode()
   } finally {
@@ -278,7 +278,7 @@ onUnmounted(stopPolling)
             {{ hasBackupToday ? 'Backup de hoje disponível' : 'Nenhum backup encontrado hoje' }}
           </p>
           <p class="mt-0.5 text-xs" :class="hasBackupToday ? 'text-emerald-700/80' : 'text-amber-700/80'">
-            {{ hasBackupToday ? 'Baixe o arquivo mais recente e guarde num pendrive, HD externo ou nuvem pessoal.' : 'O backup diário roda às 10:00 — verifique o agendamento se isso persistir.' }}
+            {{ hasBackupToday ? 'Baixe o arquivo mais recente e guarde num pendrive, HD externo ou nuvem pessoal.' : 'O backup diário roda às 10:00 - verifique o agendamento se isso persistir.' }}
           </p>
         </div>
 
