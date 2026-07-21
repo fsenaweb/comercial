@@ -48,7 +48,7 @@ class SalesByProductReportTest extends TestCase
     {
         $user = User::factory()->create();
         $product = Product::factory()->create(['name' => 'Parafuso Sextavado']);
-        $variation = ProductVariation::factory()->create(['product_id' => $product->id]);
+        $variation = ProductVariation::factory()->create(['product_id' => $product->id, 'product_code' => 'PRF-SEX-01']);
 
         $this->createSaleWithItem($variation, 5, 50);
         $this->createSaleWithItem($variation, 3, 30);
@@ -62,6 +62,10 @@ class SalesByProductReportTest extends TestCase
 
         $this->assertEquals(8, $row['quantity_sold']);
         $this->assertEquals('80.00', $row['total']);
+        // Código do produto precisa aparecer no relatório de vendas — usado
+        // pelo cliente para conferência cruzada com o sistema fiscal (pedido
+        // do usuário, ver docs/11-migracao-sistema-legado.md).
+        $this->assertEquals('PRF-SEX-01', $row['product_code']);
     }
 
     public function test_filters_by_category(): void

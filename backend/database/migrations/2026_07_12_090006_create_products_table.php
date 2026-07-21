@@ -10,7 +10,9 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            // Indexado: busca por nome no PDV/Produtos passou a rodar no
+            // banco (ver product_variations.ean_gtin acima, mesmo achado).
+            $table->string('name')->index();
             $table->string('type')->default('product');
             $table->boolean('active')->default(true);
             $table->foreignId('unit_id')->constrained();
@@ -22,6 +24,13 @@ return new class extends Migration
             $table->json('fiscal_fields')->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            // Postgres não indexa FK automaticamente (diferente do MySQL) —
+            // category_id é filtrado em relatórios e na listagem paginada de
+            // produtos, por isso ganha índice explícito. Separado do
+            // ->constrained() acima: encadear ->constrained()->index() direto
+            // bagunça o nome da constraint de FK gerada pelo Laravel.
+            $table->index('category_id');
         });
     }
 

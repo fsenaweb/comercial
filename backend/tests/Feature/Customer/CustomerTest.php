@@ -40,13 +40,26 @@ class CustomerTest extends TestCase
         $this->assertDatabaseHas('customers', ['name' => 'João da Silva']);
     }
 
-    public function test_create_requires_name_and_mobile_phone(): void
+    public function test_create_requires_name(): void
     {
         $seller = User::factory()->create();
 
         $response = $this->actingAs($seller)->postJson('/api/customers', ['is_company' => false]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['name', 'mobile_phone']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['name']);
+    }
+
+    public function test_seller_can_create_customer_without_mobile_phone(): void
+    {
+        $seller = User::factory()->create();
+
+        $response = $this->actingAs($seller)->postJson('/api/customers', [
+            'name' => 'Cliente Sem Celular',
+            'is_company' => false,
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.mobile_phone', null);
+        $this->assertDatabaseHas('customers', ['name' => 'Cliente Sem Celular', 'mobile_phone' => null]);
     }
 
     public function test_seller_can_update_customer(): void

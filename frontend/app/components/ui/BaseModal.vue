@@ -45,7 +45,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
               <h2 class="mt-2 font-display text-xl font-bold text-txt-primary">{{ title }}</h2>
               <p v-if="subtitle" class="mt-1 text-sm text-txt-secondary">{{ subtitle }}</p>
             </div>
-            <button type="button" class="shrink-0 rounded-full border border-border p-1.5 text-txt-muted hover:bg-surface-subtle hover:text-txt-primary" @click="emit('close')">
+            <button type="button" class="shrink-0 cursor-pointer rounded-full border border-border p-1.5 text-txt-muted hover:bg-surface-subtle hover:text-txt-primary" @click="emit('close')">
               <X :size="16" />
             </button>
           </div>

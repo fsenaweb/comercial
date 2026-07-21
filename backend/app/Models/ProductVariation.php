@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\ProductVariationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProductVariation extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProductVariationFactory> */
+    /** @use HasFactory<ProductVariationFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -20,6 +21,7 @@ class ProductVariation extends Model
         'size',
         'ean_gtin',
         'product_code',
+        'legacy_code',
         'cost_price',
         'markup',
         'sale_price',

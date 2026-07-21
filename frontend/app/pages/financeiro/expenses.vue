@@ -126,7 +126,7 @@ await loadExpenses()
         v-for="option in [{ value: 'all', label: 'Todas' }, { value: 'pending', label: 'Pendentes' }, { value: 'paid', label: 'Pagas' }]"
         :key="option.value"
         type="button"
-        class="rounded-full border px-3.5 py-1.5 text-xs font-bold"
+        class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
         :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
         @click="statusFilter = option.value as typeof statusFilter"
       >

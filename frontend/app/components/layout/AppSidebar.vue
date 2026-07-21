@@ -168,7 +168,7 @@ async function handleLogout() {
       <div>
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          class="cursor-pointer flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isCadastrosActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
           @click="toggleGroup('cadastros')"
         >
@@ -208,7 +208,7 @@ async function handleLogout() {
       <div>
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          class="cursor-pointer flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isEstoqueActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
           @click="toggleGroup('estoque')"
         >
@@ -248,7 +248,7 @@ async function handleLogout() {
       <div>
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          class="cursor-pointer flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isFinanceiroActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
           @click="toggleGroup('financeiro')"
         >
@@ -277,7 +277,7 @@ async function handleLogout() {
       <div>
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
+          class="cursor-pointer flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-sm font-semibold transition hover:bg-surface-subtle"
           :class="isGestaoActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'"
           @click="toggleGroup('gestao')"
         >
@@ -325,7 +325,7 @@ async function handleLogout() {
         Ir para o PDV
       </NuxtLink>
       <button
-        class="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+        class="cursor-pointer flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
         @click="handleLogout"
       >
         <LogOut :size="17" />

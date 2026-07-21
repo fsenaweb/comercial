@@ -15,7 +15,7 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'mobile_phone' => ['required', 'string', 'max:20'],
+            'mobile_phone' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'document' => ['nullable', 'string', 'max:20'],
@@ -36,7 +36,6 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             'name.required' => 'Informe o nome do cliente.',
-            'mobile_phone.required' => 'Informe o celular do cliente.',
             'email.email' => 'Informe um e-mail válido.',
             'state.size' => 'Informe a UF com 2 letras.',
         ];

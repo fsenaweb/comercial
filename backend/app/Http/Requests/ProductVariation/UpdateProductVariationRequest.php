@@ -22,6 +22,7 @@ class UpdateProductVariationRequest extends FormRequest
                 'required', 'string', 'max:255',
                 Rule::unique('product_variations', 'product_code')->ignore($this->route('productVariation')),
             ],
+            'legacy_code' => ['nullable', 'string', 'max:255'],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'markup' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],

@@ -13,8 +13,21 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->string('color')->nullable();
             $table->string('size')->nullable();
-            $table->string('ean_gtin')->nullable();
+            // Indexado: leitura de código de barras no PDV/Etiquetas vira uma
+            // busca indexada no banco (GET /product-variations/lookup) em vez
+            // de carregar o catálogo inteiro no navegador — achado real ao
+            // testar a importação do sistema legado (13 mil produtos
+            // estourando memória do PHP), ver docs/11-migracao-sistema-legado.md.
+            $table->string('ean_gtin')->nullable()->index();
             $table->string('product_code')->unique();
+            // Segundo código do produto, opcional e sem exigir unicidade —
+            // na importação do sistema legado recebe o CODIGO interno
+            // original (product_code recebe a REFERENCIA, que tem
+            // prioridade); em cadastros novos, campo livre pra quem quiser
+            // manter um código interno/secundário além do product_code
+            // principal. Decisão do usuário em 2026-07-18, ver
+            // docs/11-migracao-sistema-legado.md.
+            $table->string('legacy_code')->nullable();
             $table->decimal('cost_price', 12, 2)->default(0);
             $table->decimal('markup', 7, 2)->nullable();
             $table->decimal('sale_price', 12, 2)->default(0);

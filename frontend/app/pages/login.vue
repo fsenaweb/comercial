@@ -126,7 +126,7 @@ async function handleSubmit() {
               >
               <button
                 type="button"
-                class="absolute top-1/2 right-3 -translate-y-1/2 text-txt-muted hover:text-txt-secondary"
+                class="cursor-pointer absolute top-1/2 right-3 -translate-y-1/2 text-txt-muted hover:text-txt-secondary"
                 :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
                 @click="showPassword = !showPassword"
               >
@@ -136,7 +136,7 @@ async function handleSubmit() {
             </span>
             <span v-if="passwordError" class="mt-1 block text-sm text-rose-600">{{ passwordError }}</span>
             <div class="mt-1.5 text-right">
-              <button type="button" class="text-xs font-semibold text-amber-700 hover:underline" @click="handleForgotPassword">
+              <button type="button" class="cursor-pointer text-xs font-semibold text-amber-700 hover:underline" @click="handleForgotPassword">
                 Esqueceu sua senha?
               </button>
             </div>

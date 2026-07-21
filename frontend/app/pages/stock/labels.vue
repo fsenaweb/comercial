@@ -92,7 +92,7 @@ const tabs: { key: 'pagina' | 'grade' | 'etiqueta' | 'conteudo' | 'fontes', labe
   { key: 'fontes', label: 'Fontes' },
 ]
 
-const { loadProducts, filter: filterProductRows } = useProductVariationSearch()
+const { search: searchProductVariations } = useProductVariationSearch()
 const { parse } = useApiError()
 
 const loading = ref(true)
@@ -103,10 +103,7 @@ const selected = ref<SelectedLabel[]>([])
 async function loadAll() {
   loading.value = true
   const api = useApi()
-  const [, storeSettingsRes] = await Promise.all([
-    loadProducts(),
-    api<{ data: { name: string, trade_name: string | null, label_settings: LabelSettings | null } }>('/store-settings'),
-  ])
+  const storeSettingsRes = await api<{ data: { name: string, trade_name: string | null, label_settings: LabelSettings | null } }>('/store-settings')
   storeName.value = storeSettingsRes.data.trade_name || storeSettingsRes.data.name
   if (storeSettingsRes.data.label_settings) {
     settings.value = storeSettingsRes.data.label_settings
@@ -119,10 +116,23 @@ await loadAll()
 // ---- Modal de busca de produtos ----
 const searchOpen = ref(false)
 const searchQuery = ref('')
-const searchResults = computed(() => (searchQuery.value.trim() ? filterProductRows(searchQuery.value) : []))
+const searchResults = ref<ProductVariationRow[]>([])
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+
+watch(searchQuery, (query) => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  if (!query.trim()) {
+    searchResults.value = []
+    return
+  }
+  searchDebounce = setTimeout(async () => {
+    searchResults.value = await searchProductVariations(query, 20)
+  }, 200)
+})
 
 function openSearch() {
   searchQuery.value = ''
+  searchResults.value = []
   searchOpen.value = true
 }
 
@@ -339,7 +349,7 @@ async function handlePrint() {
           v-for="tab in tabs"
           :key="tab.key"
           type="button"
-          class="rounded-full px-4 py-2 text-sm font-bold"
+          class="cursor-pointer rounded-full px-4 py-2 text-sm font-bold"
           :class="activeTab === tab.key ? 'bg-emerald-600 text-white' : 'bg-surface-subtle text-txt-secondary'"
           @click="activeTab = tab.key"
         >

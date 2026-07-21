@@ -19,6 +19,7 @@ class CreateProductVariationAction
                 'size' => $data['size'] ?? null,
                 'ean_gtin' => $data['ean_gtin'] ?? null,
                 'product_code' => $data['product_code'],
+                'legacy_code' => $data['legacy_code'] ?? null,
                 'cost_price' => $data['cost_price'],
                 'markup' => $data['markup'] ?? null,
                 'sale_price' => $data['sale_price'],
