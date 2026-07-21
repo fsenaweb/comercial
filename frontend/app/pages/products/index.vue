@@ -33,6 +33,7 @@ interface Variation {
   size: string | null
   ean_gtin: string | null
   product_code: string
+  legacy_code: string | null
   cost_price: string
   markup: string | null
   sale_price: string
@@ -101,6 +102,21 @@ const suppliers = ref<{ id: number; corporate_name: string }[]>([])
 
 const loading = ref(true)
 const search = ref('')
+const page = ref(1)
+const perPage = 25
+const totalPages = ref(1)
+const totalProducts = ref(0)
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+
+interface ProductSummary {
+  total_products: number
+  total_stock_qty: number
+  total_stock_value: string
+  low_stock_count: number
+  no_stock_count: number
+  excess_stock_count: number
+}
+const summary = ref<ProductSummary | null>(null)
 
 const unitOptions = computed(() => units.value.map((u) => ({ value: u.id, label: u.name })))
 const categoryOptions = computed(() => categories.value.map((c) => ({ value: c.id, label: c.name })))
@@ -113,26 +129,52 @@ function isoDaysAgo(days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
-async function load() {
+async function loadProducts() {
   loading.value = true
-  const [productsResult, unitsResult, categoriesResult, subcategoriesResult, brandsResult, suppliersResult, salesResult] =
+  const params = new URLSearchParams({ page: String(page.value), per_page: String(perPage) })
+  if (search.value.trim()) params.set('search', search.value.trim())
+  const res = await api<{ data: Product[], meta: { current_page: number, last_page: number, total: number } }>(
+    `/products?${params.toString()}`,
+  )
+  products.value = res.data
+  totalPages.value = res.meta.last_page
+  totalProducts.value = res.meta.total
+  loading.value = false
+}
+
+async function loadSummary() {
+  const res = await api<{ data: ProductSummary }>('/products/summary')
+  summary.value = res.data
+}
+
+watch(search, () => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    page.value = 1
+    loadProducts()
+  }, 300)
+})
+
+watch(page, () => loadProducts())
+
+async function load() {
+  const [, unitsResult, categoriesResult, subcategoriesResult, brandsResult, suppliersResult, salesResult] =
     await Promise.all([
-      productsApi.list(),
+      loadProducts(),
       unitsApi.list(),
       categoriesApi.list(),
       subcategoriesApi.list(),
       brandsApi.list(),
       suppliersApi.list(),
       api<{ data: ProductSales[] }>(`/reports/sales-by-product?date_from=${isoDaysAgo(29)}`),
+      loadSummary(),
     ])
-  products.value = productsResult
   units.value = unitsResult
   categories.value = categoriesResult
   subcategories.value = subcategoriesResult
   brands.value = brandsResult
   suppliers.value = suppliersResult
   salesLast30d.value = salesResult.data
-  loading.value = false
 }
 
 const salesLast30dQty = computed(() => salesLast30d.value.reduce((sum, p) => sum + p.quantity_sold, 0))
@@ -152,40 +194,18 @@ const skuRows = computed<SkuRow[]>(() => {
   return rows
 })
 
-const filteredRows = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return skuRows.value
-  return skuRows.value.filter(
-    (row) => row.product.name.toLowerCase().includes(query) || row.variation?.product_code.toLowerCase().includes(query),
-  )
-})
+// A busca agora roda no servidor (GET /products?search=...) — skuRows já
+// vem filtrado/paginado, sem precisar de um segundo filtro no cliente.
+const filteredRows = skuRows
 
-const totalStockQty = computed(() =>
-  products.value.reduce((total, p) => total + (p.variations ?? []).reduce((sum, v) => sum + v.current_quantity, 0), 0),
-)
-const totalStockValue = computed(() =>
-  products.value.reduce(
-    (total, p) => total + (p.variations ?? []).reduce((sum, v) => sum + v.current_quantity * Number(v.sale_price), 0),
-    0,
-  ),
-)
-const lowStockCount = computed(() =>
-  products.value.reduce(
-    (total, p) =>
-      total + (p.variations ?? []).filter((v) => v.min_quantity !== null && v.current_quantity <= v.min_quantity).length,
-    0,
-  ),
-)
-const noStockCount = computed(() =>
-  products.value.reduce((total, p) => total + (p.variations ?? []).filter((v) => v.current_quantity <= 0).length, 0),
-)
-const excessStockCount = computed(() =>
-  products.value.reduce(
-    (total, p) =>
-      total + (p.variations ?? []).filter((v) => v.max_quantity !== null && v.current_quantity > v.max_quantity).length,
-    0,
-  ),
-)
+// Estatísticas do catálogo inteiro (GET /products/summary, agregado no
+// banco) — não dá mais pra calcular iterando products.value, que agora só
+// tem a página carregada. Ver docs/11-migracao-sistema-legado.md.
+const totalStockQty = computed(() => summary.value?.total_stock_qty ?? 0)
+const totalStockValue = computed(() => Number(summary.value?.total_stock_value ?? 0))
+const lowStockCount = computed(() => summary.value?.low_stock_count ?? 0)
+const noStockCount = computed(() => summary.value?.no_stock_count ?? 0)
+const excessStockCount = computed(() => summary.value?.excess_stock_count ?? 0)
 
 function currencyBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -235,6 +255,7 @@ function emptyModalForm() {
     cest: '',
     ean_gtin: '',
     product_code: '',
+    legacy_code: '',
     color: '',
     size: '',
     cost_price_masked: 'R$ 0,00',
@@ -258,24 +279,29 @@ watch(() => [modalForm.cost_price_masked, modalForm.markup], () => {
   modalForm.sale_price_masked = formatCurrency(Math.round(applyMarkup(cost, markupPercent) * 100))
 })
 
-// Aviso de possível duplicidade: compara o nome digitado com os produtos já
-// carregados (client-side, sem endpoint novo) em ambas as direções — cobre
-// tanto "Parafuso 4x30" digitado igual a um já cadastrado quanto uma versão
-// mais curta/mais longa do mesmo nome. Não bloqueia o cadastro, só avisa.
-function findSimilarProducts(name: string, excludeId: number | null) {
-  const query = name.trim().toLowerCase()
+// Aviso de possível duplicidade: busca no servidor pelo nome digitado (debounced)
+// — antes comparava só com os produtos já carregados na página atual, o que
+// deixou de fazer sentido com o catálogo paginado (ver
+// docs/11-migracao-sistema-legado.md). Não bloqueia o cadastro, só avisa.
+async function checkSimilarProducts(name: string, excludeId: number | null): Promise<Product[]> {
+  const query = name.trim()
   if (query.length < 3) return []
-  return products.value
-    .filter((p) => {
-      if (p.id === excludeId) return false
-      const productName = p.name.toLowerCase()
-      return productName.includes(query) || query.includes(productName)
-    })
-    .slice(0, 5)
+  const res = await api<{ data: Product[] }>(`/products?search=${encodeURIComponent(query)}&per_page=6`)
+  return res.data.filter((p) => p.id !== excludeId).slice(0, 5)
 }
 
-const modalSimilarProducts = computed(() => findSimilarProducts(modalForm.name, editingProductId.value))
-const quickSimilarProducts = computed(() => findSimilarProducts(quickForm.name, null))
+const modalSimilarProducts = ref<Product[]>([])
+let modalSimilarDebounce: ReturnType<typeof setTimeout> | null = null
+watch(() => modalForm.name, (name) => {
+  if (modalSimilarDebounce) clearTimeout(modalSimilarDebounce)
+  modalSimilarDebounce = setTimeout(async () => {
+    modalSimilarProducts.value = await checkSimilarProducts(name, editingProductId.value)
+  }, 300)
+})
+
+// quickSimilarProducts fica declarado logo abaixo de quickForm (mais adiante
+// no arquivo) — o watcher precisa que quickForm já exista quando roda.
+const quickSimilarProducts = ref<Product[]>([])
 
 const subcategoryOptions = computed(() =>
   subcategories.value
@@ -289,6 +315,7 @@ function openCreateModal() {
   Object.assign(modalForm, emptyModalForm())
   modalError.value = null
   fiscalOpen.value = false
+  modalSimilarProducts.value = []
   modalOpen.value = true
 }
 
@@ -311,6 +338,7 @@ function openEditModal(row: SkuRow) {
   if (row.variation) {
     modalForm.ean_gtin = row.variation.ean_gtin ?? ''
     modalForm.product_code = row.variation.product_code
+    modalForm.legacy_code = row.variation.legacy_code ?? ''
     modalForm.color = row.variation.color ?? ''
     modalForm.size = row.variation.size ?? ''
     modalForm.cost_price_masked = maskCurrency(String(Math.round(Number(row.variation.cost_price) * 100)))
@@ -370,6 +398,7 @@ async function handleModalSubmit() {
 
     const variationPayload = {
       product_code: modalForm.product_code,
+      legacy_code: modalForm.legacy_code.trim() || null,
       ean_gtin: modalForm.ean_gtin.trim() || null,
       color: modalForm.color.trim() || null,
       size: modalForm.size.trim() || null,
@@ -442,6 +471,14 @@ function emptyQuickForm() {
 
 const quickForm = reactive(emptyQuickForm())
 
+let quickSimilarDebounce: ReturnType<typeof setTimeout> | null = null
+watch(() => quickForm.name, (name) => {
+  if (quickSimilarDebounce) clearTimeout(quickSimilarDebounce)
+  quickSimilarDebounce = setTimeout(async () => {
+    quickSimilarProducts.value = await checkSimilarProducts(name, null)
+  }, 300)
+})
+
 watch(() => [quickForm.cost_price_masked, quickForm.markup], () => {
   if (quickForm.markup === '') return
   const markupPercent = Number(quickForm.markup)
@@ -455,6 +492,7 @@ function toggleQuickPanel() {
   if (quickOpen.value) {
     Object.assign(quickForm, emptyQuickForm())
     quickError.value = null
+    quickSimilarProducts.value = []
   }
 }
 
@@ -530,6 +568,7 @@ function emptySkuForm() {
     size: null as string | null,
     ean_gtin: null as string | null,
     product_code: '',
+    legacy_code: null as string | null,
     cost_price_masked: 'R$ 0,00',
     markup: '',
     sale_price_masked: 'R$ 0,00',
@@ -577,6 +616,7 @@ function startEditSku(variation: Variation) {
   skuForm.size = variation.size
   skuForm.ean_gtin = variation.ean_gtin
   skuForm.product_code = variation.product_code
+  skuForm.legacy_code = variation.legacy_code
   skuForm.cost_price_masked = maskCurrency(String(Math.round(Number(variation.cost_price) * 100)))
   skuForm.markup = variation.markup ?? ''
   skuForm.sale_price_masked = maskCurrency(String(Math.round(Number(variation.sale_price) * 100)))
@@ -613,6 +653,7 @@ async function handleSkuSubmit() {
     size: skuForm.size,
     ean_gtin: skuForm.ean_gtin,
     product_code: skuForm.product_code,
+    legacy_code: skuForm.legacy_code,
     cost_price: currencyToNumber(skuForm.cost_price_masked),
     markup: skuForm.markup === '' ? null : Number(skuForm.markup),
     sale_price: currencyToNumber(skuForm.sale_price_masked),
@@ -668,8 +709,8 @@ await load()
     </div>
 
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatCard label="Produtos" :value="products.length" subtext="cadastros encontrados" :icon="Package" tone="sky" />
-      <StatCard label="Estoque na página" :value="totalStockQty" :subtext="currencyBRL(totalStockValue)" :icon="ListTree" tone="emerald" />
+      <StatCard label="Produtos" :value="totalProducts" subtext="cadastros no catálogo" :icon="Package" tone="sky" />
+      <StatCard label="Estoque total" :value="totalStockQty" :subtext="currencyBRL(totalStockValue)" :icon="ListTree" tone="emerald" />
       <StatCard
         label="Alertas"
         :value="lowStockCount"
@@ -813,9 +854,10 @@ await load()
     </div>
 
     <div class="rounded-2xl border border-border bg-surface-raised shadow-card">
-      <div class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
+      <div class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
         <span>Produto</span>
         <span>Código</span>
+        <span>Cód. Interno</span>
         <span>Preço</span>
         <span>Estoque</span>
         <span class="text-right">Ações</span>
@@ -829,13 +871,14 @@ await load()
         v-for="row in filteredRows"
         v-else
         :key="row.key"
-        class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
+        class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
         <span class="flex items-center gap-2 text-sm font-medium text-txt-primary">
           {{ row.product.name }}
           <StatusBadge v-if="!row.product.active" label="Inativo" tone="danger" />
         </span>
         <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '—' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation?.legacy_code ?? '—' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '—' }}</span>
         <span v-if="row.variation">
           <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
@@ -863,10 +906,15 @@ await load()
             Estoque acima do máximo
           </span>
         </div>
-        <span class="text-xs text-txt-secondary">
-          Exibindo <strong class="text-txt-primary">{{ filteredRows.length }}</strong> de
-          <strong class="text-txt-primary">{{ skuRows.length }}</strong>
-        </span>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-txt-secondary">
+            Página <strong class="text-txt-primary">{{ page }}</strong> de
+            <strong class="text-txt-primary">{{ totalPages }}</strong>
+            ({{ totalProducts }} produto{{ totalProducts === 1 ? '' : 's' }})
+          </span>
+          <BaseButton variant="ghost" :block="false" :disabled="page <= 1" @click="page = page - 1">Anterior</BaseButton>
+          <BaseButton variant="ghost" :block="false" :disabled="page >= totalPages" @click="page = page + 1">Próxima</BaseButton>
+        </div>
       </div>
     </div>
 
@@ -1002,6 +1050,7 @@ await load()
                 </button>
               </div>
               <BaseInput v-model="modalForm.product_code" label="Código do produto" :error="firstFieldError(modalError, 'product_code')" />
+              <BaseInput v-model="modalForm.legacy_code" label="Código Interno" :error="firstFieldError(modalError, 'legacy_code')" />
               <BaseInput v-model="modalForm.color" label="Cor" :error="firstFieldError(modalError, 'color')" />
               <BaseInput v-model="modalForm.size" label="Tamanho" :error="firstFieldError(modalError, 'size')" />
             </div>
@@ -1118,7 +1167,10 @@ await load()
               <BaseInput v-model="skuForm.size" label="Tamanho" :error="firstFieldError(skuError, 'size')" />
               <BaseInput v-model="skuForm.ean_gtin" label="EAN/GTIN" :error="firstFieldError(skuError, 'ean_gtin')" />
             </div>
-            <BaseInput v-model="skuForm.product_code" label="Código do produto" :error="firstFieldError(skuError, 'product_code')" />
+            <div class="grid grid-cols-2 gap-4">
+              <BaseInput v-model="skuForm.product_code" label="Código do produto" :error="firstFieldError(skuError, 'product_code')" />
+              <BaseInput v-model="skuForm.legacy_code" label="Código Interno" :error="firstFieldError(skuError, 'legacy_code')" />
+            </div>
             <div class="grid grid-cols-3 gap-4">
               <BaseInput
                 :model-value="skuForm.cost_price_masked"
@@ -1177,6 +1229,7 @@ await load()
           :loading="skuModalLoading"
           :columns="[
             { key: 'product_code', label: 'Código' },
+            { key: 'legacy_code', label: 'Código Interno' },
             { key: 'sale_price', label: 'Preço de venda' },
             { key: 'current_quantity', label: 'Estoque' },
           ]"

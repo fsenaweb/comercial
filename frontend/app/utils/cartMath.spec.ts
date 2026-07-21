@@ -35,4 +35,12 @@ describe('cartMath', () => {
   it('clamps the sale total discount to zero', () => {
     expect(saleTotalCents(1000, 'fixed', 50)).toBe(0)
   })
+
+  it('truncates a percentage discount landing on a half-cent, in favor of the merchant', () => {
+    // 15% de R$12,90 (1290 centavos) = R$1,935 de desconto — trunca pra
+    // R$1,93 (193 centavos), nunca arredonda pra R$1,94, espelhando
+    // ResolvesDiscounts::resolveDiscountAmount do backend (decisão do
+    // usuário, 2026-07-19: a fração de centavo fica sempre com a loja).
+    expect(saleTotalCents(1290, 'percentage', 15)).toBe(1097)
+  })
 })

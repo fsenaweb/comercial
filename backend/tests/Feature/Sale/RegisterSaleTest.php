@@ -308,7 +308,10 @@ class RegisterSaleTest extends TestCase
         $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
         $variation = ProductVariation::factory()->create(['sale_price' => 12.50, 'current_quantity' => 20]);
 
-        // 3 unidades a R$12,50 = R$37,50, desconto de item 10% -> R$33,75
+        // 3 unidades a R$12,50 = R$37,50, desconto de item 10% -> R$33,75.
+        // Desconto de venda 10% sobre R$33,75 = R$3,375, truncado (nunca pra
+        // cima, a favor do comerciante — ver ResolvesDiscounts) pra R$3,37 ->
+        // total R$30,38.
         $response = $this->actingAs($admin)->postJson('/api/sales', [
             'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 30.38]],
             'discount_type' => 'percentage',
@@ -335,6 +338,37 @@ class RegisterSaleTest extends TestCase
         ]));
 
         $response->assertStatus(422)->assertJsonValidationErrors(['discount_value']);
+    }
+
+    public function test_percentage_discount_on_half_cent_boundary_truncates_in_favor_of_merchant(): void
+    {
+        // Achado real (2026-07-19): 10 unidades a R$1,29 = R$12,90, desconto
+        // de venda 15% = R$1,935 — a fração de centavo precisa ficar sempre a
+        // favor do comerciante (decisão do usuário), então o desconto trunca
+        // pra R$1,93 (nunca arredonda pra R$1,94), total R$10,97. Backend
+        // (bcdiv, trunca por padrão) e PDV (cartMath.ts, Math.floor) truncam
+        // do mesmo jeito de propósito — divergirem foi o bug original: o PDV
+        // chegou a arredondar diferente do backend e a venda era rejeitada
+        // com "a soma das formas de pagamento precisa ser igual ao total da
+        // venda". Ver ResolvesDiscounts::resolveDiscountAmount.
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 1.29, 'current_quantity' => 20]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10.97]],
+            'discount_type' => 'percentage',
+            'discount_value' => 15,
+            'items' => [
+                ['product_variation_id' => $variation->id, 'quantity' => 10],
+            ],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.subtotal', '12.90')
+            ->assertJsonPath('data.discount', '1.93')
+            ->assertJsonPath('data.total', '10.97');
     }
 
     public function test_index_lists_sales(): void

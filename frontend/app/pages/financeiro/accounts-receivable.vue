@@ -385,7 +385,7 @@ await loadAll()
           v-for="option in [{ value: 'open', label: 'Com saldo' }, { value: 'paid', label: 'Quitados' }, { value: 'all', label: 'Todos' }]"
           :key="option.value"
           type="button"
-          class="rounded-full border px-3.5 py-1.5 text-xs font-bold"
+          class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
           :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
           @click="statusFilter = option.value as typeof statusFilter"
         >
@@ -407,7 +407,7 @@ await loadAll()
           v-else
           :key="account.id"
           type="button"
-          class="grid w-full grid-cols-[2fr_1fr_1.4fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
+          class="cursor-pointer grid w-full grid-cols-[2fr_1fr_1.4fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
           @click="openDetail(account)"
         >
           <span class="truncate text-sm font-medium text-txt-primary">{{ account.customer_name ?? '—' }}</span>

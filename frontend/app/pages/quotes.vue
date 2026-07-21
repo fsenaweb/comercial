@@ -467,7 +467,7 @@ await Promise.all([load(), loadSellers(), loadPaymentMethods(), cashRegisterStor
               <button
                 v-if="convertPayments.length > 1"
                 type="button"
-                class="mb-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                class="mb-0.5 flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
                 @click="removeConvertPaymentLine(index)"
               >
                 <Trash2 :size="15" />

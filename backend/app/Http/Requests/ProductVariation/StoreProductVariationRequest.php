@@ -18,6 +18,7 @@ class StoreProductVariationRequest extends FormRequest
             'size' => ['nullable', 'string', 'max:255'],
             'ean_gtin' => ['nullable', 'string', 'max:255'],
             'product_code' => ['required', 'string', 'max:255', 'unique:product_variations,product_code'],
+            'legacy_code' => ['nullable', 'string', 'max:255'],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'markup' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],

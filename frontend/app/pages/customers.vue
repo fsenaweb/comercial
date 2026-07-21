@@ -4,7 +4,7 @@ import { AlertTriangle, FileUp, Pencil, Plus, Search, Trash2, Upload, Users } fr
 interface Customer {
   id: number
   name: string
-  mobile_phone: string
+  mobile_phone: string | null
   phone: string | null
   email: string | null
   document: string | null

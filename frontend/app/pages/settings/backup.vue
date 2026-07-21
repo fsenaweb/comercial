@@ -304,14 +304,14 @@ onUnmounted(stopPolling)
               <div class="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-txt-secondary transition hover:border-border-strong hover:text-txt-primary"
+                  class="cursor-pointer flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-txt-secondary transition hover:border-border-strong hover:text-txt-primary"
                   @click="downloadBackup(backup)"
                 >
                   <Download :size="14" /> Baixar
                 </button>
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+                  class="cursor-pointer flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
                   @click="openRestoreModalForLocal(backup)"
                 >
                   <RotateCcw :size="14" /> Restaurar
@@ -341,7 +341,7 @@ onUnmounted(stopPolling)
                 <p class="flex-1 rounded-lg bg-white px-3 py-2 text-center font-mono text-lg font-bold tracking-widest text-sky-900">{{ deviceCode.user_code }}</p>
                 <button
                   type="button"
-                  class="flex h-full shrink-0 items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
+                  class="cursor-pointer flex h-full shrink-0 items-center gap-1.5 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
                   @click="copyDeviceCode"
                 >
                   <Check v-if="codeCopied" :size="14" />
@@ -367,7 +367,7 @@ onUnmounted(stopPolling)
               <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-txt-secondary transition hover:border-border-strong hover:text-txt-primary disabled:opacity-60"
+                  class="cursor-pointer flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-txt-secondary transition hover:border-border-strong hover:text-txt-primary disabled:opacity-60"
                   :disabled="uploadingNow"
                   @click="uploadLatestNow"
                 >
@@ -375,7 +375,7 @@ onUnmounted(stopPolling)
                 </button>
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+                  class="cursor-pointer flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
                   @click="disconnectGoogleDrive"
                 >
                   <Unlink :size="14" /> Desconectar
@@ -411,7 +411,7 @@ onUnmounted(stopPolling)
           <input ref="uploadFileInput" type="file" accept=".zip" class="hidden" @change="onUploadFileSelected">
           <button
             type="button"
-            class="mt-4 flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+            class="cursor-pointer mt-4 flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
             @click="uploadFileInput?.click()"
           >
             <Upload :size="14" /> Escolher arquivo e restaurar
@@ -463,7 +463,7 @@ onUnmounted(stopPolling)
         <p v-if="restoreError" class="mt-3 text-sm text-rose-600">{{ restoreError }}</p>
 
         <div class="mt-5 flex justify-end gap-2.5">
-          <button type="button" class="rounded-full border border-border px-4 py-2 text-sm font-semibold text-txt-secondary hover:border-border-strong" @click="closeRestoreModal">
+          <button type="button" class="cursor-pointer rounded-full border border-border px-4 py-2 text-sm font-semibold text-txt-secondary hover:border-border-strong" @click="closeRestoreModal">
             Cancelar
           </button>
           <BaseButton

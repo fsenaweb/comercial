@@ -2,6 +2,7 @@
 import {
   Boxes,
   ChevronDown,
+  HelpCircle,
   LogOut,
   Minus,
   Plus,
@@ -22,7 +23,7 @@ useHead({ title: 'PDV — JP Parafusos' })
 interface Customer {
   id: number
   name: string
-  mobile_phone: string
+  mobile_phone: string | null
   phone: string | null
 }
 
@@ -39,6 +40,7 @@ interface UserOption {
 
 const auth = useAuthStore()
 const cart = useCartStore()
+const { openManual } = useManualDialog()
 const cashRegisterStore = useCashRegisterStore()
 const { parse, firstFieldError } = useApiError()
 const { printFormatDialog } = usePrintFormatDialog()
@@ -46,7 +48,7 @@ const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurre
 const { maskInput: maskCep } = useCepMask()
 
 const loading = ref(true)
-const { rows: skuRows, loadProducts, findExact, findFuzzy, filter: filterSkuRows } = useProductVariationSearch()
+const { findExact, search: searchProductVariations } = useProductVariationSearch()
 const paymentMethods = ref<PaymentMethod[]>([])
 const users = ref<UserOption[]>([])
 const customers = ref<Customer[]>([])
@@ -55,8 +57,7 @@ const requireSellerOnSale = ref(false)
 async function loadAll() {
   loading.value = true
   const api = useApi()
-  const [, paymentMethodsRes, usersRes, customersRes, storeSettingsRes] = await Promise.all([
-    loadProducts(),
+  const [paymentMethodsRes, usersRes, customersRes, storeSettingsRes] = await Promise.all([
     api<{ data: PaymentMethod[] }>('/payment-methods'),
     api<{ data: UserOption[] }>('/users/active'),
     api<{ data: Customer[] }>('/customers'),
@@ -116,30 +117,34 @@ function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
 
 // Autocomplete: sugestões por nome/código enquanto o operador digita (não
 // atrapalha o leitor de código de barras — o match exato no Enter continua
-// tendo prioridade e inclui na hora, como já funcionava).
+// tendo prioridade e inclui na hora, como já funcionava). Busca no banco
+// (debounced), não mais um filtro sobre o catálogo inteiro carregado no
+// navegador — ver docs/11-migracao-sistema-legado.md.
 const highlightedSuggestionIndex = ref(0)
+const searchSuggestions = ref<SkuRow[]>([])
+let suggestionsDebounce: ReturnType<typeof setTimeout> | null = null
 
-const searchSuggestions = computed<SkuRow[]>(() => {
-  if (foundRow.value) return []
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return []
-  return skuRows.value
-    .filter((row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q))
-    .slice(0, 6)
-})
-
-watch(searchSuggestions, () => {
-  highlightedSuggestionIndex.value = 0
+watch(searchQuery, (query) => {
+  if (suggestionsDebounce) clearTimeout(suggestionsDebounce)
+  if (foundRow.value || !query.trim()) {
+    searchSuggestions.value = []
+    return
+  }
+  suggestionsDebounce = setTimeout(async () => {
+    searchSuggestions.value = await searchProductVariations(query, 6)
+    highlightedSuggestionIndex.value = 0
+  }, 200)
 })
 
 function selectSuggestion(row: SkuRow) {
   foundRow.value = row
   searchQuery.value = row.productName
+  searchSuggestions.value = []
   pendingQty.value = 1
   pendingUnitMasked.value = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
 }
 
-function handleSearchKeydown(event: KeyboardEvent) {
+async function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key === 'ArrowDown' && searchSuggestions.value.length > 0) {
     event.preventDefault()
     highlightedSuggestionIndex.value = Math.min(highlightedSuggestionIndex.value + 1, searchSuggestions.value.length - 1)
@@ -153,7 +158,7 @@ function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter') return
   event.preventDefault()
 
-  const exact = findExact(searchQuery.value)
+  const exact = await findExact(searchQuery.value)
   if (exact) {
     if (autoAdd.value) {
       addRowToCart(exact, 1)
@@ -172,7 +177,7 @@ function handleSearchKeydown(event: KeyboardEvent) {
     return
   }
 
-  const fuzzy = findFuzzy(searchQuery.value)
+  const [fuzzy] = await searchProductVariations(searchQuery.value, 1)
   if (fuzzy) {
     foundRow.value = fuzzy
     pendingQty.value = 1
@@ -192,11 +197,23 @@ function handleIncluirItem() {
 // ---- Modal de busca de produto (F2) ----
 const showProductPicker = ref(false)
 const productPickerSearch = ref('')
+const filteredProductPickerRows = ref<SkuRow[]>([])
+let productPickerDebounce: ReturnType<typeof setTimeout> | null = null
 
-const filteredProductPickerRows = computed(() => filterSkuRows(productPickerSearch.value))
+watch(productPickerSearch, (query) => {
+  if (productPickerDebounce) clearTimeout(productPickerDebounce)
+  if (!query.trim()) {
+    filteredProductPickerRows.value = []
+    return
+  }
+  productPickerDebounce = setTimeout(async () => {
+    filteredProductPickerRows.value = await searchProductVariations(query, 20)
+  }, 200)
+})
 
 function openProductPicker() {
   productPickerSearch.value = ''
+  filteredProductPickerRows.value = []
   showProductPicker.value = true
 }
 
@@ -267,7 +284,7 @@ const customerSearch = ref('')
 const filteredCustomers = computed(() => {
   const q = customerSearch.value.trim().toLowerCase()
   if (!q) return customers.value
-  return customers.value.filter((c) => c.name.toLowerCase().includes(q) || c.mobile_phone.includes(q))
+  return customers.value.filter((c) => c.name.toLowerCase().includes(q) || (c.mobile_phone ?? '').includes(q))
 })
 
 function selectCustomer(customer: Customer) {
@@ -524,7 +541,7 @@ async function confirmSaveQuote() {
           <div class="truncate text-[9.5px] font-bold tracking-wide text-txt-muted uppercase">Cliente</div>
           <div class="truncate text-[13px] font-bold text-txt-primary">{{ cart.customerName ?? 'Nenhum cliente vinculado' }}</div>
         </div>
-        <button v-if="cart.customerId" type="button" class="ml-auto flex-none text-txt-muted hover:text-txt-primary" @click="clearCustomer">
+        <button v-if="cart.customerId" type="button" class="cursor-pointer ml-auto flex-none text-txt-muted hover:text-txt-primary" @click="clearCustomer">
           <X :size="13" />
         </button>
       </div>
@@ -539,6 +556,15 @@ async function confirmSaveQuote() {
       </BaseButton>
 
       <div class="flex-1" />
+
+      <button
+        type="button"
+        title="Manual do Usuário (F4)"
+        class="flex flex-none cursor-pointer items-center justify-center rounded-full border border-border p-1.5 text-txt-secondary hover:bg-surface-subtle hover:text-txt-primary"
+        @click="openManual()"
+      >
+        <HelpCircle :size="16" />
+      </button>
 
       <AppearanceControls />
 
@@ -602,11 +628,11 @@ async function confirmSaveQuote() {
               <div>
                 <label class="text-[9.5px] font-bold tracking-wide text-txt-muted uppercase">Qtd.</label>
                 <div class="mt-1.5 flex items-center gap-1.5">
-                  <button type="button" class="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty = Math.max(1, pendingQty - 1)">
+                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty = Math.max(1, pendingQty - 1)">
                     <Minus :size="13" />
                   </button>
                   <input v-model.number="pendingQty" type="number" min="1" class="w-full rounded-lg border border-border px-1 py-1 text-center text-sm">
-                  <button type="button" class="flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty += 1">
+                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty += 1">
                     <Plus :size="13" />
                   </button>
                 </div>
@@ -722,11 +748,11 @@ async function confirmSaveQuote() {
                 </label>
               </div>
               <div class="flex flex-none items-center gap-1.5">
-                <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity - 1)">
+                <button type="button" class="cursor-pointer flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity - 1)">
                   <Minus :size="13" />
                 </button>
                 <span class="w-7 text-center text-[17px] font-bold text-txt-primary">{{ item.quantity }}</span>
-                <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity + 1)">
+                <button type="button" class="cursor-pointer flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity + 1)">
                   <Plus :size="13" />
                 </button>
               </div>
@@ -741,7 +767,7 @@ async function confirmSaveQuote() {
               <span class="w-24 flex-none text-right text-[17px] font-bold text-txt-primary">
                 {{ formatCurrency(Math.round(itemTotal(item) * 100)) }}
               </span>
-              <button type="button" class="flex h-7.5 w-7.5 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50" @click="cart.removeItem(item.key)">
+              <button type="button" class="cursor-pointer flex h-7.5 w-7.5 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50" @click="cart.removeItem(item.key)">
                 <Trash2 :size="15" />
               </button>
             </div>
@@ -785,7 +811,7 @@ async function confirmSaveQuote() {
           <ShieldCheck :size="16" class="flex-none" />
           <span class="text-xs font-semibold">
             Nenhum caixa aberto — dá pra montar um orçamento, mas é preciso
-            <button type="button" class="underline" @click="navigateTo('/cash-register')">abrir o caixa</button>
+            <button type="button" class="cursor-pointer underline" @click="navigateTo('/cash-register')">abrir o caixa</button>
             para finalizar uma venda.
           </span>
         </div>
@@ -862,7 +888,7 @@ async function confirmSaveQuote() {
                 <button
                   v-if="cart.payments.length > 1"
                   type="button"
-                  class="mb-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
+                  class="mb-0.5 flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50"
                   @click="removePaymentLine(index)"
                 >
                   <Trash2 :size="15" />
@@ -928,7 +954,7 @@ async function confirmSaveQuote() {
           v-for="customer in filteredCustomers"
           :key="customer.id"
           type="button"
-          class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-surface-subtle"
+          class="cursor-pointer flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-surface-subtle"
           @click="selectCustomer(customer)"
         >
           <div class="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-surface-subtle text-xs font-bold text-txt-secondary">
@@ -941,7 +967,7 @@ async function confirmSaveQuote() {
         </button>
         <p v-if="filteredCustomers.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum cliente encontrado.</p>
       </div>
-      <button type="button" class="mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-brand hover:bg-surface-subtle" @click="openNewCustomer">
+      <button type="button" class="cursor-pointer mt-2 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-brand hover:bg-surface-subtle" @click="openNewCustomer">
         <Plus :size="15" />
         <span class="text-sm font-bold">Novo cliente</span>
       </button>
@@ -974,7 +1000,8 @@ async function confirmSaveQuote() {
           </div>
           <BaseButton :block="false" @click="chooseProductFromPicker(row)">Escolher</BaseButton>
         </div>
-        <p v-if="filteredProductPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
+        <p v-if="!productPickerSearch.trim()" class="py-6 text-center text-sm text-txt-muted">Digite pra buscar um produto.</p>
+        <p v-else-if="filteredProductPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
       </div>
     </BaseModal>
 

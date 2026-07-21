@@ -18,7 +18,7 @@ const options: { value: PrintFormat, label: string, hint: string }[] = [
         v-for="option in options"
         :key="option.value"
         type="button"
-        class="flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-brand hover:bg-surface-subtle"
+        class="cursor-pointer flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-brand hover:bg-surface-subtle"
         @click="resolvePrintFormat(option.value)"
       >
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-subtle text-txt-secondary">

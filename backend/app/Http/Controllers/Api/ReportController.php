@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ReportController extends Controller
@@ -132,7 +133,7 @@ class ReportController extends Controller
         $mpdf = new Mpdf(['tempDir' => sys_get_temp_dir()]);
         $mpdf->WriteHTML(view('reports.export', ['report' => $report, 'letterhead' => $this->letterhead()])->render());
 
-        return response($mpdf->Output($key.'.pdf', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+        return response($mpdf->Output($key.'.pdf', Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$key.'.pdf"',
         ]);
@@ -238,11 +239,15 @@ class ReportController extends Controller
             'title' => 'Vendas por Produto',
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
+                ['key' => 'product_code', 'label' => 'Código'],
+                ['key' => 'legacy_code', 'label' => 'Código Interno'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade'],
                 ['key' => 'total', 'label' => 'Total'],
             ],
             'rows' => $rows->map(fn ($row) => [
                 'product_name' => $row->product_name,
+                'product_code' => $row->product_code,
+                'legacy_code' => $row->legacy_code,
                 'quantity_sold' => (string) $row->quantity_sold,
                 'total' => $this->money($row->total),
             ])->all(),
@@ -329,6 +334,8 @@ class ReportController extends Controller
         $this->applyDateFilter($query, $request, 'sales.created_at');
 
         $rows = $query->selectRaw('products.id as product_id, products.name as product_name,
+                MAX(product_variations.product_code) as product_code,
+                MAX(product_variations.legacy_code) as legacy_code,
                 SUM(sale_items.quantity) as quantity_sold,
                 COALESCE(SUM(sale_items.total), 0) as revenue,
                 COALESCE(SUM(sale_items.quantity * product_variations.cost_price), 0) as cost')
@@ -340,6 +347,8 @@ class ReportController extends Controller
             'title' => 'Lucro Bruto por Produto',
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
+                ['key' => 'product_code', 'label' => 'Código'],
+                ['key' => 'legacy_code', 'label' => 'Código Interno'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade'],
                 ['key' => 'revenue', 'label' => 'Receita'],
                 ['key' => 'cost', 'label' => 'Custo'],
@@ -350,6 +359,8 @@ class ReportController extends Controller
 
                 return [
                     'product_name' => $row->product_name,
+                    'product_code' => $row->product_code,
+                    'legacy_code' => $row->legacy_code,
                     'quantity_sold' => (string) $row->quantity_sold,
                     'revenue' => $this->money($row->revenue),
                     'cost' => $this->money($row->cost),
@@ -368,12 +379,14 @@ class ReportController extends Controller
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
                 ['key' => 'product_code', 'label' => 'Código'],
+                ['key' => 'legacy_code', 'label' => 'Código Interno'],
                 ['key' => 'current_quantity', 'label' => 'Quantidade Atual'],
                 ['key' => 'min_quantity', 'label' => 'Quantidade Mínima'],
             ],
             'rows' => $variations->map(fn ($variation) => [
                 'product_name' => $variation->product->name,
                 'product_code' => $variation->product_code,
+                'legacy_code' => $variation->legacy_code,
                 'current_quantity' => (string) $variation->current_quantity,
                 'min_quantity' => (string) $variation->min_quantity,
             ])->all(),
@@ -396,6 +409,7 @@ class ReportController extends Controller
             return [
                 'product_name' => $variation->product->name,
                 'product_code' => $variation->product_code,
+                'legacy_code' => $variation->legacy_code,
                 'current_quantity' => (string) $variation->current_quantity,
                 'cost_value' => $this->money($costValue),
                 'sale_value' => $this->money($saleValue),
@@ -411,6 +425,7 @@ class ReportController extends Controller
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
                 ['key' => 'product_code', 'label' => 'Código'],
+                ['key' => 'legacy_code', 'label' => 'Código Interno'],
                 ['key' => 'current_quantity', 'label' => 'Quantidade'],
                 ['key' => 'cost_value', 'label' => 'Valor (Custo)'],
                 ['key' => 'sale_value', 'label' => 'Valor (Venda)'],
@@ -433,7 +448,10 @@ class ReportController extends Controller
             $query->where('products.category_id', $request->integer('category_id'));
         }
 
-        return $query->selectRaw('products.id as product_id, products.name as product_name, SUM(sale_items.quantity) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as total')
+        return $query->selectRaw('products.id as product_id, products.name as product_name,
+                MAX(product_variations.product_code) as product_code,
+                MAX(product_variations.legacy_code) as legacy_code,
+                SUM(sale_items.quantity) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as total')
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('quantity_sold')
             ->get();

@@ -5,6 +5,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+# CSVs da migração do sistema legado (dado real de cliente/produto) — nunca versionar, ver docs/11-migracao-sistema-legado.md
+/storage/legacy-import
 /vendor
 .env
 .env.backup

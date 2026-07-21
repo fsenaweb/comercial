@@ -16,6 +16,7 @@ class ProductVariationResource extends JsonResource
             'size' => $this->size,
             'ean_gtin' => $this->ean_gtin,
             'product_code' => $this->product_code,
+            'legacy_code' => $this->legacy_code,
             'cost_price' => $this->cost_price,
             'markup' => $this->markup,
             'sale_price' => $this->sale_price,

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ChevronDown, LogOut, Search, Settings } from 'lucide-vue-next'
+import { ChevronDown, HelpCircle, LogOut, Search, Settings } from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const menuOpen = ref(false)
+const { openManual } = useManualDialog()
 
 async function handleLogout() {
   await auth.logout()
@@ -18,10 +19,19 @@ async function handleLogout() {
     </label>
 
     <div v-if="auth.user" class="flex items-center gap-3">
+      <button
+        type="button"
+        title="Manual do Usuário (F4)"
+        class="flex cursor-pointer items-center justify-center rounded-full border border-border p-1.5 text-txt-secondary hover:bg-surface-subtle hover:text-txt-primary"
+        @click="openManual()"
+      >
+        <HelpCircle :size="16" />
+      </button>
+
       <AppearanceControls />
 
       <div class="relative">
-        <button type="button" class="flex items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-surface-subtle" @click="menuOpen = !menuOpen">
+        <button type="button" class="cursor-pointer flex items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-surface-subtle" @click="menuOpen = !menuOpen">
           <span
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand font-display text-sm font-bold text-brand-ink"
           >
@@ -50,7 +60,7 @@ async function handleLogout() {
           <div class="my-1 h-px bg-border" />
           <button
             type="button"
-            class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+            class="cursor-pointer flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
             @click="handleLogout"
           >
             <LogOut :size="16" />

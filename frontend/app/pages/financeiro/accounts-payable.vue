@@ -172,7 +172,7 @@ await loadAll()
           v-for="option in [{ value: 'all', label: 'Todas' }, { value: 'open', label: 'Em aberto' }, { value: 'paid', label: 'Quitadas' }]"
           :key="option.value"
           type="button"
-          class="rounded-full border px-3.5 py-1.5 text-xs font-bold"
+          class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
           :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
           @click="statusFilter = option.value as typeof statusFilter"
         >
@@ -196,7 +196,7 @@ await loadAll()
           v-else
           :key="payable.id"
           type="button"
-          class="grid w-full grid-cols-[1.6fr_1.8fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
+          class="cursor-pointer grid w-full grid-cols-[1.6fr_1.8fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
           @click="openDetail(payable)"
         >
           <span class="truncate text-sm font-medium text-txt-primary">{{ payable.supplier_name ?? '—' }}</span>

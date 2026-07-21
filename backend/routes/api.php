@@ -18,9 +18,9 @@ use App\Http\Controllers\Api\ProductVariationController;
 use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\StockEntryController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StoreSettingController;
-use App\Http\Controllers\Api\StockEntryController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UnitController;
@@ -61,6 +61,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('units', UnitController::class);
     Route::apiResource('suppliers', SupplierController::class);
     Route::apiResource('customers', CustomerController::class);
+    Route::get('/products/summary', [ProductController::class, 'summary']);
+    Route::get('/product-variations/lookup', [ProductVariationController::class, 'lookup']);
+    Route::get('/product-variations/search', [ProductVariationController::class, 'search']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('products.variations', ProductVariationController::class)
         ->parameters(['variations' => 'productVariation'])

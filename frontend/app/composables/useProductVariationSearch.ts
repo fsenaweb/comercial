@@ -10,13 +10,6 @@ export interface ProductVariation {
   wholesale_price: string | null
 }
 
-export interface ProductWithVariations {
-  id: number
-  name: string
-  active: boolean
-  variations?: ProductVariation[]
-}
-
 export interface ProductVariationRow {
   key: string
   productName: string
@@ -24,61 +17,52 @@ export interface ProductVariationRow {
   variation: ProductVariation
 }
 
+interface SearchApiRow extends ProductVariation {
+  product_name: string
+}
+
+function toRow(item: SearchApiRow): ProductVariationRow {
+  const label = [item.color, item.size].filter(Boolean).join(' / ') || null
+  const { product_name, ...variation } = item
+  return { key: `${item.id}`, productName: product_name, variationLabel: label, variation }
+}
+
 /**
- * Não existe endpoint de busca de produto dedicado no backend — PDV e a tela de
- * Etiquetas reaproveitam GET /products (variações já vêm aninhadas) e filtram
- * no cliente. Centraliza aqui o achatamento produto→variação e a busca por
- * nome/código/EAN usados nos dois lugares.
+ * Busca de produto no PDV, no seletor F2 e nas Etiquetas — roda no banco
+ * (GET /product-variations/lookup|search) em vez de carregar o catálogo
+ * inteiro no navegador. Trocado depois de um achado real: com os 13 mil
+ * produtos importados do sistema legado, carregar tudo de uma vez estourava
+ * a memória do PHP e mandava ~14MB de JSON pro navegador a cada tela (ver
+ * docs/11-migracao-sistema-legado.md).
  */
 export function useProductVariationSearch() {
-  const products = ref<ProductWithVariations[]>([])
+  const api = useApi()
+  const searching = ref(false)
 
-  async function loadProducts() {
-    const api = useApi()
-    const response = await api<{ data: ProductWithVariations[] }>('/products')
-    products.value = response.data
-  }
-
-  const rows = computed<ProductVariationRow[]>(() => {
-    const result: ProductVariationRow[] = []
-    for (const product of products.value) {
-      if (!product.active) continue
-      for (const variation of product.variations ?? []) {
-        const label = [variation.color, variation.size].filter(Boolean).join(' / ') || null
-        result.push({ key: `${variation.id}`, productName: product.name, variationLabel: label, variation })
-      }
+  async function findExact(code: string): Promise<ProductVariationRow | null> {
+    const trimmed = code.trim()
+    if (!trimmed) return null
+    try {
+      const res = await api<{ data: SearchApiRow }>(`/product-variations/lookup?code=${encodeURIComponent(trimmed)}`)
+      return toRow(res.data)
+    } catch {
+      return null
     }
-    return result
-  })
+  }
 
-  const exactMatchIndex = computed(() => {
-    const map = new Map<string, ProductVariationRow>()
-    for (const row of rows.value) {
-      if (row.variation.ean_gtin) map.set(row.variation.ean_gtin.toLowerCase(), row)
-      map.set(row.variation.product_code.toLowerCase(), row)
+  async function search(query: string, limit = 20): Promise<ProductVariationRow[]> {
+    const trimmed = query.trim()
+    if (!trimmed) return []
+    searching.value = true
+    try {
+      const res = await api<{ data: SearchApiRow[] }>(
+        `/product-variations/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`,
+      )
+      return res.data.map(toRow)
+    } finally {
+      searching.value = false
     }
-    return map
-  })
-
-  function findExact(query: string): ProductVariationRow | null {
-    return exactMatchIndex.value.get(query.trim().toLowerCase()) ?? null
   }
 
-  function findFuzzy(query: string): ProductVariationRow | null {
-    const q = query.trim().toLowerCase()
-    if (!q) return null
-    return rows.value.find(
-      (row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q),
-    ) ?? null
-  }
-
-  function filter(query: string): ProductVariationRow[] {
-    const q = query.trim().toLowerCase()
-    if (!q) return rows.value
-    return rows.value.filter(
-      (row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q),
-    )
-  }
-
-  return { products, loadProducts, rows, exactMatchIndex, findExact, findFuzzy, filter }
+  return { searching, findExact, search }
 }

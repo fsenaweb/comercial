@@ -60,6 +60,27 @@ class ReportCatalogTest extends TestCase
             ->assertJsonStructure(['data' => ['title', 'headers', 'rows']]);
     }
 
+    #[DataProvider('salesByProductCatalogKeys')]
+    public function test_sales_by_product_catalog_reports_include_product_code(string $key): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->getJson("/api/reports/catalog/{$key}");
+
+        $response->assertOk();
+        $headerKeys = collect($response->json('data.headers'))->pluck('key');
+        $this->assertTrue($headerKeys->contains('product_code'));
+        $this->assertTrue($headerKeys->contains('legacy_code'));
+    }
+
+    public static function salesByProductCatalogKeys(): array
+    {
+        return [
+            ['vendas_produto'],
+            ['lucro_bruto'],
+        ];
+    }
+
     #[DataProvider('catalogKeys')]
     public function test_catalog_report_exports_pdf(string $key): void
     {
