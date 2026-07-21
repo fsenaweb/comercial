@@ -12,7 +12,7 @@ const props = withDefaults(
   { size: 'md' },
 )
 
-// 'lg'/'xl' usam largura relativa ao viewport (não só um max-width fixo) —
+// 'lg'/'xl' usam largura relativa ao viewport (não só um max-width fixo) -
 // numa tela 17"+ o modal precisa acompanhar o espaço disponível, não ficar
 // travado num tamanho pensado pra tela pequena (ver docs/08-design-system.md).
 const sizeClasses: Record<string, string> = {

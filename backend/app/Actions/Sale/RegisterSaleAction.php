@@ -37,6 +37,8 @@ class RegisterSaleAction
 
             [$saleDiscountType, $saleDiscountValue, $saleDiscountAmount, $total] = $this->resolveSaleDiscount($subtotal, $data);
 
+            $this->assertDiscountAuthorized($itemsToInsert, $subtotal, $saleDiscountAmount, $data['admin_password'] ?? null);
+
             $paymentsSum = array_reduce($data['payments'], fn ($carry, $payment) => bcadd($carry, (string) $payment['amount'], 2), '0.00');
             if (bccomp($paymentsSum, $total, 2) !== 0) {
                 throw ValidationException::withMessages([

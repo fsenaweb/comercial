@@ -49,20 +49,34 @@ class ProductVariationController extends Controller
      * Autocomplete por nome/código (PDV, seletor F2, Etiquetas) — busca no
      * banco, limitada, em vez do filtro client-side sobre o catálogo inteiro
      * que existia antes.
+     *
+     * Termo tokenizado por espaço (pedido do cliente, 2026-07-21): cada
+     * palavra precisa aparecer em algum lugar (nome, código ou EAN), em
+     * qualquer ordem — "paraf x100" acha "PARAFUSO SEXTAVADO M8 X100" mesmo
+     * sem "x100" vir logo depois de "paraf" no nome. Antes o termo inteiro
+     * era um único `ILIKE '%...%'`, que exige a frase inteira contígua.
+     * Um `%` literal digitado pelo usuário (ex.: "paraf%x100") continua
+     * funcionando como coringa de qualquer jeito — não é escapado, o
+     * Postgres já trata `%` dentro do padrão do ILIKE como curinga.
      */
     public function search(Request $request): AnonymousResourceCollection
     {
         $term = trim((string) $request->query('q', ''));
         $limit = min((int) $request->query('limit', 20), 50);
+        $words = array_values(array_filter(preg_split('/\s+/', $term)));
 
         $variations = ProductVariation::query()
             ->with('product')
             ->whereHas('product', fn ($q) => $q->where('active', true))
-            ->when($term !== '', function ($query) use ($term) {
-                $query->where(function ($q) use ($term) {
-                    $q->where('product_code', 'ilike', "%{$term}%")
-                        ->orWhere('ean_gtin', 'ilike', "%{$term}%")
-                        ->orWhereHas('product', fn ($q2) => $q2->where('name', 'ilike', "%{$term}%"));
+            ->when($words !== [], function ($query) use ($words) {
+                $query->where(function ($q) use ($words) {
+                    foreach ($words as $word) {
+                        $q->where(function ($qWord) use ($word) {
+                            $qWord->where('product_code', 'ilike', "%{$word}%")
+                                ->orWhere('ean_gtin', 'ilike', "%{$word}%")
+                                ->orWhereHas('product', fn ($q2) => $q2->where('name', 'ilike', "%{$word}%"));
+                        });
+                    }
                 });
             })
             ->orderBy(Product::select('name')->whereColumn('products.id', 'product_variations.product_id'))

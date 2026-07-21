@@ -7,6 +7,28 @@ use App\Enums\DiscountType;
 trait ResolvesDiscounts
 {
     /**
+     * Acima disso, o desconto (por item ou da venda) só é aceito com a senha
+     * de um usuário admin — decisão do cliente (2026-07-21), pra evitar que
+     * caixa/vendedor conceda descontos grandes sem o dono saber.
+     */
+    private const MAX_DISCOUNT_PERCENT = '20';
+
+    /**
+     * Verdadeiro quando `$discountAmount` passa de MAX_DISCOUNT_PERCENT% de `$base`
+     * — usado tanto pro desconto de item quanto pro desconto total da venda, sempre
+     * comparando contra o valor bruto (antes do desconto em questão), nunca contra o
+     * total já descontado.
+     */
+    private function discountExceedsCap(string $base, string $discountAmount): bool
+    {
+        if (bccomp($base, '0', 2) <= 0) {
+            return false;
+        }
+
+        return bccomp(bcmul($discountAmount, '100', 4), bcmul($base, self::MAX_DISCOUNT_PERCENT, 4), 4) > 0;
+    }
+
+    /**
      * Resolve o valor absoluto do desconto a partir do tipo escolhido pelo
      * operador: fixo usa o valor direto, percentual multiplica e trunca (nunca
      * arredonda pra cima) pra 2 casas no final. Compartilhado entre venda

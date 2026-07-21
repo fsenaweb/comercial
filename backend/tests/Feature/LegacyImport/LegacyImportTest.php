@@ -65,6 +65,18 @@ class LegacyImportTest extends TestCase
         // legado fica preservado à parte em legacy_code, para conferência
         // cruzada com o sistema fiscal — ver docs/11-migracao-sistema-legado.md.
         $this->assertSame('1', $variation->legacy_code);
+        $this->assertSame('C01 BA05', $product->location);
+    }
+
+    public function test_imports_product_without_location_as_null(): void
+    {
+        User::factory()->admin()->create();
+
+        Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
+
+        $product = ProductVariation::where('product_code', 'ARR-PRS')->firstOrFail()->product;
+
+        $this->assertNull($product->location);
     }
 
     public function test_normalizes_sem_gtin_barcode_to_null(): void

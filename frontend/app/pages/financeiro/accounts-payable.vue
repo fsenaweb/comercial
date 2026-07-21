@@ -159,7 +159,7 @@ await loadAll()
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 class="font-display text-[30px] font-extrabold text-brand">Contas a Pagar</h1>
-          <p class="text-sm text-txt-secondary">Controle financeiro de dívidas com fornecedores — pago por boleto/transferência, não sai do caixa da loja.</p>
+          <p class="text-sm text-txt-secondary">Controle financeiro de dívidas com fornecedores - pago por boleto/transferência, não sai do caixa da loja.</p>
         </div>
         <BaseButton :block="false" @click="openForm">
           <Plus :size="15" />
@@ -173,7 +173,7 @@ await loadAll()
           :key="option.value"
           type="button"
           class="cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-bold"
-          :class="statusFilter === option.value ? 'border-txt-primary bg-txt-primary text-white' : 'border-border text-txt-secondary'"
+          :class="statusFilter === option.value ? 'border-ink bg-ink text-white' : 'border-border text-txt-secondary'"
           @click="statusFilter = option.value as typeof statusFilter"
         >
           {{ option.label }}
@@ -199,7 +199,7 @@ await loadAll()
           class="cursor-pointer grid w-full grid-cols-[1.6fr_1.8fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 text-left last:border-0 hover:bg-surface-subtle"
           @click="openDetail(payable)"
         >
-          <span class="truncate text-sm font-medium text-txt-primary">{{ payable.supplier_name ?? '—' }}</span>
+          <span class="truncate text-sm font-medium text-txt-primary">{{ payable.supplier_name ?? '-' }}</span>
           <span class="truncate text-sm text-txt-secondary">{{ payable.description }}</span>
           <span class="text-right text-sm font-bold text-txt-primary">{{ formatAmount(payable.total_amount) }}</span>
           <span class="text-sm text-txt-secondary">{{ payable.installments.filter((i) => i.status === 'paid').length }}/{{ payable.installments_count }}</span>
@@ -259,7 +259,7 @@ await loadAll()
 
           <p class="mt-3 text-sm font-semibold" :class="sumMatches ? 'text-emerald-700' : 'text-rose-600'">
             Soma das parcelas: {{ formatAmount(rowsSum) }} / Total: {{ formatAmount(totalValue) }}
-            <span v-if="sumMatches"> — Ok</span>
+            <span v-if="sumMatches"> - Ok</span>
           </p>
         </div>
 

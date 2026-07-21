@@ -292,34 +292,76 @@ class ReportController extends Controller
         ];
     }
 
+    /**
+     * Detalhado por transação (pedido do cliente, 2026-07-21): a versão
+     * anterior só mostrava o agregado por forma de pagamento (quantidade +
+     * total), sem listar quais vendas compuseram aquele total. Duas
+     * consultas com o mesmo filtro — uma agregada (vira os chips de
+     * `summary`, mesma conta de antes) e outra detalhada (uma linha por
+     * `sale_payment`, agrupada por forma de pagamento com uma linha de
+     * subtotal ao final de cada grupo, no formato pedido). Uma venda com
+     * pagamento dividido aparece com uma linha em cada forma de pagamento
+     * usada — é o comportamento certo aqui, cada perna é uma transação
+     * própria pra conferência.
+     */
     private function buildSalesByPaymentMethodReport(Request $request): array
     {
-        $query = SalePayment::query()
+        $baseQuery = fn () => SalePayment::query()
             ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
             ->join('payment_methods', 'payment_methods.id', '=', 'sale_payments.payment_method_id')
             ->where('sales.status', SaleStatus::Completed->value);
 
-        $this->applyDateFilter($query, $request, 'sales.created_at');
-
-        $rows = $query->selectRaw('payment_methods.id as payment_method_id, payment_methods.name as payment_method_name,
+        $aggregateQuery = $baseQuery();
+        $this->applyDateFilter($aggregateQuery, $request, 'sales.created_at');
+        $aggregates = $aggregateQuery->selectRaw('payment_methods.id as payment_method_id, payment_methods.name as payment_method_name,
                 COUNT(DISTINCT sale_payments.sale_id) as sales_count,
                 COALESCE(SUM(sale_payments.amount), 0) as total')
             ->groupBy('payment_methods.id', 'payment_methods.name')
             ->orderByDesc('total')
             ->get();
 
+        $detailQuery = $baseQuery();
+        $this->applyDateFilter($detailQuery, $request, 'sales.created_at');
+        $details = $detailQuery->selectRaw('sale_payments.payment_method_id, sales.number as sale_number,
+                sales.created_at as sale_date, sale_payments.amount as amount')
+            ->orderBy('sales.created_at')
+            ->get()
+            ->groupBy('payment_method_id');
+
+        $rows = [];
+        $summary = [];
+
+        foreach ($aggregates as $aggregate) {
+            foreach ($details->get($aggregate->payment_method_id, collect()) as $payment) {
+                $rows[] = [
+                    'payment_method_name' => $aggregate->payment_method_name,
+                    'sale_number' => $payment->sale_number,
+                    'sale_date' => Carbon::parse($payment->sale_date)->format('d/m/Y H:i'),
+                    'amount' => $this->money($payment->amount),
+                ];
+            }
+            $rows[] = [
+                'payment_method_name' => "Subtotal — {$aggregate->payment_method_name}",
+                'sale_number' => '',
+                'sale_date' => '',
+                'amount' => $this->money($aggregate->total),
+            ];
+            $summary[] = [
+                'label' => $aggregate->payment_method_name,
+                'value' => "{$aggregate->sales_count} venda(s) · ".$this->money($aggregate->total),
+            ];
+        }
+
         return [
             'title' => 'Vendas por Forma de Pagamento',
+            'summary' => $summary,
             'headers' => [
                 ['key' => 'payment_method_name', 'label' => 'Forma de Pagamento'],
-                ['key' => 'sales_count', 'label' => 'Qtd. de vendas'],
-                ['key' => 'total', 'label' => 'Total'],
+                ['key' => 'sale_number', 'label' => 'Venda'],
+                ['key' => 'sale_date', 'label' => 'Data'],
+                ['key' => 'amount', 'label' => 'Valor'],
             ],
-            'rows' => $rows->map(fn ($row) => [
-                'payment_method_name' => $row->payment_method_name,
-                'sales_count' => (string) $row->sales_count,
-                'total' => $this->money($row->total),
-            ])->all(),
+            'rows' => $rows,
         ];
     }
 

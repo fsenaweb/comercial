@@ -149,8 +149,8 @@ await load()
       >
         <span class="text-sm text-txt-secondary">{{ formatDateTime(movement.created_at) }}</span>
         <div class="min-w-0">
-          <p class="truncate text-sm font-medium text-txt-primary">{{ movement.product_name ?? '—' }}</p>
-          <p class="text-[11px] text-txt-muted">Cód. {{ movement.product_code ?? '—' }}</p>
+          <p class="truncate text-sm font-medium text-txt-primary">{{ movement.product_name ?? '-' }}</p>
+          <p class="text-[11px] text-txt-muted">Cód. {{ movement.product_code ?? '-' }}</p>
         </div>
         <span>
           <StatusBadge :label="movement.type_label" :tone="typeTone[movement.type]" />
@@ -166,7 +166,7 @@ await load()
           <ShoppingCart v-if="movement.type === 'sale'" :size="13" class="shrink-0 text-txt-muted" />
           <span class="truncate">{{ movement.origin }}</span>
         </button>
-        <span class="min-w-0 truncate text-sm text-txt-secondary">{{ movement.user_name ?? '—' }}</span>
+        <span class="min-w-0 truncate text-sm text-txt-secondary">{{ movement.user_name ?? '-' }}</span>
       </div>
 
       <div v-if="hasMore" class="flex justify-center border-t border-border px-5 py-4">
@@ -178,10 +178,10 @@ await load()
       <div v-if="originModalMovement" class="space-y-3 text-sm">
         <p class="text-txt-primary">{{ originModalMovement.origin }}</p>
         <div class="grid grid-cols-2 gap-3 border-t border-border pt-3 text-txt-secondary">
-          <span>Produto: <strong class="text-txt-primary">{{ originModalMovement.product_name ?? '—' }}</strong></span>
+          <span>Produto: <strong class="text-txt-primary">{{ originModalMovement.product_name ?? '-' }}</strong></span>
           <span>Data: <strong class="text-txt-primary">{{ formatDateTime(originModalMovement.created_at) }}</strong></span>
           <span>Tipo: <strong class="text-txt-primary">{{ originModalMovement.type_label }}</strong></span>
-          <span>Usuário: <strong class="text-txt-primary">{{ originModalMovement.user_name ?? '—' }}</strong></span>
+          <span>Usuário: <strong class="text-txt-primary">{{ originModalMovement.user_name ?? '-' }}</strong></span>
         </div>
       </div>
     </BaseModal>

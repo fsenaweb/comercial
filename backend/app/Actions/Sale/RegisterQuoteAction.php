@@ -20,6 +20,8 @@ class RegisterQuoteAction
 
             [$saleDiscountType, $saleDiscountValue, $saleDiscountAmount, $total] = $this->resolveSaleDiscount($subtotal, $data);
 
+            $this->assertDiscountAuthorized($itemsToInsert, $subtotal, $saleDiscountAmount, $data['admin_password'] ?? null);
+
             $sellerId = $data['seller_id'] ?? $user->id;
 
             $sale = Sale::create([

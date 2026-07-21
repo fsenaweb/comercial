@@ -18,7 +18,7 @@ import type { CartItem } from '~/stores/cart'
 import type { ProductVariationRow as SkuRow } from '~/composables/useProductVariationSearch'
 
 definePageMeta({ layout: 'pos' })
-useHead({ title: 'PDV — JP Parafusos' })
+useHead({ title: 'PDV - JP Parafusos' })
 
 interface Customer {
   id: number
@@ -102,6 +102,24 @@ function resetSearch() {
   pendingUnitMasked.value = 'R$ 0,00'
 }
 
+// Digitar de novo depois de um produto já selecionado precisa cancelar a
+// seleção na hora e voltar a buscar - antes disso, o watch(searchQuery)
+// abaixo ignorava qualquer edição enquanto `foundRow` estivesse preenchido
+// (só pra não reagir à própria atribuição programática de `searchQuery` que
+// `selectSuggestion`/`chooseProductFromPicker` fazem ao selecionar), e não
+// havia como sair do card "produto selecionado" sem incluir o item errado
+// no carrinho. Um `@input` dedicado (só dispara em digitação real do
+// usuário, nunca quando o script atribui `searchQuery.value` por código)
+// resolve sem ambiguidade: limpa a seleção antes de atualizar o texto.
+function handleSearchInput(event: Event) {
+  if (foundRow.value) {
+    foundRow.value = null
+    pendingQty.value = 1
+    pendingUnitMasked.value = 'R$ 0,00'
+  }
+  searchQuery.value = (event.target as HTMLInputElement).value
+}
+
 function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
   cart.addItem({
     id: row.variation.id,
@@ -115,11 +133,24 @@ function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
   }, quantity)
 }
 
+// Prefixo "<qtd>*<busca>" (pedido do cliente, paridade com o sistema antigo
+// dele): digitar "10*paraf x100" e confirmar já inclui 10 unidades do
+// produto encontrado, sem precisar ajustar a quantidade depois. O "*" só é
+// tratado como esse prefixo especial no começo do texto (nunca aparece em
+// código de barras/produto de verdade), então é seguro extrair antes de
+// mandar o termo pra busca - sem isso "10*paraf" não bateria com nada.
+function parseQtyPrefix(raw: string): { qty: number, term: string } {
+  const match = raw.match(/^(\d+)\*(.+)$/)
+  if (!match) return { qty: 1, term: raw }
+  const qty = parseInt(match[1]!, 10)
+  return { qty: qty > 0 ? qty : 1, term: match[2]! }
+}
+
 // Autocomplete: sugestões por nome/código enquanto o operador digita (não
-// atrapalha o leitor de código de barras — o match exato no Enter continua
+// atrapalha o leitor de código de barras - o match exato no Enter continua
 // tendo prioridade e inclui na hora, como já funcionava). Busca no banco
 // (debounced), não mais um filtro sobre o catálogo inteiro carregado no
-// navegador — ver docs/11-migracao-sistema-legado.md.
+// navegador - ver docs/11-migracao-sistema-legado.md.
 const highlightedSuggestionIndex = ref(0)
 const searchSuggestions = ref<SkuRow[]>([])
 let suggestionsDebounce: ReturnType<typeof setTimeout> | null = null
@@ -130,17 +161,23 @@ watch(searchQuery, (query) => {
     searchSuggestions.value = []
     return
   }
+  const { term } = parseQtyPrefix(query.trim())
+  if (!term.trim()) {
+    searchSuggestions.value = []
+    return
+  }
   suggestionsDebounce = setTimeout(async () => {
-    searchSuggestions.value = await searchProductVariations(query, 6)
+    searchSuggestions.value = await searchProductVariations(term, 6)
     highlightedSuggestionIndex.value = 0
   }, 200)
 })
 
 function selectSuggestion(row: SkuRow) {
+  const { qty } = parseQtyPrefix(searchQuery.value.trim())
   foundRow.value = row
   searchQuery.value = row.productName
   searchSuggestions.value = []
-  pendingQty.value = 1
+  pendingQty.value = qty
   pendingUnitMasked.value = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
 }
 
@@ -158,14 +195,16 @@ async function handleSearchKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter') return
   event.preventDefault()
 
-  const exact = await findExact(searchQuery.value)
+  const { qty, term } = parseQtyPrefix(searchQuery.value.trim())
+
+  const exact = await findExact(term)
   if (exact) {
     if (autoAdd.value) {
-      addRowToCart(exact, 1)
+      addRowToCart(exact, qty)
       resetSearch()
     } else {
       foundRow.value = exact
-      pendingQty.value = 1
+      pendingQty.value = qty
       pendingUnitMasked.value = maskCurrency(String(Math.round(Number(exact.variation.sale_price) * 100)))
     }
     return
@@ -177,10 +216,10 @@ async function handleSearchKeydown(event: KeyboardEvent) {
     return
   }
 
-  const [fuzzy] = await searchProductVariations(searchQuery.value, 1)
+  const [fuzzy] = await searchProductVariations(term, 1)
   if (fuzzy) {
     foundRow.value = fuzzy
-    pendingQty.value = 1
+    pendingQty.value = qty
     pendingUnitMasked.value = maskCurrency(String(Math.round(Number(fuzzy.variation.sale_price) * 100)))
   }
 }
@@ -197,6 +236,7 @@ function handleIncluirItem() {
 // ---- Modal de busca de produto (F2) ----
 const showProductPicker = ref(false)
 const productPickerSearch = ref('')
+const productPickerSearchInputRef = ref<HTMLInputElement | null>(null)
 const filteredProductPickerRows = ref<SkuRow[]>([])
 let productPickerDebounce: ReturnType<typeof setTimeout> | null = null
 
@@ -215,6 +255,7 @@ function openProductPicker() {
   productPickerSearch.value = ''
   filteredProductPickerRows.value = []
   showProductPicker.value = true
+  nextTick(() => productPickerSearchInputRef.value?.focus())
 }
 
 function chooseProductFromPicker(row: SkuRow) {
@@ -225,7 +266,7 @@ function chooseProductFromPicker(row: SkuRow) {
   showProductPicker.value = false
 }
 
-// ---- Modal de troca de vendedor/operador (F3) — mesmo padrão do F2 ----
+// ---- Modal de troca de vendedor/operador (F3) - mesmo padrão do F2 ----
 const showOperatorPicker = ref(false)
 const operatorPickerSearch = ref('')
 
@@ -262,7 +303,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 
-// Total da linha já líquido de desconto (mesma conta usada no Resumo da venda) — a
+// Total da linha já líquido de desconto (mesma conta usada no Resumo da venda) - a
 // linha do carrinho mostrava só unitário × quantidade, sem refletir o desconto do item.
 function itemTotal(item: CartItem): number {
   return lineTotalCents({
@@ -328,7 +369,7 @@ async function submitNewCustomer() {
   }
 }
 
-// ---- Pagamento único (padrão): mesma UX de antes do split payment — só a
+// ---- Pagamento único (padrão): mesma UX de antes do split payment - só a
 // forma, sem campo de valor (é sempre o total). "Dividir pagamento" (toggle)
 // é que abre a lista de linhas abaixo.
 const valorRecebidoMasked = ref('R$ 0,00')
@@ -389,7 +430,7 @@ function usarRestanteLine(index: number) {
   if (line) paymentAmountMasked.value[index] = maskCurrency(String(Math.round(line.amount * 100)))
 }
 
-// "Valor recebido"/troco só fazem sentido pra linha em dinheiro — nas demais
+// "Valor recebido"/troco só fazem sentido pra linha em dinheiro - nas demais
 // formas (cartão, Pix...) o valor é sempre exato, sem troco a calcular.
 // payment_methods é um cadastro livre (Sprint 2), sem um campo que marque
 // "isto é dinheiro", então o critério é o nome informado pela loja.
@@ -406,6 +447,33 @@ function trocoFor(index: number): number {
   return Math.max(0, currencyToNumber(cashReceivedMasked.value[index] ?? 'R$ 0,00') - line.amount)
 }
 
+// ---- Autorização de desconto acima de 20% (senha do administrador) ----
+// O backend é quem decide se o desconto passou do teto (RegisterSaleAction /
+// RegisterQuoteAction) - o front não duplica essa conta, só reage ao erro
+// `admin_password` e reenvia a mesma operação com a senha informada.
+const showAdminPasswordModal = ref(false)
+const adminPasswordValue = ref('')
+const adminPasswordError = ref<string | null>(null)
+const adminPasswordSubmitting = ref(false)
+let pendingAdminPasswordAction: 'sale' | 'quote' | null = null
+
+function closeAdminPasswordModal() {
+  showAdminPasswordModal.value = false
+  adminPasswordValue.value = ''
+  adminPasswordError.value = null
+  pendingAdminPasswordAction = null
+}
+
+async function confirmAdminPassword() {
+  adminPasswordSubmitting.value = true
+  try {
+    if (pendingAdminPasswordAction === 'sale') await runCheckout(adminPasswordValue.value)
+    else if (pendingAdminPasswordAction === 'quote') await runSaveQuote(adminPasswordValue.value)
+  } finally {
+    adminPasswordSubmitting.value = false
+  }
+}
+
 // ---- Finalizar venda ----
 const finalizing = ref(false)
 const checkoutError = ref<unknown>(null)
@@ -420,12 +488,12 @@ const canFinalize = computed(() => {
   return cart.singlePaymentMethodId !== null
 })
 
-async function handleFinalizarVenda() {
-  if (!canFinalize.value) return
+async function runCheckout(adminPassword?: string) {
   finalizing.value = true
   checkoutError.value = null
   try {
-    const sale = await cart.checkout()
+    const sale = await cart.checkout(adminPassword)
+    closeAdminPasswordModal()
     valorRecebidoMasked.value = 'R$ 0,00'
     paymentAmountMasked.value = ['R$ 0,00']
     cashReceivedMasked.value = ['R$ 0,00']
@@ -434,10 +502,22 @@ async function handleFinalizarVenda() {
     await cashRegisterStore.fetchCurrent()
     focusSearch()
   } catch (err) {
-    checkoutError.value = err
+    const requiresAdminPassword = firstFieldError(err, 'admin_password')
+    if (requiresAdminPassword) {
+      adminPasswordError.value = requiresAdminPassword
+      pendingAdminPasswordAction = 'sale'
+      showAdminPasswordModal.value = true
+    } else {
+      checkoutError.value = err
+    }
   } finally {
     finalizing.value = false
   }
+}
+
+async function handleFinalizarVenda() {
+  if (!canFinalize.value) return
+  await runCheckout()
 }
 
 // ---- Salvar orçamento ----
@@ -454,22 +534,34 @@ function openQuoteModal() {
   showQuoteModal.value = true
 }
 
-async function confirmSaveQuote() {
-  if (!canSaveQuote.value) return
+async function runSaveQuote(adminPassword?: string) {
   savingQuote.value = true
   quoteError.value = null
   try {
     cart.setExpiresAt(quoteExpiresAt.value || null)
-    await cart.saveAsQuote()
+    await cart.saveAsQuote(adminPassword)
+    closeAdminPasswordModal()
     paymentAmountMasked.value = ['R$ 0,00']
     cashReceivedMasked.value = ['R$ 0,00']
     showQuoteModal.value = false
     await navigateTo('/quotes')
   } catch (err) {
-    quoteError.value = err
+    const requiresAdminPassword = firstFieldError(err, 'admin_password')
+    if (requiresAdminPassword) {
+      adminPasswordError.value = requiresAdminPassword
+      pendingAdminPasswordAction = 'quote'
+      showAdminPasswordModal.value = true
+    } else {
+      quoteError.value = err
+    }
   } finally {
     savingQuote.value = false
   }
+}
+
+async function confirmSaveQuote() {
+  if (!canSaveQuote.value) return
+  await runSaveQuote()
 }
 </script>
 
@@ -589,14 +681,24 @@ async function confirmSaveQuote() {
             <Search :size="15" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-txt-muted" />
             <input
               ref="searchInputRef"
-              v-model="searchQuery"
+              :value="searchQuery"
               type="text"
               placeholder="Código, nome ou código de barra"
               autofocus
               autocomplete="off"
-              class="w-full rounded-xl border-[1.5px] border-brand bg-surface-raised py-2.5 pr-3 pl-9 text-sm text-txt-primary focus:outline-none"
+              class="w-full rounded-xl border-[1.5px] border-brand bg-surface-raised py-2.5 pr-9 pl-9 text-sm text-txt-primary focus:outline-none"
+              @input="handleSearchInput"
               @keydown="handleSearchKeydown"
             >
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="cursor-pointer absolute top-1/2 right-3 -translate-y-1/2 text-txt-muted hover:text-txt-primary"
+              aria-label="Limpar busca"
+              @click="resetSearch(); focusSearch()"
+            >
+              <X :size="14" />
+            </button>
 
             <div
               v-if="searchSuggestions.length > 0"
@@ -613,16 +715,24 @@ async function confirmSaveQuote() {
               >
                 <div class="min-w-0">
                   <p class="truncate text-[13px] font-bold text-txt-primary">{{ row.productName }}</p>
-                  <p class="text-[11px] text-txt-muted">Cód. {{ row.variation.product_code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span></p>
+                  <p class="text-[11px] text-txt-muted">
+                    Cód. {{ row.variation.product_code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
+                    · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
+                  </p>
                 </div>
                 <span class="flex-none text-[12.5px] font-bold text-txt-secondary">{{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}</span>
               </button>
             </div>
           </label>
 
+          <p v-if="!foundRow" class="mb-3 text-[11px] text-txt-muted">Dica: digite <strong class="text-txt-secondary">10*</strong> antes do nome ou código pra incluir 10 unidades de uma vez.</p>
+
           <div v-if="foundRow" class="mb-3 rounded-xl border border-border p-3">
             <p class="text-[13.5px] font-bold text-txt-primary">{{ foundRow.productName }}</p>
-            <p class="mb-3 text-[11.5px] text-txt-muted">Cód. {{ foundRow.variation.product_code }}</p>
+            <p class="mb-3 text-[11.5px] text-txt-muted">
+              Cód. {{ foundRow.variation.product_code }}
+              · <span :class="foundRow.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ foundRow.variation.current_quantity }} em estoque</span>
+            </p>
 
             <div class="mb-2.5 grid grid-cols-2 gap-2.5">
               <div>
@@ -810,7 +920,7 @@ async function confirmSaveQuote() {
         <div v-else class="flex items-center gap-2 rounded-xl bg-rose-50 px-3.5 py-3 text-rose-700">
           <ShieldCheck :size="16" class="flex-none" />
           <span class="text-xs font-semibold">
-            Nenhum caixa aberto — dá pra montar um orçamento, mas é preciso
+            Nenhum caixa aberto - dá pra montar um orçamento, mas é preciso
             <button type="button" class="cursor-pointer underline" @click="navigateTo('/cash-register')">abrir o caixa</button>
             para finalizar uma venda.
           </span>
@@ -978,6 +1088,7 @@ async function confirmSaveQuote() {
       <label class="relative mb-3 block">
         <Search :size="15" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-txt-muted" />
         <input
+          ref="productPickerSearchInputRef"
           v-model="productPickerSearch"
           type="text"
           placeholder="Nome ou código do produto"
@@ -989,16 +1100,18 @@ async function confirmSaveQuote() {
         <div
           v-for="row in filteredProductPickerRows"
           :key="row.key"
-          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          @click="chooseProductFromPicker(row)"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">
               Cód. {{ row.variation.product_code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
+              · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
               · {{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}
             </p>
           </div>
-          <BaseButton :block="false" @click="chooseProductFromPicker(row)">Escolher</BaseButton>
+          <BaseButton :block="false" @click.stop="chooseProductFromPicker(row)">Escolher</BaseButton>
         </div>
         <p v-if="!productPickerSearch.trim()" class="py-6 text-center text-sm text-txt-muted">Digite pra buscar um produto.</p>
         <p v-else-if="filteredProductPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
@@ -1030,8 +1143,24 @@ async function confirmSaveQuote() {
       </div>
     </BaseModal>
 
+    <!-- MODAL: SENHA DO ADMINISTRADOR (desconto acima de 20%) -->
+    <BaseModal
+      :open="showAdminPasswordModal"
+      title="Autorização do administrador"
+      subtitle="Esse desconto passa de 20% - só o administrador pode liberar, informando a senha."
+      @close="closeAdminPasswordModal"
+    >
+      <form class="space-y-4" @submit.prevent="confirmAdminPassword">
+        <BaseInput v-model="adminPasswordValue" type="password" label="Senha do administrador" :error="adminPasswordError" />
+        <div class="flex justify-end gap-3 border-t border-border pt-4">
+          <BaseButton type="button" variant="ghost" :block="false" @click="closeAdminPasswordModal">Cancelar</BaseButton>
+          <BaseButton type="submit" :loading="adminPasswordSubmitting" :block="false">Autorizar</BaseButton>
+        </div>
+      </form>
+    </BaseModal>
+
     <!-- MODAL: SALVAR ORÇAMENTO -->
-    <BaseModal :open="showQuoteModal" title="Salvar orçamento" subtitle="O carrinho é salvo como orçamento — não baixa estoque nem lança no caixa." @close="showQuoteModal = false">
+    <BaseModal :open="showQuoteModal" title="Salvar orçamento" subtitle="O carrinho é salvo como orçamento - não baixa estoque nem lança no caixa." @close="showQuoteModal = false">
       <div class="space-y-4">
         <BaseInput v-model="quoteExpiresAt" type="date" label="Validade (opcional)" :error="firstFieldError(quoteError, 'expires_at')" />
         <p v-if="quoteError && !firstFieldError(quoteError, 'expires_at')" class="text-sm text-rose-600">{{ parse(quoteError).message }}</p>

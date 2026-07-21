@@ -17,8 +17,8 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string'],
             'role' => ['required', Rule::enum(UserRole::class)],
             'commission_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'active' => ['required', 'boolean'],
@@ -29,11 +29,9 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name.required' => 'Informe o nome do usuário.',
-            'email.required' => 'Informe o e-mail do usuário.',
             'email.email' => 'Informe um e-mail válido.',
             'email.unique' => 'Já existe um usuário com esse e-mail.',
             'password.required' => 'Informe uma senha.',
-            'password.min' => 'A senha precisa ter pelo menos 8 caracteres.',
             'role.required' => 'Selecione o papel do usuário.',
         ];
     }

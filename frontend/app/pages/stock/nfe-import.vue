@@ -1,24 +1,8 @@
 <script setup lang="ts">
 import { AlertTriangle, ArrowLeft, CheckCircle2, FileUp, Search, Upload } from 'lucide-vue-next'
+import type { ProductVariationRow } from '~/composables/useProductVariationSearch'
 
-interface Variation {
-  id: number
-  product_code: string
-  current_quantity: number
-  markup: string | null
-}
-
-interface Product {
-  id: number
-  name: string
-  variations?: Variation[]
-}
-
-interface SkuOption {
-  key: string
-  productName: string
-  variation: Variation
-}
+type SkuOption = ProductVariationRow
 
 interface Supplier {
   id: number
@@ -64,28 +48,13 @@ interface WorkingItem {
 }
 
 const api = useApi()
-const productsApi = useResourceApi<Product>('products')
+const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
 
-const products = ref<Product[]>([])
 const suppliers = ref<Supplier[]>([])
 
-const skuOptions = computed<SkuOption[]>(() => {
-  const rows: SkuOption[] = []
-  for (const product of products.value) {
-    for (const variation of product.variations ?? []) {
-      rows.push({ key: `${product.id}-${variation.id}`, productName: product.name, variation })
-    }
-  }
-  return rows
-})
-
 onMounted(async () => {
-  const [productsResult, suppliersRes] = await Promise.all([
-    productsApi.list(),
-    api<{ data: Supplier[] }>('/suppliers'),
-  ])
-  products.value = productsResult
+  const suppliersRes = await api<{ data: Supplier[] }>('/suppliers')
   suppliers.value = suppliersRes.data
 })
 
@@ -143,20 +112,31 @@ async function handleParse() {
   }
 }
 
-// ---- MODAL: escolher produto pra item não casado ----
+// ---- MODAL: escolher produto pra item não casado - busca no banco
+// (debounced). Antes filtrava uma lista fixa carregada no mount (só a
+// primeira página de `GET /products`, que virou paginado - achado do
+// cliente, 2026-07-21: a busca não encontrava produto fora dela).
 const showPicker = ref(false)
 const pickerSearch = ref('')
 const pickerTarget = ref<WorkingItem | null>(null)
+const filteredPickerRows = ref<SkuOption[]>([])
+let pickerDebounce: ReturnType<typeof setTimeout> | null = null
 
-const filteredPickerRows = computed(() => {
-  const q = pickerSearch.value.trim().toLowerCase()
-  if (!q) return skuOptions.value
-  return skuOptions.value.filter((row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q))
+watch(pickerSearch, (query) => {
+  if (pickerDebounce) clearTimeout(pickerDebounce)
+  if (!query.trim()) {
+    filteredPickerRows.value = []
+    return
+  }
+  pickerDebounce = setTimeout(async () => {
+    filteredPickerRows.value = await searchProductVariations(query, 20)
+  }, 200)
 })
 
 function openPicker(item: WorkingItem) {
   pickerTarget.value = item
   pickerSearch.value = ''
+  filteredPickerRows.value = []
   showPicker.value = true
 }
 
@@ -303,11 +283,11 @@ function startOver() {
           v-model="supplierId"
           label="Fornecedor no sistema"
           :options="suppliers.map((s) => ({ value: s.id, label: supplierLabel(s) }))"
-          :placeholder="parsed.matched_supplier ? undefined : 'Não encontrado pelo CNPJ — selecione'"
+          :placeholder="parsed.matched_supplier ? undefined : 'Não encontrado pelo CNPJ - selecione'"
         />
         <p v-if="!parsed.matched_supplier" class="mt-2 flex items-center gap-1.5 text-xs text-sky-700">
           <AlertTriangle :size="13" class="shrink-0" />
-          Fornecedor não encontrado pelo CNPJ {{ parsed.emit.cnpj }} — selecione o correspondente ou cadastre-o antes de confirmar.
+          Fornecedor não encontrado pelo CNPJ {{ parsed.emit.cnpj }} - selecione o correspondente ou cadastre-o antes de confirmar.
         </p>
       </div>
 
@@ -318,7 +298,7 @@ function startOver() {
           <div class="mb-2 flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-txt-primary">{{ item.parsed.description }}</p>
-              <p class="text-[11px] text-txt-muted">Cód. fornecedor {{ item.parsed.product_code }} · EAN {{ item.parsed.ean ?? '—' }} · Qtd. {{ item.parsed.quantity }} · Custo unit. {{ formatAmount(item.parsed.unit_cost) }}</p>
+              <p class="text-[11px] text-txt-muted">Cód. fornecedor {{ item.parsed.product_code }} · EAN {{ item.parsed.ean ?? '-' }} · Qtd. {{ item.parsed.quantity }} · Custo unit. {{ formatAmount(item.parsed.unit_cost) }}</p>
             </div>
           </div>
 
@@ -333,7 +313,7 @@ function startOver() {
             @click="openPicker(item)"
           >
             <Search :size="15" />
-            <span class="flex-1 text-sm">Produto não encontrado — clique para buscar ou selecionar</span>
+            <span class="flex-1 text-sm">Produto não encontrado - clique para buscar ou selecionar</span>
           </button>
 
           <label class="mt-3 flex items-center gap-2 text-sm text-txt-secondary">
@@ -359,7 +339,7 @@ function startOver() {
           <div v-if="parsed.duplicatas.length > 0" class="space-y-1.5">
             <p class="text-[11px] font-bold tracking-wide text-txt-muted uppercase">Parcelas (conforme a nota)</p>
             <div v-for="dup in parsed.duplicatas" :key="dup.number" class="flex justify-between text-sm text-txt-secondary">
-              <span>Parcela {{ dup.number }} — vence {{ dup.due_date }}</span>
+              <span>Parcela {{ dup.number }} - vence {{ dup.due_date }}</span>
               <span class="font-semibold text-txt-primary">{{ formatAmount(dup.amount) }}</span>
             </div>
           </div>
@@ -408,13 +388,14 @@ function startOver() {
         <div
           v-for="row in filteredPickerRows"
           :key="row.key"
-          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          @click="choosePickerRow(row)"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
-          <BaseButton :block="false" @click="choosePickerRow(row)">Escolher</BaseButton>
+          <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
       </div>

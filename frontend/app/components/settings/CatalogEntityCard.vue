@@ -126,12 +126,12 @@ const secondaryFields = computed(() => props.fields.filter((f) => f.secondary))
 function resolveDisplay(item: CatalogItem, field: CatalogField): string {
   const raw = item[field.key]
   if (field.type === 'select') {
-    return field.options?.find((o) => String(o.value) === String(raw))?.label ?? '—'
+    return field.options?.find((o) => String(o.value) === String(raw))?.label ?? '-'
   }
   if (field.type === 'switch') {
     return raw ? 'Ativo' : 'Inativo'
   }
-  return raw == null || raw === '' ? '—' : String(raw)
+  return raw == null || raw === '' ? '-' : String(raw)
 }
 
 function resolveLabel(item: CatalogItem) {
@@ -141,7 +141,7 @@ function resolveLabel(item: CatalogItem) {
 function resolveSecondaryLine(item: CatalogItem) {
   return secondaryFields.value
     .map((f) => resolveDisplay(item, f))
-    .filter((v) => v !== '—')
+    .filter((v) => v !== '-')
     .join(' · ')
 }
 

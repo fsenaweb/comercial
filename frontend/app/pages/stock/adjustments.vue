@@ -1,43 +1,12 @@
 <script setup lang="ts">
 import { AlertTriangle, ClipboardEdit, Package, Search } from 'lucide-vue-next'
+import type { ProductVariationRow } from '~/composables/useProductVariationSearch'
 
-interface Variation {
-  id: number
-  product_code: string
-  color: string | null
-  size: string | null
-  current_quantity: number
-  max_quantity: number | null
-}
+type SkuOption = ProductVariationRow
 
-interface Product {
-  id: number
-  name: string
-  variations?: Variation[]
-}
-
-interface SkuOption {
-  key: string
-  productName: string
-  variation: Variation
-}
-
-const productsApi = useResourceApi<Product>('products')
 const api = useApi()
+const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
-
-const products = ref<Product[]>([])
-const loading = ref(true)
-
-const skuOptions = computed<SkuOption[]>(() => {
-  const rows: SkuOption[] = []
-  for (const product of products.value) {
-    for (const variation of product.variations ?? []) {
-      rows.push({ key: `${product.id}-${variation.id}`, productName: product.name, variation })
-    }
-  }
-  return rows
-})
 
 const selected = ref<SkuOption | null>(null)
 const newQuantity = ref<number | null>(null)
@@ -53,18 +22,29 @@ function selectSku(row: SkuOption) {
   successMessage.value = null
 }
 
-// ---- Modal de busca de produto (F2), mesmo padrão do PDV ----
+// ---- Modal de busca de produto (F2), mesmo padrão do PDV - busca no banco
+// (debounced). Antes filtrava uma lista fixa carregada no mount (só a
+// primeira página de `GET /products`, que virou paginado - achado do
+// cliente, 2026-07-21: a busca não encontrava produto fora dela).
 const showPicker = ref(false)
 const pickerSearch = ref('')
+const filteredPickerRows = ref<SkuOption[]>([])
+let pickerDebounce: ReturnType<typeof setTimeout> | null = null
 
-const filteredPickerRows = computed(() => {
-  const q = pickerSearch.value.trim().toLowerCase()
-  if (!q) return skuOptions.value
-  return skuOptions.value.filter((row) => row.productName.toLowerCase().includes(q) || row.variation.product_code.toLowerCase().includes(q))
+watch(pickerSearch, (query) => {
+  if (pickerDebounce) clearTimeout(pickerDebounce)
+  if (!query.trim()) {
+    filteredPickerRows.value = []
+    return
+  }
+  pickerDebounce = setTimeout(async () => {
+    filteredPickerRows.value = await searchProductVariations(query, 20)
+  }, 200)
 })
 
 function openPicker() {
   pickerSearch.value = ''
+  filteredPickerRows.value = []
   showPicker.value = true
 }
 
@@ -97,14 +77,8 @@ const excessWarning = computed(() => {
   if (!selected.value || newQuantity.value === null) return null
   const max = selected.value.variation.max_quantity
   if (max === null || newQuantity.value <= max) return null
-  return `Estoque máximo cadastrado é ${max} — este ajuste deixará o saldo acima do limite.`
+  return `Estoque máximo cadastrado é ${max} - este ajuste deixará o saldo acima do limite.`
 })
-
-async function load() {
-  loading.value = true
-  products.value = await productsApi.list()
-  loading.value = false
-}
 
 async function handleSubmit() {
   if (!selected.value || newQuantity.value === null) return
@@ -123,22 +97,19 @@ async function handleSubmit() {
     })
     successMessage.value = `Estoque de "${selected.value.productName}" ajustado para ${newQuantity.value} unidade(s).`
     clearSelection()
-    await load()
   } catch (err) {
     error.value = err
   } finally {
     saving.value = false
   }
 }
-
-await load()
 </script>
 
 <template>
   <div class="space-y-5">
     <div>
       <h1 class="font-display text-[30px] font-extrabold text-brand">Ajuste de Estoque</h1>
-      <p class="text-sm text-txt-secondary">Corrija a quantidade em estoque após uma contagem, avaria ou outra divergência — sempre gerando um registro no Kardex.</p>
+      <p class="text-sm text-txt-secondary">Corrija a quantidade em estoque após uma contagem, avaria ou outra divergência - sempre gerando um registro no Kardex.</p>
     </div>
 
     <div class="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
@@ -158,14 +129,11 @@ await load()
             <label class="mb-1 block text-sm font-medium text-txt-secondary">Produto</label>
             <button
               type="button"
-              :disabled="loading"
-              class="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-txt-muted hover:border-brand disabled:cursor-not-allowed"
+              class="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-txt-muted hover:border-brand"
               @click="openPicker"
             >
               <Search :size="15" />
-              <span class="flex-1 text-sm">
-                {{ loading ? 'Carregando produtos...' : 'Clique ou tecle ' }}<strong v-if="!loading" class="text-txt-secondary">F2</strong>{{ loading ? '' : ' para buscar produto...' }}
-              </span>
+              <span class="flex-1 text-sm">Clique ou tecle <strong class="text-txt-secondary">F2</strong> para buscar produto...</span>
             </button>
           </div>
 
@@ -216,9 +184,9 @@ await load()
           <p class="font-display text-sm font-bold text-txt-primary">Como funciona</p>
         </div>
         <ul class="space-y-2 text-xs text-txt-secondary">
-          <li>• Informe a quantidade <strong>contada</strong> no estoque, não a diferença — o sistema calcula a diferença sozinho.</li>
+          <li>• Informe a quantidade <strong>contada</strong> no estoque, não a diferença - o sistema calcula a diferença sozinho.</li>
           <li>• Todo ajuste gera um registro no <NuxtLink to="/stock/kardex" class="font-semibold text-brand underline">Kardex</NuxtLink>, com motivo, usuário e data.</li>
-          <li>• O sistema não permite estoque negativo — um ajuste ou venda que resultaria em saldo negativo é bloqueado.</li>
+          <li>• O sistema não permite estoque negativo - um ajuste ou venda que resultaria em saldo negativo é bloqueado.</li>
           <li>• Para receber mercadoria de um fornecedor, use a tela <NuxtLink to="/stock/entries" class="font-semibold text-brand underline">Entradas de Estoque</NuxtLink> em vez desta.</li>
         </ul>
       </div>
@@ -240,13 +208,14 @@ await load()
         <div
           v-for="row in filteredPickerRows"
           :key="row.key"
-          class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-subtle"
+          @click="choosePickerRow(row)"
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
-          <BaseButton :block="false" @click="choosePickerRow(row)">Escolher</BaseButton>
+          <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>
         <p v-if="filteredPickerRows.length === 0" class="py-6 text-center text-sm text-txt-muted">Nenhum produto encontrado.</p>
       </div>

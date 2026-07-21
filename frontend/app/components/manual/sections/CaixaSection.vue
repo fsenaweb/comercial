@@ -4,7 +4,7 @@
       <h3 class="font-display text-base font-bold text-txt-primary">Caixa</h3>
       <p class="mt-1.5">
         Só é possível registrar vendas com o caixa aberto. Cada terminal tem um único caixa aberto
-        por vez — não é possível abrir um segundo enquanto o primeiro estiver aberto.
+        por vez - não é possível abrir um segundo enquanto o primeiro estiver aberto.
       </p>
     </div>
 
@@ -28,7 +28,7 @@
         Com o caixa aberto, use os botões <strong class="text-txt-primary">Sangria</strong> (retirar
         dinheiro do caixa) e <strong class="text-txt-primary">Reforço</strong> (colocar dinheiro a
         mais) informando valor e motivo. Um lançamento indevido pode ser removido antes do
-        fechamento — depois de fechado, o extrato não pode mais ser alterado.
+        fechamento - depois de fechado, o extrato não pode mais ser alterado.
       </p>
     </div>
 
@@ -37,7 +37,7 @@
       <p class="mt-1.5">
         Confira o extrato do dia (vendas, sangrias, reforços) e clique em
         <strong class="text-txt-primary">Fechar caixa</strong>. Depois de fechado, o caixa vira
-        histórico — para vender de novo, é preciso abrir um novo caixa.
+        histórico - para vender de novo, é preciso abrir um novo caixa.
       </p>
     </div>
 

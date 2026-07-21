@@ -26,6 +26,7 @@ class StoreQuoteRequest extends FormRequest
                 'nullable', 'numeric', 'min:0',
                 Rule::when(($this->input('discount_type') ?? 'fixed') === 'percentage', ['max:100']),
             ],
+            'admin_password' => ['nullable', 'string'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_variation_id' => [

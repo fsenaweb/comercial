@@ -2,7 +2,7 @@ import type { FontScale, Theme } from '~/utils/appearance'
 import type { AuthUser } from './auth'
 
 /**
- * Aplica tema/fonte no <html> — chamado tanto ao aplicar a preferência
+ * Aplica tema/fonte no <html> - chamado tanto ao aplicar a preferência
  * autoritativa do usuário (após /api/me) quanto pelo hint de cookie no
  * app.head.script (nuxt.config.ts), pra evitar flash de tema errado antes
  * do Vue montar.

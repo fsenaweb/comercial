@@ -194,12 +194,12 @@ const skuRows = computed<SkuRow[]>(() => {
   return rows
 })
 
-// A busca agora roda no servidor (GET /products?search=...) — skuRows já
+// A busca agora roda no servidor (GET /products?search=...) - skuRows já
 // vem filtrado/paginado, sem precisar de um segundo filtro no cliente.
 const filteredRows = skuRows
 
 // Estatísticas do catálogo inteiro (GET /products/summary, agregado no
-// banco) — não dá mais pra calcular iterando products.value, que agora só
+// banco) - não dá mais pra calcular iterando products.value, que agora só
 // tem a página carregada. Ver docs/11-migracao-sistema-legado.md.
 const totalStockQty = computed(() => summary.value?.total_stock_qty ?? 0)
 const totalStockValue = computed(() => Number(summary.value?.total_stock_value ?? 0))
@@ -218,7 +218,7 @@ function stockBadgeTone(variation: Variation): 'danger' | 'warning' | 'info' | '
   return 'success'
 }
 
-// ---- Modal "Novo Produto" / "Editar Produto" — produto + primeira/atual variação juntos ----
+// ---- Modal "Novo Produto" / "Editar Produto" - produto + primeira/atual variação juntos ----
 
 const modalOpen = ref(false)
 const modalSaving = ref(false)
@@ -227,7 +227,7 @@ const fiscalOpen = ref(false)
 
 const editingProductId = ref<number | null>(null)
 const editingVariationId = ref<number | null>(null)
-// true quando o produto em edição ainda não tem nenhuma SKU — o campo de
+// true quando o produto em edição ainda não tem nenhuma SKU - o campo de
 // quantidade fica editável (equivale a criar a primeira variação); quando já
 // existe SKU, a quantidade só muda via ajuste de estoque (regra do projeto).
 const hasExistingVariation = computed(() => editingVariationId.value !== null)
@@ -280,7 +280,7 @@ watch(() => [modalForm.cost_price_masked, modalForm.markup], () => {
 })
 
 // Aviso de possível duplicidade: busca no servidor pelo nome digitado (debounced)
-// — antes comparava só com os produtos já carregados na página atual, o que
+// - antes comparava só com os produtos já carregados na página atual, o que
 // deixou de fazer sentido com o catálogo paginado (ver
 // docs/11-migracao-sistema-legado.md). Não bloqueia o cadastro, só avisa.
 async function checkSimilarProducts(name: string, excludeId: number | null): Promise<Product[]> {
@@ -300,7 +300,7 @@ watch(() => modalForm.name, (name) => {
 })
 
 // quickSimilarProducts fica declarado logo abaixo de quickForm (mais adiante
-// no arquivo) — o watcher precisa que quickForm já exista quando roda.
+// no arquivo) - o watcher precisa que quickForm já exista quando roda.
 const quickSimilarProducts = ref<Product[]>([])
 
 const subcategoryOptions = computed(() =>
@@ -695,7 +695,7 @@ async function handleSkuDelete(variation: Variation) {
   await load()
 }
 
-// ---- Modal "Importar produtos" — UI presente, processamento ainda não existe ----
+// ---- Modal "Importar produtos" - UI presente, processamento ainda não existe ----
 const importOpen = ref(false)
 
 await load()
@@ -873,17 +873,20 @@ await load()
         :key="row.key"
         class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
-        <span class="flex items-center gap-2 text-sm font-medium text-txt-primary">
+        <span
+          class="flex cursor-pointer items-center gap-2 text-sm font-medium text-txt-primary hover:underline"
+          @click="openVariationsModal(row.product.id)"
+        >
           {{ row.product.name }}
           <StatusBadge v-if="!row.product.active" label="Inativo" tone="danger" />
         </span>
-        <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '—' }}</span>
-        <span class="text-sm text-txt-secondary">{{ row.variation?.legacy_code ?? '—' }}</span>
-        <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '—' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation?.legacy_code ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '-' }}</span>
         <span v-if="row.variation">
           <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
         </span>
-        <span v-else class="text-sm text-txt-muted">—</span>
+        <span v-else class="text-sm text-txt-muted">-</span>
         <div class="flex justify-end gap-1">
           <IconButton :icon="ListTree" label="Ver variações" @click="openVariationsModal(row.product.id)" />
           <IconButton v-if="auth.isAdmin" :icon="Pencil" label="Editar Produto" @click="openEditModal(row)" />
@@ -1024,7 +1027,7 @@ await load()
               <StatusBadge label="Variações" tone="success" />
               <p class="mt-2 font-display text-sm font-bold text-txt-primary">Preço, estoque e identificação</p>
               <p class="text-xs text-txt-secondary">
-                {{ hasExistingVariation ? 'Editando a SKU selecionada — quantidade só muda por ajuste de estoque.' : 'Cadastre a variação com seus códigos, valores e saldo.' }}
+                {{ hasExistingVariation ? 'Editando a SKU selecionada - quantidade só muda por ajuste de estoque.' : 'Cadastre a variação com seus códigos, valores e saldo.' }}
               </p>
             </div>
             <BaseButton type="button" variant="ghost" :block="false" disabled title="Em breve">Gerenciar cores e tamanhos</BaseButton>
@@ -1135,7 +1138,7 @@ await load()
             <span class="text-sm font-bold">Antes de importar</span>
           </div>
           <p class="mt-2 text-xs text-txt-secondary">
-            Essa importação em massa ainda não foi implementada — por enquanto, cadastre pelo "Novo Produto" ou "Cadastro Rápido".
+            Essa importação em massa ainda não foi implementada - por enquanto, cadastre pelo "Novo Produto" ou "Cadastro Rápido".
           </p>
           <BaseButton variant="ghost" :block="false" disabled class="mt-3">Baixar modelo XLSX</BaseButton>
         </div>

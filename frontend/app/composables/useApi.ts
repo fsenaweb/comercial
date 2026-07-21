@@ -8,7 +8,7 @@ function readCookie(name: string): string | null {
 
 /**
  * Cliente HTTP único para a API Laravel. Sanctum autentica por cookie de sessão
- * (SPA same-origin em produção, ver docs/01-architecture.md) — por isso toda
+ * (SPA same-origin em produção, ver docs/01-architecture.md) - por isso toda
  * chamada envia `credentials: 'include'` e o header X-XSRF-TOKEN lido do cookie.
  */
 export function useApi() {
@@ -30,7 +30,7 @@ export function useApi() {
 
 /**
  * Necessário antes de POST /login: garante o cookie XSRF-TOKEN via Sanctum.
- * Fica fora de /api (rota própria do Sanctum) — ver docker/nginx/default.conf.
+ * Fica fora de /api (rota própria do Sanctum) - ver docker/nginx/default.conf.
  */
 export async function ensureCsrfCookie(): Promise<void> {
   const config = useRuntimeConfig()

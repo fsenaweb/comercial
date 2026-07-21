@@ -1,5 +1,5 @@
 /**
- * Máscara de moeda (BRL). Trabalha só com dígitos — cada dígito digitado
+ * Máscara de moeda (BRL). Trabalha só com dígitos - cada dígito digitado
  * empurra os centavos, como em caixas registradoras físicas.
  */
 export function useCurrencyMask() {

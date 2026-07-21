@@ -17,7 +17,7 @@
     <div>
       <h4 class="font-display text-sm font-bold text-txt-primary">Dados da Empresa</h4>
       <p class="mt-1.5">
-        Nome, CNPJ, endereço, contato e logo da loja — usados no comprovante, nos relatórios
+        Nome, CNPJ, endereço, contato e logo da loja - usados no comprovante, nos relatórios
         exportados e no cabeçalho impresso.
       </p>
     </div>
@@ -33,7 +33,7 @@
     <div>
       <h4 class="font-display text-sm font-bold text-txt-primary">Configurações (catálogo base)</h4>
       <p class="mt-1.5">
-        Categorias, subcategorias, marcas, unidades e formas de pagamento — a base usada nos
+        Categorias, subcategorias, marcas, unidades e formas de pagamento - a base usada nos
         cadastros de produto e no PDV.
       </p>
     </div>
@@ -42,7 +42,7 @@
       <h4 class="font-display text-sm font-bold text-txt-primary">Aparência</h4>
       <p class="mt-1.5">
         Tema claro/escuro e tamanho de fonte ficam nos botões no canto superior direito de qualquer
-        tela (inclusive no PDV) — a preferência é salva por usuário, não por computador.
+        tela (inclusive no PDV) - a preferência é salva por usuário, não por computador.
       </p>
     </div>
   </div>

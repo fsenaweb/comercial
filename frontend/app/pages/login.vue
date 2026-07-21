@@ -55,7 +55,7 @@ async function handleSubmit() {
 
 <template>
   <div class="flex min-h-screen">
-    <div class="relative hidden w-[46%] min-w-[420px] flex-col justify-between overflow-hidden bg-txt-primary px-16 py-14 text-white lg:flex">
+    <div class="relative hidden w-[46%] min-w-[420px] flex-col justify-between overflow-hidden bg-ink px-16 py-14 text-white lg:flex">
       <div
         class="pointer-events-none absolute inset-0 opacity-[0.03]"
         style="background-image: repeating-linear-gradient(115deg, #fff 0px, #fff 1px, transparent 1px, transparent 34px)"
@@ -84,7 +84,7 @@ async function handleSubmit() {
           Tem <span class="text-brand">tudo</span> em um só lugar
         </h1>
         <p class="max-w-sm text-[15px] leading-relaxed text-white/70">
-          A JP Parafusos e Acessórios — soluções para sua casa, carro e oficina.
+          A JP Parafusos e Acessórios - soluções para sua casa, carro e oficina.
         </p>
       </div>
 

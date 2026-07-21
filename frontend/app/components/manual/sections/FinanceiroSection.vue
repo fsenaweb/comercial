@@ -3,7 +3,7 @@
     <div>
       <h3 class="font-display text-base font-bold text-txt-primary">Financeiro</h3>
       <p class="mt-1.5">
-        Controle de crediário (fiado), contas a pagar e despesas da loja — separado do fluxo de
+        Controle de crediário (fiado), contas a pagar e despesas da loja - separado do fluxo de
         venda do PDV.
       </p>
     </div>
@@ -19,7 +19,7 @@
       <p class="mt-1.5">
         Funciona como uma "caderneta": ao lançar uma compra para um cliente (com os produtos reais
         do catálogo, igual ao PDV), a conta do cliente é aberta automaticamente e o estoque é
-        decrementado — sem envolver o caixa. O saldo devedor é sempre a soma das compras menos os
+        decrementado - sem envolver o caixa. O saldo devedor é sempre a soma das compras menos os
         pagamentos já feitos. Um pagamento (parcial ou total) exige caixa aberto, porque é dinheiro
         físico entrando na loja.
       </p>
@@ -29,7 +29,7 @@
       <h4 class="font-display text-sm font-bold text-txt-primary">Contas a pagar</h4>
       <p class="mt-1.5">
         Lançamentos ligados a um fornecedor, podendo ter várias parcelas. Dar baixa numa parcela não
-        toca o caixa (pago por boleto/transferência, fora do PDV) — é só controle financeiro.
+        toca o caixa (pago por boleto/transferência, fora do PDV) - é só controle financeiro.
       </p>
     </div>
 

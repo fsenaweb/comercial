@@ -66,7 +66,7 @@ function emptyForm() {
     phone: null as string | null,
     email: null as string | null,
     document: null as string | null,
-    // Fornecedor nasce como Pessoa Jurídica (maioria dos casos) — o inverso de
+    // Fornecedor nasce como Pessoa Jurídica (maioria dos casos) - o inverso de
     // Clientes, que nasce Pessoa Física; o usuário desmarca se for autônomo/PF.
     is_company: true,
     state_registration: null as string | null,
@@ -155,7 +155,7 @@ async function handleModalDelete() {
   await load()
 }
 
-// ---- Modal "Importar planilha" — UI presente, processamento ainda não existe ----
+// ---- Modal "Importar planilha" - UI presente, processamento ainda não existe ----
 const importOpen = ref(false)
 
 await load()
@@ -210,9 +210,9 @@ await load()
         <span>
           <StatusBadge :label="supplier.is_company ? 'PJ' : 'PF'" tone="info" />
         </span>
-        <span class="text-sm text-txt-secondary">{{ supplier.mobile_phone ?? '—' }}</span>
-        <span class="truncate text-sm text-txt-secondary">{{ supplier.email ?? '—' }}</span>
-        <span class="text-sm text-txt-secondary">{{ supplier.document ?? '—' }}</span>
+        <span class="text-sm text-txt-secondary">{{ supplier.mobile_phone ?? '-' }}</span>
+        <span class="truncate text-sm text-txt-secondary">{{ supplier.email ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ supplier.document ?? '-' }}</span>
         <div class="flex justify-end">
           <IconButton :icon="Pencil" label="Editar" @click="openEditModal(supplier)" />
         </div>
@@ -309,7 +309,7 @@ await load()
             <span class="text-sm font-bold">Antes de importar</span>
           </div>
           <p class="mt-2 text-xs text-txt-secondary">
-            Essa importação em massa ainda não foi implementada — por enquanto, cadastre pelo "Novo Fornecedor".
+            Essa importação em massa ainda não foi implementada - por enquanto, cadastre pelo "Novo Fornecedor".
           </p>
           <BaseButton variant="ghost" :block="false" disabled class="mt-3">Baixar modelo XLSX</BaseButton>
         </div>

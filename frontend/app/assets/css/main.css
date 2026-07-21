@@ -9,14 +9,14 @@
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
 
-  /* Marca (amarelo + preto da loja) — usar só em CTA principal, item ativo
+  /* Marca (amarelo + preto da loja) - usar só em CTA principal, item ativo
      do menu e foco. Texto sempre em --color-brand-ink (preto), nunca branco. */
-  --color-brand: #fbbf24; /* placeholder — amostrar o hex exato do arquivo do logo */
+  --color-brand: #fbbf24; /* placeholder - amostrar o hex exato do arquivo do logo */
   --color-brand-ink: #111827;
 
-  /* Neutros / superfícies — valores do tema claro, sempre o default (ver
+  /* Neutros / superfícies - valores do tema claro, sempre o default (ver
      docs/08-design-system.md: não segue prefers-color-scheme do SO). Dark
-     mode só ativa por toggle explícito do usuário — overrides em
+     mode só ativa por toggle explícito do usuário - overrides em
      :root[data-theme="dark"] logo abaixo. */
   --color-surface: #f8fafc;
   --color-surface-raised: #ffffff;
@@ -27,17 +27,24 @@
   --color-txt-secondary: #475569;
   --color-txt-muted: #94a3b8;
 
+  /* Fixo (não sobrescrito no bloco dark abaixo) - pra painéis/chips que
+     precisam ficar "sempre escuros com texto branco" independente do tema
+     (ex.: painel de marca do login, filtro ativo do financeiro). Nunca usar
+     `bg-txt-primary`/`text-white` pra esse efeito: txt-primary inverte no
+     tema escuro (fica claro) e o texto branco por cima vira ilegível. */
+  --color-ink: #0f172a;
+
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 /* Cores de status (sucesso/erro/info/atenção) usam as paletas padrão do
-   Tailwind (emerald/rose/sky/amber-600) diretamente — não precisam de token
+   Tailwind (emerald/rose/sky/amber-600) diretamente - não precisam de token
    próprio; ver docs/08-design-system.md, "Princípio: marca vs. semântica".
    Ficam com o mesmo tom tingido claro em qualquer tema (badge/chip é um
    elemento isolado com o próprio fundo, não depende do fundo da página para
    ter contraste). */
 
-/* Tokens escuros — só entram em vigor quando o usuário escolhe o tema escuro
+/* Tokens escuros - só entram em vigor quando o usuário escolhe o tema escuro
    explicitamente (data-theme setado pela store de preferências, nunca pelo
    prefers-color-scheme do SO). --color-brand/--color-brand-ink não mudam: o
    amarelo de marca mantém contraste alto com texto escuro em cima dele
@@ -57,7 +64,7 @@
   color-scheme: dark;
 }
 
-/* Tamanho de fonte (P/M/G) — escala o root inteiro (afeta texto e espaçamento
+/* Tamanho de fonte (P/M/G) - escala o root inteiro (afeta texto e espaçamento
    em rem do Tailwind), não é zoom do navegador. "Média" é o default/tamanho
    atual do sistema, sem classe nenhuma. */
 html.font-scale-small {

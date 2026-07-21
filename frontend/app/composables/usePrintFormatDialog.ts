@@ -13,7 +13,7 @@ function resolvePrintFormat(value: PrintFormat | null) {
 }
 
 // Seletor de formato de impressão (Bobina 80mm/58mm/Papel A4), pedido no momento
-// do clique em "Imprimir" — sem tela de configuração global (Sub-sprint D).
+// do clique em "Imprimir" - sem tela de configuração global (Sub-sprint D).
 // Mesmo padrão singleton de useConfirmDialog: um único <PrintFormatDialogHost />
 // montado em app.vue resolve todo pedido de formato do app.
 function printFormatDialog(): Promise<PrintFormat | null> {

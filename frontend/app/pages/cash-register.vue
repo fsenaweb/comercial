@@ -45,7 +45,7 @@ const { maskInput: maskCurrency, toNumber, format } = useCurrencyMask()
 const canOperate = computed(() => auth.user?.role === 'admin' || auth.user?.role === 'cashier')
 
 function formatAmount(value: string | number | null): string {
-  if (value === null) return '—'
+  if (value === null) return '-'
   return format(Math.round(Number(value) * 100))
 }
 
@@ -368,7 +368,7 @@ await loadAll()
           <span>
             <StatusBadge :label="register.status_label" :tone="register.status === 'open' ? 'success' : 'neutral'" />
           </span>
-          <span class="truncate text-sm text-txt-secondary">{{ register.opened_by_name ?? '—' }}</span>
+          <span class="truncate text-sm text-txt-secondary">{{ register.opened_by_name ?? '-' }}</span>
           <div class="flex justify-end">
             <IconButton :icon="Eye" label="Ver detalhes" @click="openDetail(register)" />
           </div>
@@ -488,7 +488,7 @@ await loadAll()
           <span>
             <StatusBadge :label="operation.type_label" :tone="operation.type === 'in' ? 'info' : 'danger'" />
           </span>
-          <span class="text-sm text-txt-secondary">{{ operation.payment_method_name ?? '—' }}</span>
+          <span class="text-sm text-txt-secondary">{{ operation.payment_method_name ?? '-' }}</span>
           <span class="text-sm font-semibold text-txt-primary">{{ formatAmount(operation.amount) }}</span>
           <span class="flex min-w-0 items-center gap-1.5 truncate text-sm text-txt-secondary">
             <span class="truncate">{{ operation.notes ?? operation.origin_label }}</span>
@@ -525,12 +525,12 @@ await loadAll()
       <div v-else-if="saleDetail" class="space-y-4">
         <div class="grid grid-cols-2 gap-3 text-sm">
           <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ saleDetail.customer_name ?? 'Não informado' }}</strong></span>
-          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ saleDetail.seller_name ?? '—' }}</strong></span>
+          <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ saleDetail.seller_name ?? '-' }}</strong></span>
           <div class="col-span-2 text-txt-secondary">
             Forma de pagamento:
-            <span v-if="saleDetail.payments.length === 0" class="font-bold text-txt-primary">—</span>
+            <span v-if="saleDetail.payments.length === 0" class="font-bold text-txt-primary">-</span>
             <span v-for="(payment, index) in saleDetail.payments" :key="payment.id" class="font-bold text-txt-primary">
-              {{ payment.payment_method_name ?? '—' }} ({{ formatAmount(payment.amount) }})<span v-if="index < saleDetail.payments.length - 1">, </span>
+              {{ payment.payment_method_name ?? '-' }} ({{ formatAmount(payment.amount) }})<span v-if="index < saleDetail.payments.length - 1">, </span>
             </span>
           </div>
         </div>
@@ -544,8 +544,8 @@ await loadAll()
           </div>
           <div v-for="item in saleDetail.items" :key="item.id" class="grid grid-cols-[2fr_0.6fr_1fr_1fr] gap-2 border-b border-border px-4 py-2.5 text-sm last:border-0">
             <div class="min-w-0">
-              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '—' }}</p>
-              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '—' }}</p>
+              <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '-' }}</p>
+              <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '-' }}</p>
             </div>
             <span class="text-center text-txt-secondary">{{ item.quantity }}</span>
             <span class="text-right text-txt-secondary">{{ formatAmount(item.unit_price) }}</span>

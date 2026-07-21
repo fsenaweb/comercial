@@ -6,6 +6,8 @@ export interface ProductVariation {
   product_code: string
   sale_price: string
   current_quantity: number
+  max_quantity: number | null
+  markup: string | null
   wholesale_min_qty: number | null
   wholesale_price: string | null
 }
@@ -28,7 +30,7 @@ function toRow(item: SearchApiRow): ProductVariationRow {
 }
 
 /**
- * Busca de produto no PDV, no seletor F2 e nas Etiquetas — roda no banco
+ * Busca de produto no PDV, no seletor F2 e nas Etiquetas - roda no banco
  * (GET /product-variations/lookup|search) em vez de carregar o catálogo
  * inteiro no navegador. Trocado depois de um achado real: com os 13 mil
  * produtos importados do sistema legado, carregar tudo de uma vez estourava
