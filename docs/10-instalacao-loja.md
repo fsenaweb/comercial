@@ -103,6 +103,21 @@ em vez do IP puro, adicione uma linha no arquivo de hosts do Windows
 `loja.local` para o IP da máquina servidor — o nginx já responde por
 qualquer `Host` (`server_name _;`), não precisa reconfigurar nada nele.
 
+**Editar o arquivo de hosts exige privilégio de Administrador**,
+independente do programa usado (Notepad, Git Bash etc.) — se a edição
+manual travar/não salvar, o motivo normalmente é esse, não a ferramenta.
+Via Git Bash, **aberto como Administrador** (botão direito no atalho →
+"Executar como administrador"), o comando abaixo adiciona a entrada de
+forma idempotente (não duplica se já existir):
+
+```bash
+grep -q "loja.local" /c/Windows/System32/drivers/etc/hosts || echo "127.0.0.1 loja.local" >> /c/Windows/System32/drivers/etc/hosts
+```
+
+Isso aponta `loja.local` para a própria máquina (127.0.0.1) — use esse
+comando na máquina servidor. Nos outros terminais, troque `127.0.0.1` pelo
+IP da máquina servidor na rede local.
+
 ## 7. Configurar impressão sem diálogo (terminais de PDV/caixa)
 
 Cada terminal que vai imprimir comprovante/etiqueta direto (sem a caixa de

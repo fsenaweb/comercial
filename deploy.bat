@@ -28,6 +28,11 @@ REM Idempotente a partir da segunda execucao (link ja existe) - nao aborta o
 REM deploy se falhar por esse motivo, mesmo espirito do "|| true" do deploy.sh.
 docker compose exec php-fpm php artisan storage:link
 
+REM Corrige permissao restritiva (0700) que storage/app/backup possa ter
+REM herdado de antes de `visibility => public` (config/filesystems.php) -
+REM achado real em Windows/Docker Desktop, ver docs/07-dev-environment.md.
+docker compose exec php-fpm php artisan backups:ensure-directory-permissions
+
 call "%~dp0deploy-frontend.bat"
 if errorlevel 1 goto :error
 

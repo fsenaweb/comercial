@@ -47,11 +47,26 @@ return [
             'report' => false,
         ],
 
-        // Camada local do backup (ver docs/01-architecture.md) — mapeada para um
-        // volume Docker dedicado (`backup_local`), sobrevive a rebuilds do container.
+        // Camada local do backup (ver docs/01-architecture.md) — dentro do bind
+        // mount `./backend:/var/www/html` (docker-compose.yml), sobrevive a
+        // rebuilds do container por estar no host.
+        //
+        // `visibility => public` é obrigatório aqui, não só estético: sem ele,
+        // o padrão do Flysystem é 'private' (diretório 0700/arquivo 0600) — o
+        // `backup:run`/`backup:clean` agendado (container `scheduler`) cria
+        // `storage/app/backup/` com essa permissão restritiva. Achado real na
+        // loja do cliente (2026-07-23, Windows + Docker Desktop/WSL2): o bind
+        // mount de volta pro host não preserva esse bit de permissão de forma
+        // confiável entre containers/execuções, e o www-data de uma leitura
+        // seguinte via `/settings/backup` (deep listing do Flysystem) recebia
+        // "Permission denied" ao tentar abrir o próprio diretório que ele
+        // mesmo tinha criado. `EnsureBackupDirectoryIsAccessibleAction`
+        // complementa isto corrigindo diretórios que já existiam 0700 antes
+        // desta correção.
         'backups' => [
             'driver' => 'local',
             'root' => storage_path('app/backup'),
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],
