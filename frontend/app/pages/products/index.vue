@@ -32,8 +32,8 @@ interface Variation {
   color: string | null
   size: string | null
   ean_gtin: string | null
-  product_code: string
-  legacy_code: string | null
+  code: string
+  reference: string | null
   cost_price: string
   markup: string | null
   sale_price: string
@@ -254,8 +254,8 @@ function emptyModalForm() {
     cfop: '',
     cest: '',
     ean_gtin: '',
-    product_code: '',
-    legacy_code: '',
+    code: '',
+    reference: '',
     color: '',
     size: '',
     cost_price_masked: 'R$ 0,00',
@@ -337,8 +337,8 @@ function openEditModal(row: SkuRow) {
   modalForm.cest = row.product.fiscal_fields?.cest ?? ''
   if (row.variation) {
     modalForm.ean_gtin = row.variation.ean_gtin ?? ''
-    modalForm.product_code = row.variation.product_code
-    modalForm.legacy_code = row.variation.legacy_code ?? ''
+    modalForm.code = row.variation.code
+    modalForm.reference = row.variation.reference ?? ''
     modalForm.color = row.variation.color ?? ''
     modalForm.size = row.variation.size ?? ''
     modalForm.cost_price_masked = maskCurrency(String(Math.round(Number(row.variation.cost_price) * 100)))
@@ -397,8 +397,8 @@ async function handleModalSubmit() {
       : (await productsApi.create(productPayload)).id
 
     const variationPayload = {
-      product_code: modalForm.product_code,
-      legacy_code: modalForm.legacy_code.trim() || null,
+      code: modalForm.code,
+      reference: modalForm.reference.trim() || null,
       ean_gtin: modalForm.ean_gtin.trim() || null,
       color: modalForm.color.trim() || null,
       size: modalForm.size.trim() || null,
@@ -521,7 +521,7 @@ async function handleQuickSubmit() {
     await api(`/products/${product.id}/variations`, {
       method: 'POST',
       body: {
-        product_code: code,
+        code: code,
         ean_gtin: quickForm.ean_gtin.trim() || null,
         cost_price: currencyToNumber(quickForm.cost_price_masked),
         markup: quickForm.markup === '' ? null : Number(quickForm.markup),
@@ -567,8 +567,8 @@ function emptySkuForm() {
     color: null as string | null,
     size: null as string | null,
     ean_gtin: null as string | null,
-    product_code: '',
-    legacy_code: null as string | null,
+    code: '',
+    reference: null as string | null,
     cost_price_masked: 'R$ 0,00',
     markup: '',
     sale_price_masked: 'R$ 0,00',
@@ -615,8 +615,8 @@ function startEditSku(variation: Variation) {
   skuForm.color = variation.color
   skuForm.size = variation.size
   skuForm.ean_gtin = variation.ean_gtin
-  skuForm.product_code = variation.product_code
-  skuForm.legacy_code = variation.legacy_code
+  skuForm.code = variation.code
+  skuForm.reference = variation.reference
   skuForm.cost_price_masked = maskCurrency(String(Math.round(Number(variation.cost_price) * 100)))
   skuForm.markup = variation.markup ?? ''
   skuForm.sale_price_masked = maskCurrency(String(Math.round(Number(variation.sale_price) * 100)))
@@ -652,8 +652,8 @@ async function handleSkuSubmit() {
     color: skuForm.color,
     size: skuForm.size,
     ean_gtin: skuForm.ean_gtin,
-    product_code: skuForm.product_code,
-    legacy_code: skuForm.legacy_code,
+    code: skuForm.code,
+    reference: skuForm.reference,
     cost_price: currencyToNumber(skuForm.cost_price_masked),
     markup: skuForm.markup === '' ? null : Number(skuForm.markup),
     sale_price: currencyToNumber(skuForm.sale_price_masked),
@@ -684,7 +684,7 @@ async function handleSkuDelete(variation: Variation) {
   if (!skuModalProduct.value) return
   const confirmed = await confirmDialog({
     title: 'Excluir variação',
-    message: `Excluir a variação "${variation.product_code}"?`,
+    message: `Excluir a variação "${variation.code}"?`,
     confirmLabel: 'Excluir',
     variant: 'danger',
   })
@@ -880,8 +880,8 @@ await load()
           {{ row.product.name }}
           <StatusBadge v-if="!row.product.active" label="Inativo" tone="danger" />
         </span>
-        <span class="text-sm text-txt-secondary">{{ row.variation?.product_code ?? '-' }}</span>
-        <span class="text-sm text-txt-secondary">{{ row.variation?.legacy_code ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation?.code ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.variation?.reference ?? '-' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '-' }}</span>
         <span v-if="row.variation">
           <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
@@ -1052,8 +1052,8 @@ await load()
                   <QrCode :size="16" />
                 </button>
               </div>
-              <BaseInput v-model="modalForm.product_code" label="Código do produto" :error="firstFieldError(modalError, 'product_code')" />
-              <BaseInput v-model="modalForm.legacy_code" label="Código Interno" :error="firstFieldError(modalError, 'legacy_code')" />
+              <BaseInput v-model="modalForm.code" label="Código" :error="firstFieldError(modalError, 'code')" />
+              <BaseInput v-model="modalForm.reference" label="Referência (opcional)" :error="firstFieldError(modalError, 'reference')" />
               <BaseInput v-model="modalForm.color" label="Cor" :error="firstFieldError(modalError, 'color')" />
               <BaseInput v-model="modalForm.size" label="Tamanho" :error="firstFieldError(modalError, 'size')" />
             </div>
@@ -1171,8 +1171,8 @@ await load()
               <BaseInput v-model="skuForm.ean_gtin" label="EAN/GTIN" :error="firstFieldError(skuError, 'ean_gtin')" />
             </div>
             <div class="grid grid-cols-2 gap-4">
-              <BaseInput v-model="skuForm.product_code" label="Código do produto" :error="firstFieldError(skuError, 'product_code')" />
-              <BaseInput v-model="skuForm.legacy_code" label="Código Interno" :error="firstFieldError(skuError, 'legacy_code')" />
+              <BaseInput v-model="skuForm.code" label="Código" :error="firstFieldError(skuError, 'code')" />
+              <BaseInput v-model="skuForm.reference" label="Referência (opcional)" :error="firstFieldError(skuError, 'reference')" />
             </div>
             <div class="grid grid-cols-3 gap-4">
               <BaseInput
@@ -1231,8 +1231,8 @@ await load()
           :items="skuModalProduct?.variations ?? []"
           :loading="skuModalLoading"
           :columns="[
-            { key: 'product_code', label: 'Código' },
-            { key: 'legacy_code', label: 'Código Interno' },
+            { key: 'code', label: 'Código' },
+            { key: 'reference', label: 'Referência' },
             { key: 'sale_price', label: 'Preço de venda' },
             { key: 'current_quantity', label: 'Estoque' },
           ]"

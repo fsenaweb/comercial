@@ -9,7 +9,7 @@ interface StockMovement {
   product_name: string | null
   product_code: string | null
   quantity: number
-  origin: string
+  origin: string | null
   user_name: string | null
   created_at: string
 }
@@ -125,7 +125,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
 
-const canSubmit = computed(() => origin.value.trim().length > 0 && items.value.some((item) => item.selected && item.quantity && item.quantity > 0))
+const canSubmit = computed(() => items.value.some((item) => item.selected && item.quantity && item.quantity > 0))
 
 function excessWarning(item: FormItem): string | null {
   if (!item.selected || !item.quantity) return null
@@ -209,7 +209,7 @@ await loadAll()
           </div>
           <span class="text-right text-sm font-bold text-emerald-700">+{{ entry.quantity }}</span>
           <button type="button" class="min-w-0 cursor-pointer truncate text-left text-sm text-txt-secondary hover:text-txt-primary hover:underline" @click="openOriginModal(entry)">
-            {{ entry.origin }}
+            {{ entry.origin ?? '-' }}
           </button>
           <span class="min-w-0 truncate text-sm text-txt-secondary">{{ entry.user_name ?? '-' }}</span>
         </div>
@@ -222,7 +222,7 @@ await loadAll()
         <IconButton :icon="ArrowLeft" label="Voltar" @click="closeForm" />
         <div>
           <h1 class="font-display text-2xl font-extrabold text-txt-primary">Nova entrada</h1>
-          <p class="text-sm text-txt-secondary">Busque cada produto já cadastrado, informe a quantidade recebida e o motivo/origem da entrada.</p>
+          <p class="text-sm text-txt-secondary">Busque cada produto já cadastrado e informe a quantidade recebida. O motivo/origem da entrada é opcional.</p>
         </div>
       </div>
 
@@ -265,7 +265,7 @@ await loadAll()
                 <div class="flex items-center justify-between rounded-xl border border-border bg-surface px-3 py-2">
                   <span class="min-w-0">
                     <span class="block truncate text-sm font-medium text-txt-primary">{{ item.selected.productName }}</span>
-                    <span class="block text-[11px] text-txt-muted">Cód. {{ item.selected.variation.product_code }} · {{ item.selected.variation.current_quantity }} em estoque</span>
+                    <span class="block text-[11px] text-txt-muted">Cód. {{ item.selected.variation.code }} · {{ item.selected.variation.current_quantity }} em estoque</span>
                   </span>
                   <button type="button" class="shrink-0 cursor-pointer text-xs font-semibold text-brand" @click="item.selected = null">Trocar</button>
                 </div>
@@ -283,11 +283,11 @@ await loadAll()
           <p class="mb-4 font-display text-sm font-bold text-txt-primary">Motivo da entrada</p>
           <BaseInput
             v-model="origin"
-            label="Origem / motivo"
+            label="Origem / motivo (opcional)"
             placeholder="Ex.: Compra NF 1234 - Fornecedor XPTO"
             :error="firstFieldError(error, 'origin')"
           />
-          <p class="mt-1 text-[11px] text-txt-muted">Descreva a origem (fornecedor, número da nota, devolução de cliente etc.).</p>
+          <p class="mt-1 text-[11px] text-txt-muted">Descreva a origem se quiser (fornecedor, número da nota, devolução de cliente etc.).</p>
         </div>
 
         <p v-if="error && !firstFieldError(error, 'origin')" class="text-sm text-rose-600">{{ parse(error).message }}</p>
@@ -320,7 +320,7 @@ await loadAll()
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
+            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
           <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>
@@ -331,7 +331,7 @@ await loadAll()
     <!-- MODAL: ORIGEM / MOTIVO COMPLETO -->
     <BaseModal :open="showOriginModal" title="Origem / motivo" subtitle="Detalhe completo da entrada." @close="showOriginModal = false">
       <div v-if="originModalEntry" class="space-y-3 text-sm">
-        <p class="text-txt-primary">{{ originModalEntry.origin }}</p>
+        <p class="text-txt-primary">{{ originModalEntry.origin ?? 'Não informado' }}</p>
         <div class="grid grid-cols-2 gap-3 border-t border-border pt-3 text-txt-secondary">
           <span>Produto: <strong class="text-txt-primary">{{ originModalEntry.product_name ?? '-' }}</strong></span>
           <span>Data: <strong class="text-txt-primary">{{ formatDateTime(originModalEntry.created_at) }}</strong></span>

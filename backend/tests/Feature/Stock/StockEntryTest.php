@@ -88,7 +88,24 @@ class StockEntryTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['quantity']);
     }
 
-    public function test_origin_is_required(): void
+    public function test_origin_is_optional(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/entries', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 5,
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.origin', null);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variation_id' => $variation->id,
+            'origin' => null,
+        ]);
+    }
+
+    public function test_blank_origin_is_stored_as_null(): void
     {
         $admin = User::factory()->admin()->create();
         $variation = ProductVariation::factory()->create();
@@ -96,8 +113,9 @@ class StockEntryTest extends TestCase
         $response = $this->actingAs($admin)->postJson('/api/stock-movements/entries', [
             'product_variation_id' => $variation->id,
             'quantity' => 5,
+            'origin' => '',
         ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['origin']);
+        $response->assertCreated()->assertJsonPath('data.origin', null);
     }
 }

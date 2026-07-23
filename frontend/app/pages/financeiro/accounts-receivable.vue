@@ -497,7 +497,7 @@ await loadAll()
 
             <div v-else class="space-y-3">
               <div class="flex items-center justify-between rounded-xl border border-border bg-surface px-3 py-2">
-                <span class="min-w-0 truncate text-sm font-medium text-txt-primary">{{ item.selected.productName }} <span class="text-[11px] text-txt-muted">(Cód. {{ item.selected.variation.product_code }})</span></span>
+                <span class="min-w-0 truncate text-sm font-medium text-txt-primary">{{ item.selected.productName }} <span class="text-[11px] text-txt-muted">(Cód. {{ item.selected.variation.code }})</span></span>
                 <button type="button" class="shrink-0 cursor-pointer text-xs font-semibold text-brand" @click="item.selected = null">Trocar</button>
               </div>
               <div class="grid grid-cols-[1fr_1.3fr_1.3fr] gap-3">
@@ -623,7 +623,7 @@ await loadAll()
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque · {{ formatAmount(row.variation.sale_price) }}</p>
+            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ row.variation.current_quantity }} em estoque · {{ formatAmount(row.variation.sale_price) }}</p>
           </div>
           <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>

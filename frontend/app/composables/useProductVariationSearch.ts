@@ -3,7 +3,7 @@ export interface ProductVariation {
   color: string | null
   size: string | null
   ean_gtin: string | null
-  product_code: string
+  code: string
   sale_price: string
   current_quantity: number
   max_quantity: number | null

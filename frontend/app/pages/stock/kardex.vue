@@ -9,7 +9,7 @@ interface StockMovement {
   type: 'in' | 'out' | 'adjustment' | 'sale'
   type_label: string
   quantity: number
-  origin: string
+  origin: string | null
   reference_id: number | null
   user_id: number
   user_name: string | null
@@ -164,7 +164,7 @@ await load()
           @click="openOriginModal(movement)"
         >
           <ShoppingCart v-if="movement.type === 'sale'" :size="13" class="shrink-0 text-txt-muted" />
-          <span class="truncate">{{ movement.origin }}</span>
+          <span class="truncate">{{ movement.origin ?? '-' }}</span>
         </button>
         <span class="min-w-0 truncate text-sm text-txt-secondary">{{ movement.user_name ?? '-' }}</span>
       </div>
@@ -176,7 +176,7 @@ await load()
 
     <BaseModal :open="showOriginModal" title="Origem / motivo" subtitle="Detalhe completo da movimentação." @close="showOriginModal = false">
       <div v-if="originModalMovement" class="space-y-3 text-sm">
-        <p class="text-txt-primary">{{ originModalMovement.origin }}</p>
+        <p class="text-txt-primary">{{ originModalMovement.origin ?? 'Não informado' }}</p>
         <div class="grid grid-cols-2 gap-3 border-t border-border pt-3 text-txt-secondary">
           <span>Produto: <strong class="text-txt-primary">{{ originModalMovement.product_name ?? '-' }}</strong></span>
           <span>Data: <strong class="text-txt-primary">{{ formatDateTime(originModalMovement.created_at) }}</strong></span>

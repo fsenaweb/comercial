@@ -18,17 +18,17 @@ class ProductVariationTest extends TestCase
         $product = Product::factory()->create();
 
         $response = $this->actingAs($admin)->postJson("/api/products/{$product->id}/variations", [
-            'product_code' => 'SKU-0001',
+            'code' => 'SKU-0001',
             'cost_price' => 10,
             'sale_price' => 20,
             'initial_quantity' => 15,
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.product_code', 'SKU-0001')
+            ->assertJsonPath('data.code', 'SKU-0001')
             ->assertJsonPath('data.current_quantity', 15);
 
-        $variation = ProductVariation::where('product_code', 'SKU-0001')->firstOrFail();
+        $variation = ProductVariation::where('code', 'SKU-0001')->firstOrFail();
 
         $this->assertDatabaseHas('stock_movements', [
             'product_variation_id' => $variation->id,
@@ -45,7 +45,7 @@ class ProductVariationTest extends TestCase
         $product = Product::factory()->create();
 
         $response = $this->actingAs($seller)->postJson("/api/products/{$product->id}/variations", [
-            'product_code' => 'SKU-0001',
+            'code' => 'SKU-0001',
             'cost_price' => 10,
             'sale_price' => 20,
             'initial_quantity' => 15,
@@ -54,20 +54,20 @@ class ProductVariationTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_create_requires_unique_product_code(): void
+    public function test_create_requires_unique_code(): void
     {
         $admin = User::factory()->admin()->create();
         $product = Product::factory()->create();
-        ProductVariation::factory()->create(['product_id' => $product->id, 'product_code' => 'SKU-0001']);
+        ProductVariation::factory()->create(['product_id' => $product->id, 'code' => 'SKU-0001']);
 
         $response = $this->actingAs($admin)->postJson("/api/products/{$product->id}/variations", [
-            'product_code' => 'SKU-0001',
+            'code' => 'SKU-0001',
             'cost_price' => 10,
             'sale_price' => 20,
             'initial_quantity' => 15,
         ]);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['product_code']);
+        $response->assertStatus(422)->assertJsonValidationErrors(['code']);
     }
 
     public function test_admin_can_update_variation_without_touching_quantity(): void
@@ -78,7 +78,7 @@ class ProductVariationTest extends TestCase
         $response = $this->actingAs($admin)->putJson(
             "/api/products/{$variation->product_id}/variations/{$variation->id}",
             [
-                'product_code' => $variation->product_code,
+                'code' => $variation->code,
                 'cost_price' => 12,
                 'sale_price' => 25,
             ]

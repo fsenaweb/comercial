@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, Check, CloudOff, Copy, Download, ExternalLink, HardDrive, RefreshCw, RotateCcw, Send, Unlink, Upload } from 'lucide-vue-next'
+import { AlertTriangle, Check, CloudOff, Copy, Download, ExternalLink, HardDrive, PlayCircle, RefreshCw, RotateCcw, Send, Unlink, Upload } from 'lucide-vue-next'
 
 interface LocalBackup {
   name: string
@@ -33,6 +33,7 @@ const googleDrive = ref<GoogleDriveStatus>({ connected: false, account_email: nu
 const loading = ref(true)
 const errorMessage = ref('')
 const uploadingNow = ref(false)
+const runningBackupNow = ref(false)
 
 const connecting = ref(false)
 const deviceCode = ref<{ user_code: string, verification_url: string } | null>(null)
@@ -77,6 +78,20 @@ async function load() {
     errorMessage.value = parse(error).message
   } finally {
     loading.value = false
+  }
+}
+
+async function runBackupNow() {
+  runningBackupNow.value = true
+  errorMessage.value = ''
+
+  try {
+    await api('/backups/run', { method: 'POST' })
+    await load()
+  } catch (error) {
+    errorMessage.value = parse(error).message
+  } finally {
+    runningBackupNow.value = false
   }
 }
 
@@ -265,10 +280,16 @@ onUnmounted(stopPolling)
       <SettingsNav />
 
       <div class="flex min-w-0 flex-col gap-4">
-        <div class="rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
-          <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Área ativa</span>
-          <h2 class="mt-1.5 font-display text-xl font-bold text-txt-primary">Backup e restauração</h2>
-          <p class="mt-0.5 text-sm text-txt-secondary">Cópia local diária gerada automaticamente; baixe manualmente ou conecte o Google Drive para envio automático.</p>
+        <div class="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-surface-raised p-5 shadow-card">
+          <div>
+            <span class="text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Área ativa</span>
+            <h2 class="mt-1.5 font-display text-xl font-bold text-txt-primary">Backup e restauração</h2>
+            <p class="mt-0.5 text-sm text-txt-secondary">Cópia local diária gerada automaticamente às 10:00; baixe manualmente ou conecte o Google Drive para envio automático.</p>
+          </div>
+          <BaseButton :block="false" :loading="runningBackupNow" loading-text="Gerando backup..." @click="runBackupNow">
+            <PlayCircle :size="15" />
+            Gerar backup agora
+          </BaseButton>
         </div>
 
         <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-600">{{ errorMessage }}</p>
@@ -278,7 +299,7 @@ onUnmounted(stopPolling)
             {{ hasBackupToday ? 'Backup de hoje disponível' : 'Nenhum backup encontrado hoje' }}
           </p>
           <p class="mt-0.5 text-xs" :class="hasBackupToday ? 'text-emerald-700/80' : 'text-amber-700/80'">
-            {{ hasBackupToday ? 'Baixe o arquivo mais recente e guarde num pendrive, HD externo ou nuvem pessoal.' : 'O backup diário roda às 10:00 - verifique o agendamento se isso persistir.' }}
+            {{ hasBackupToday ? 'Baixe o arquivo mais recente e guarde num pendrive, HD externo ou nuvem pessoal.' : 'O backup diário roda às 10:00 - use o botão "Gerar backup agora" se precisar de uma cópia antes disso.' }}
           </p>
         </div>
 

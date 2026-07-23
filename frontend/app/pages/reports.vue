@@ -14,6 +14,12 @@ interface ReportDefinition {
   title: string
   description: string
   needsPeriod: boolean
+  needsPaymentMethodFilter?: boolean
+}
+
+interface PaymentMethod {
+  id: number
+  name: string
 }
 
 interface CategoryDefinition {
@@ -54,7 +60,7 @@ const categories: CategoryDefinition[] = [
       { key: 'vendas_produto', title: 'Vendas por Produto', description: 'Classificação detalhada e volume dos produtos mais vendidos.', needsPeriod: true },
       { key: 'vendas_categoria', title: 'Vendas por Categoria', description: 'Performance comparativa das categorias cadastradas na loja.', needsPeriod: true },
       { key: 'vendas_vendedor', title: 'Vendas por Vendedor', description: 'Acompanhamento do volume de vendas faturadas por cada vendedor.', needsPeriod: true },
-      { key: 'vendas_forma_pagamento', title: 'Vendas por Forma de Pagamento', description: 'Composição do faturamento por forma de pagamento, incluindo vendas com pagamento dividido.', needsPeriod: true },
+      { key: 'vendas_forma_pagamento', title: 'Vendas por Forma de Pagamento', description: 'Composição do faturamento por forma de pagamento, incluindo vendas com pagamento dividido.', needsPeriod: true, needsPaymentMethodFilter: true },
       { key: 'lucro_bruto', title: 'Lucro Bruto por Produto', description: 'Demonstrativo de margem de lucro e rentabilidade unitária.', needsPeriod: true },
     ],
   },
@@ -89,6 +95,13 @@ function isoDaysAgo(days: number): string {
 const dateFrom = ref(isoDaysAgo(29))
 const dateTo = ref(isoDaysAgo(0))
 
+const paymentMethods = ref<PaymentMethod[]>([])
+const selectedPaymentMethodIds = ref<number[]>([])
+
+api<{ data: PaymentMethod[] }>('/payment-methods').then(({ data }) => {
+  paymentMethods.value = data
+})
+
 const loading = ref(false)
 const report = ref<ReportPayload | null>(null)
 
@@ -100,6 +113,7 @@ function selectCategory(key: string) {
 function openReport(key: string) {
   activeReportKey.value = key
   report.value = null
+  selectedPaymentMethodIds.value = []
 }
 
 function backToList() {
@@ -107,11 +121,21 @@ function backToList() {
   report.value = null
 }
 
+function togglePaymentMethod(id: number) {
+  const index = selectedPaymentMethodIds.value.indexOf(id)
+  if (index === -1) selectedPaymentMethodIds.value.push(id)
+  else selectedPaymentMethodIds.value.splice(index, 1)
+}
+
 function buildQuery(): string {
-  if (!activeReport.value?.needsPeriod) return ''
   const query = new URLSearchParams()
-  if (dateFrom.value) query.set('date_from', dateFrom.value)
-  if (dateTo.value) query.set('date_to', dateTo.value)
+  if (activeReport.value?.needsPeriod) {
+    if (dateFrom.value) query.set('date_from', dateFrom.value)
+    if (dateTo.value) query.set('date_to', dateTo.value)
+  }
+  if (activeReport.value?.needsPaymentMethodFilter) {
+    for (const id of selectedPaymentMethodIds.value) query.append('payment_method_ids[]', String(id))
+  }
   return query.toString()
 }
 
@@ -217,6 +241,29 @@ function printReport() {
             <BaseInput v-model="dateFrom" label="Data Início" type="date" />
             <BaseInput v-model="dateTo" label="Data Final" type="date" />
           </div>
+
+          <div v-if="activeReport.needsPaymentMethodFilter">
+            <p class="mb-2 text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Formas de pagamento</p>
+            <div class="flex flex-wrap gap-2">
+              <label
+                v-for="method in paymentMethods"
+                :key="method.id"
+                class="flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+                :class="selectedPaymentMethodIds.includes(method.id) ? 'border-brand bg-brand/10 text-txt-primary' : 'border-border text-txt-secondary'"
+              >
+                <input
+                  type="checkbox"
+                  class="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand"
+                  :checked="selectedPaymentMethodIds.includes(method.id)"
+                  @change="togglePaymentMethod(method.id)"
+                >
+                {{ method.name }}
+              </label>
+            </div>
+            <p v-if="paymentMethods.length === 0" class="text-xs text-txt-muted">Nenhuma forma de pagamento cadastrada.</p>
+            <p v-else class="mt-1.5 text-[11px] text-txt-muted">Nenhuma selecionada = considera todas.</p>
+          </div>
+
           <div class="flex flex-wrap justify-end gap-2.5">
             <BaseButton variant="ghost" :block="false" @click="exportReport('excel')">
               <Download :size="15" />

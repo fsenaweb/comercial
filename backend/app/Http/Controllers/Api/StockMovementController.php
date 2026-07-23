@@ -31,7 +31,8 @@ class StockMovementController extends Controller
         if ($request->filled('search')) {
             $search = $request->string('search')->value();
             $query->whereHas('productVariation', function ($q) use ($search) {
-                $q->where('product_code', 'ilike', "%{$search}%")
+                $q->where('code', 'ilike', "%{$search}%")
+                    ->orWhere('reference', 'ilike', "%{$search}%")
                     ->orWhereHas('product', fn ($p) => $p->where('name', 'ilike', "%{$search}%"));
             });
         }

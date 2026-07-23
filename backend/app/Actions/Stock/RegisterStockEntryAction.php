@@ -21,7 +21,7 @@ class RegisterStockEntryAction
                 'product_variation_id' => $variation->id,
                 'type' => StockMovementType::In,
                 'quantity' => $data['quantity'],
-                'origin' => $data['origin'],
+                'origin' => $data['origin'] ?? null,
                 'reference_id' => $data['reference_id'] ?? null,
                 'user_id' => $user->id,
             ]);

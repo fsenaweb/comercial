@@ -13,6 +13,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-vue-next'
+import type { ComponentPublicInstance } from 'vue'
 import { lineTotalCents } from '~/utils/cartMath'
 import type { CartItem } from '~/stores/cart'
 import type { ProductVariationRow as SkuRow } from '~/composables/useProductVariationSearch'
@@ -125,7 +126,7 @@ function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
     id: row.variation.id,
     productName: row.productName,
     variationLabel: row.variationLabel,
-    productCode: row.variation.product_code,
+    productCode: row.variation.code,
     salePrice: unitPrice ?? Number(row.variation.sale_price),
     currentQuantity: row.variation.current_quantity,
     wholesaleMinQty: row.variation.wholesale_min_qty,
@@ -155,6 +156,15 @@ const highlightedSuggestionIndex = ref(0)
 const searchSuggestions = ref<SkuRow[]>([])
 let suggestionsDebounce: ReturnType<typeof setTimeout> | null = null
 
+let suggestionEls: (Element | null)[] = []
+function setSuggestionRef(el: Element | ComponentPublicInstance | null, index: number) {
+  suggestionEls[index] = el instanceof Element ? el : null
+}
+
+watch(highlightedSuggestionIndex, (index) => {
+  nextTick(() => suggestionEls[index]?.scrollIntoView({ block: 'nearest' }))
+})
+
 watch(searchQuery, (query) => {
   if (suggestionsDebounce) clearTimeout(suggestionsDebounce)
   if (foundRow.value || !query.trim()) {
@@ -167,7 +177,7 @@ watch(searchQuery, (query) => {
     return
   }
   suggestionsDebounce = setTimeout(async () => {
-    searchSuggestions.value = await searchProductVariations(term, 6)
+    searchSuggestions.value = await searchProductVariations(term, 20)
     highlightedSuggestionIndex.value = 0
   }, 200)
 })
@@ -702,11 +712,12 @@ async function confirmSaveQuote() {
 
             <div
               v-if="searchSuggestions.length > 0"
-              class="absolute top-full right-0 left-0 z-10 mt-1.5 overflow-hidden rounded-xl border border-border bg-surface-raised shadow-card"
+              class="absolute top-full right-0 left-0 z-10 mt-1.5 max-h-[300px] overflow-y-auto rounded-xl border border-border bg-surface-raised shadow-card"
             >
               <button
                 v-for="(row, index) in searchSuggestions"
                 :key="row.key"
+                :ref="(el) => setSuggestionRef(el, index)"
                 type="button"
                 class="flex w-full cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 text-left"
                 :class="index === highlightedSuggestionIndex ? 'bg-brand/15' : 'hover:bg-surface-subtle'"
@@ -716,7 +727,7 @@ async function confirmSaveQuote() {
                 <div class="min-w-0">
                   <p class="truncate text-[13px] font-bold text-txt-primary">{{ row.productName }}</p>
                   <p class="text-[11px] text-txt-muted">
-                    Cód. {{ row.variation.product_code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
+                    Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
                     · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
                   </p>
                 </div>
@@ -730,7 +741,7 @@ async function confirmSaveQuote() {
           <div v-if="foundRow" class="mb-3 rounded-xl border border-border p-3">
             <p class="text-[13.5px] font-bold text-txt-primary">{{ foundRow.productName }}</p>
             <p class="mb-3 text-[11.5px] text-txt-muted">
-              Cód. {{ foundRow.variation.product_code }}
+              Cód. {{ foundRow.variation.code }}
               · <span :class="foundRow.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ foundRow.variation.current_quantity }} em estoque</span>
             </p>
 
@@ -1106,7 +1117,7 @@ async function confirmSaveQuote() {
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">
-              Cód. {{ row.variation.product_code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
+              Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
               · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
               · {{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}
             </p>

@@ -132,4 +132,24 @@ class SalesByPaymentMethodReportTest extends TestCase
         $this->assertCount(2, $rows); // 1 transação + 1 subtotal
         $this->assertSame($inRange->number, $rows->first()['sale_number']);
     }
+
+    public function test_filters_by_selected_payment_methods(): void
+    {
+        $user = User::factory()->create();
+        $pix = PaymentMethod::factory()->create(['name' => 'Pix']);
+        $cash = PaymentMethod::factory()->create(['name' => 'Dinheiro']);
+
+        $saleA = $this->createSale(30);
+        SalePayment::create(['sale_id' => $saleA->id, 'payment_method_id' => $pix->id, 'amount' => 30]);
+        $saleB = $this->createSale(15);
+        SalePayment::create(['sale_id' => $saleB->id, 'payment_method_id' => $cash->id, 'amount' => 15]);
+
+        $response = $this->actingAs($user)->getJson("/api/reports/catalog/vendas_forma_pagamento?payment_method_ids[]={$pix->id}");
+
+        $rows = collect($response->json('data.rows'));
+        $this->assertTrue($rows->every(fn ($row) => str_contains((string) $row['payment_method_name'], 'Pix')));
+        $summary = collect($response->json('data.summary'))->keyBy('label');
+        $this->assertArrayHasKey('Pix', $summary->toArray());
+        $this->assertArrayNotHasKey('Dinheiro', $summary->toArray());
+    }
 }

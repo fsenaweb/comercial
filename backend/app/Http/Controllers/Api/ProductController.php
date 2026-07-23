@@ -32,7 +32,7 @@ class ProductController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhereHas('variations', fn ($v) => $v->where('product_code', 'ilike', "%{$search}%"));
+                    ->orWhereHas('variations', fn ($v) => $v->where('code', 'ilike', "%{$search}%")->orWhere('reference', 'ilike', "%{$search}%"));
             });
         }
 

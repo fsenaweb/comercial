@@ -134,7 +134,7 @@ class ProductCatalogSeeder extends Seeder
             }
 
             $variation = $product->variations()->create([
-                'product_code' => $data['code'],
+                'code' => $data['code'],
                 'cost_price' => $data['cost'],
                 'sale_price' => $data['price'],
                 'current_quantity' => $data['qty'],

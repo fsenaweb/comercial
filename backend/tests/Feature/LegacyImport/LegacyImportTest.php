@@ -50,7 +50,7 @@ class LegacyImportTest extends TestCase
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $variation = ProductVariation::where('product_code', 'PRF-M8')->firstOrFail();
+        $variation = ProductVariation::where('code', '1')->firstOrFail();
         $product = $variation->product;
 
         $this->assertSame('Parafuso Sextavado M8', $product->name);
@@ -61,10 +61,11 @@ class LegacyImportTest extends TestCase
         $this->assertSame('2.00', $variation->wholesale_price);
         $this->assertSame(12, $variation->wholesale_min_qty);
         $this->assertNotNull($product->brand_id);
-        // REFERENCIA vira product_code (prioridade, pedido do cliente); CODIGO
-        // legado fica preservado à parte em legacy_code, para conferência
-        // cruzada com o sistema fiscal — ver docs/11-migracao-sistema-legado.md.
-        $this->assertSame('1', $variation->legacy_code);
+        // CODIGO legado (único no sistema de origem) vira `code`, o
+        // identificador único do sistema; REFERENCIA vira `reference`, campo
+        // livre de classificação — pedido do cliente, 2026-07-22, ver
+        // docs/11-migracao-sistema-legado.md.
+        $this->assertSame('PRF-M8', $variation->reference);
         $this->assertSame('C01 BA05', $product->location);
     }
 
@@ -74,7 +75,7 @@ class LegacyImportTest extends TestCase
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $product = ProductVariation::where('product_code', 'ARR-PRS')->firstOrFail()->product;
+        $product = ProductVariation::where('code', '2')->firstOrFail()->product;
 
         $this->assertNull($product->location);
     }
@@ -85,20 +86,23 @@ class LegacyImportTest extends TestCase
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $variation = ProductVariation::where('product_code', 'ARR-PRS')->firstOrFail();
+        $variation = ProductVariation::where('code', '2')->firstOrFail();
 
         $this->assertNull($variation->ean_gtin);
         $this->assertFalse($variation->product->active);
     }
 
-    public function test_deduplicates_colliding_reference_codes(): void
+    public function test_reference_can_repeat_across_products(): void
     {
         User::factory()->admin()->create();
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $this->assertDatabaseHas('product_variations', ['product_code' => 'DUP']);
-        $this->assertDatabaseHas('product_variations', ['product_code' => 'DUP-4']);
+        // REFERENCIA "DUP" tinha ~387 colisões no legado — não precisa mais
+        // ser única, então os dois produtos ficam com a mesma referência,
+        // cada um com seu próprio `code` (CODIGO), que é o campo único.
+        $this->assertDatabaseHas('product_variations', ['code' => '3', 'reference' => 'DUP']);
+        $this->assertDatabaseHas('product_variations', ['code' => '4', 'reference' => 'DUP']);
     }
 
     public function test_ignores_restaurant_placeholder_products(): void
@@ -120,7 +124,7 @@ class LegacyImportTest extends TestCase
         // transação inteira — ver docs/11-migracao-sistema-legado.md.
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $variation = ProductVariation::where('product_code', 'MRG-ABS')->firstOrFail();
+        $variation = ProductVariation::where('code', '6')->firstOrFail();
 
         $this->assertNull($variation->markup);
     }
@@ -131,7 +135,7 @@ class LegacyImportTest extends TestCase
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $product = ProductVariation::where('product_code', 'SERV-01')->firstOrFail()->product;
+        $product = ProductVariation::where('code', '5')->firstOrFail()->product;
 
         $this->assertSame('service', $product->type->value);
     }
@@ -142,7 +146,7 @@ class LegacyImportTest extends TestCase
 
         Artisan::call('legacy:import', ['path' => $this->fixturesPath]);
 
-        $variation = ProductVariation::where('product_code', 'PRF-M8')->firstOrFail();
+        $variation = ProductVariation::where('code', '1')->firstOrFail();
 
         $this->assertDatabaseHas('stock_movements', [
             'product_variation_id' => $variation->id,

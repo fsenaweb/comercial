@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/store-settings/google-drive', [GoogleDriveBackupController::class, 'destroy']);
 
         Route::get('/backups', [BackupController::class, 'index']);
+        Route::post('/backups/run', [BackupController::class, 'run']);
         Route::get('/backups/{filename}/download', [BackupController::class, 'download'])
             ->where('filename', '.*');
         Route::post('/backups/upload-latest', [BackupController::class, 'uploadLatest']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Backup\GenerateRestoreConfirmationCodeAction;
 use App\Actions\Backup\ListRemoteGoogleDriveBackupsAction;
 use App\Actions\Backup\RestoreBackupAction;
+use App\Actions\Backup\RunManualBackupAction;
 use App\Actions\Backup\UploadLatestBackupToGoogleDriveAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Backup\RestoreBackupRequest;
@@ -42,6 +43,13 @@ class BackupController extends Controller
     }
 
     public function uploadLatest(UploadLatestBackupToGoogleDriveAction $action): Response
+    {
+        $action->execute();
+
+        return response()->noContent();
+    }
+
+    public function run(RunManualBackupAction $action): Response
     {
         $action->execute();
 

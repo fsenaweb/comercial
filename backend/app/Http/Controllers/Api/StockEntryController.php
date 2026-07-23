@@ -48,7 +48,7 @@ class StockEntryController extends Controller
             $item['matched_variation'] = $match ? [
                 'id' => $match->id,
                 'product_name' => $match->product->name,
-                'product_code' => $match->product_code,
+                'product_code' => $match->code,
                 'markup' => $match->markup,
             ] : null;
 

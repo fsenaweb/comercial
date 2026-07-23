@@ -13,7 +13,8 @@ return new class extends Migration
             $table->foreignId('product_variation_id')->constrained()->cascadeOnDelete();
             $table->string('type');
             $table->integer('quantity');
-            $table->string('origin');
+            // Nullable: motivo/origem da entrada é opcional (pedido do cliente, 2026-07-22).
+            $table->string('origin')->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->foreignId('user_id')->constrained();
             $table->timestamp('created_at')->useCurrent();

@@ -239,15 +239,15 @@ class ReportController extends Controller
             'title' => 'Vendas por Produto',
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
-                ['key' => 'product_code', 'label' => 'Código'],
-                ['key' => 'legacy_code', 'label' => 'Código Interno'],
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'reference', 'label' => 'Referência'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade'],
                 ['key' => 'total', 'label' => 'Total'],
             ],
             'rows' => $rows->map(fn ($row) => [
                 'product_name' => $row->product_name,
-                'product_code' => $row->product_code,
-                'legacy_code' => $row->legacy_code,
+                'code' => $row->code,
+                'reference' => $row->reference,
                 'quantity_sold' => (string) $row->quantity_sold,
                 'total' => $this->money($row->total),
             ])->all(),
@@ -306,10 +306,20 @@ class ReportController extends Controller
      */
     private function buildSalesByPaymentMethodReport(Request $request): array
     {
-        $baseQuery = fn () => SalePayment::query()
-            ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
-            ->join('payment_methods', 'payment_methods.id', '=', 'sale_payments.payment_method_id')
-            ->where('sales.status', SaleStatus::Completed->value);
+        $paymentMethodIds = $this->paymentMethodIds($request);
+
+        $baseQuery = function () use ($paymentMethodIds) {
+            $query = SalePayment::query()
+                ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
+                ->join('payment_methods', 'payment_methods.id', '=', 'sale_payments.payment_method_id')
+                ->where('sales.status', SaleStatus::Completed->value);
+
+            if ($paymentMethodIds !== []) {
+                $query->whereIn('sale_payments.payment_method_id', $paymentMethodIds);
+            }
+
+            return $query;
+        };
 
         $aggregateQuery = $baseQuery();
         $this->applyDateFilter($aggregateQuery, $request, 'sales.created_at');
@@ -376,8 +386,8 @@ class ReportController extends Controller
         $this->applyDateFilter($query, $request, 'sales.created_at');
 
         $rows = $query->selectRaw('products.id as product_id, products.name as product_name,
-                MAX(product_variations.product_code) as product_code,
-                MAX(product_variations.legacy_code) as legacy_code,
+                MAX(product_variations.code) as code,
+                MAX(product_variations.reference) as reference,
                 SUM(sale_items.quantity) as quantity_sold,
                 COALESCE(SUM(sale_items.total), 0) as revenue,
                 COALESCE(SUM(sale_items.quantity * product_variations.cost_price), 0) as cost')
@@ -389,8 +399,8 @@ class ReportController extends Controller
             'title' => 'Lucro Bruto por Produto',
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
-                ['key' => 'product_code', 'label' => 'Código'],
-                ['key' => 'legacy_code', 'label' => 'Código Interno'],
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'reference', 'label' => 'Referência'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade'],
                 ['key' => 'revenue', 'label' => 'Receita'],
                 ['key' => 'cost', 'label' => 'Custo'],
@@ -401,8 +411,8 @@ class ReportController extends Controller
 
                 return [
                     'product_name' => $row->product_name,
-                    'product_code' => $row->product_code,
-                    'legacy_code' => $row->legacy_code,
+                    'code' => $row->code,
+                    'reference' => $row->reference,
                     'quantity_sold' => (string) $row->quantity_sold,
                     'revenue' => $this->money($row->revenue),
                     'cost' => $this->money($row->cost),
@@ -420,15 +430,15 @@ class ReportController extends Controller
             'title' => 'Nível de Estoque',
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
-                ['key' => 'product_code', 'label' => 'Código'],
-                ['key' => 'legacy_code', 'label' => 'Código Interno'],
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'reference', 'label' => 'Referência'],
                 ['key' => 'current_quantity', 'label' => 'Quantidade Atual'],
                 ['key' => 'min_quantity', 'label' => 'Quantidade Mínima'],
             ],
             'rows' => $variations->map(fn ($variation) => [
                 'product_name' => $variation->product->name,
-                'product_code' => $variation->product_code,
-                'legacy_code' => $variation->legacy_code,
+                'code' => $variation->code,
+                'reference' => $variation->reference,
                 'current_quantity' => (string) $variation->current_quantity,
                 'min_quantity' => (string) $variation->min_quantity,
             ])->all(),
@@ -450,8 +460,8 @@ class ReportController extends Controller
 
             return [
                 'product_name' => $variation->product->name,
-                'product_code' => $variation->product_code,
-                'legacy_code' => $variation->legacy_code,
+                'code' => $variation->code,
+                'reference' => $variation->reference,
                 'current_quantity' => (string) $variation->current_quantity,
                 'cost_value' => $this->money($costValue),
                 'sale_value' => $this->money($saleValue),
@@ -466,8 +476,8 @@ class ReportController extends Controller
             ],
             'headers' => [
                 ['key' => 'product_name', 'label' => 'Produto'],
-                ['key' => 'product_code', 'label' => 'Código'],
-                ['key' => 'legacy_code', 'label' => 'Código Interno'],
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'reference', 'label' => 'Referência'],
                 ['key' => 'current_quantity', 'label' => 'Quantidade'],
                 ['key' => 'cost_value', 'label' => 'Valor (Custo)'],
                 ['key' => 'sale_value', 'label' => 'Valor (Venda)'],
@@ -491,8 +501,8 @@ class ReportController extends Controller
         }
 
         return $query->selectRaw('products.id as product_id, products.name as product_name,
-                MAX(product_variations.product_code) as product_code,
-                MAX(product_variations.legacy_code) as legacy_code,
+                MAX(product_variations.code) as code,
+                MAX(product_variations.reference) as reference,
                 SUM(sale_items.quantity) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as total')
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('quantity_sold')
@@ -537,6 +547,18 @@ class ReportController extends Controller
         if ($request->filled('date_to')) {
             $query->whereDate($column, '<=', $request->string('date_to')->value());
         }
+    }
+
+    /** @return array<int, int> */
+    private function paymentMethodIds(Request $request): array
+    {
+        $ids = $request->query('payment_method_ids', []);
+
+        if (! is_array($ids)) {
+            $ids = explode(',', (string) $ids);
+        }
+
+        return collect($ids)->filter(fn ($id) => $id !== null && $id !== '')->map(fn ($id) => (int) $id)->values()->all();
     }
 
     private function resolvePeriod(Request $request, int $defaultDays): array

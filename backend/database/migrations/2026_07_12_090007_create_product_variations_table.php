@@ -19,15 +19,16 @@ return new class extends Migration
             // testar a importação do sistema legado (13 mil produtos
             // estourando memória do PHP), ver docs/11-migracao-sistema-legado.md.
             $table->string('ean_gtin')->nullable()->index();
-            $table->string('product_code')->unique();
-            // Segundo código do produto, opcional e sem exigir unicidade —
-            // na importação do sistema legado recebe o CODIGO interno
-            // original (product_code recebe a REFERENCIA, que tem
-            // prioridade); em cadastros novos, campo livre pra quem quiser
-            // manter um código interno/secundário além do product_code
-            // principal. Decisão do usuário em 2026-07-18, ver
-            // docs/11-migracao-sistema-legado.md.
-            $table->string('legacy_code')->nullable();
+            // Identificador único do produto — na importação do sistema
+            // legado recebe o CODIGO interno (já único na prática no
+            // sistema de origem); em cadastros novos, é o código que o
+            // usuário define. Decisão do cliente em 2026-07-22.
+            $table->string('code')->unique();
+            // Referência/classificação livre do usuário, sem exigir
+            // unicidade — na importação do legado recebe a REFERENCIA
+            // (que tinha colisões no sistema de origem, daí não ser única
+            // aqui). Ver docs/11-migracao-sistema-legado.md.
+            $table->string('reference')->nullable();
             $table->decimal('cost_price', 12, 2)->default(0);
             $table->decimal('markup', 7, 2)->nullable();
             $table->decimal('sale_price', 12, 2)->default(0);

@@ -30,7 +30,7 @@ class ProductVariationSearchResource extends JsonResource
             'color' => $this->color,
             'size' => $this->size,
             'ean_gtin' => $this->ean_gtin,
-            'product_code' => $this->product_code,
+            'code' => $this->code,
             'sale_price' => $this->sale_price,
             'current_quantity' => $this->current_quantity,
             'max_quantity' => $this->max_quantity,

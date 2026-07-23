@@ -141,7 +141,7 @@ async function handleSubmit() {
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold text-txt-primary">{{ selected.productName }}</p>
-                <p class="text-xs text-txt-muted">Cód. {{ selected.variation.product_code }}</p>
+                <p class="text-xs text-txt-muted">Cód. {{ selected.variation.code }}</p>
               </div>
               <BaseButton type="button" variant="ghost" :block="false" @click="clearSelection">Trocar</BaseButton>
             </div>
@@ -213,7 +213,7 @@ async function handleSubmit() {
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
+            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
           <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>

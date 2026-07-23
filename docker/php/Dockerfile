@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/zz-uploads.ini
+
 # Usuário não-root com o mesmo UID/GID do host, para evitar arquivos gerados como root
 RUN groupmod -o -g ${GID} www-data && usermod -o -u ${UID} -g ${GID} www-data \
     && mkdir -p /var/www/html && chown -R www-data:www-data /var/www/html
