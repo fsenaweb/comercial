@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Backup\EnsureBackupDirectoryIsAccessibleAction;
 use App\Actions\Backup\GenerateRestoreConfirmationCodeAction;
 use App\Actions\Backup\ListRemoteGoogleDriveBackupsAction;
 use App\Actions\Backup\RestoreBackupAction;
@@ -20,19 +21,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BackupController extends Controller
 {
-    public function index(ListRemoteGoogleDriveBackupsAction $remoteAction): JsonResponse
+    public function index(ListRemoteGoogleDriveBackupsAction $remoteAction, EnsureBackupDirectoryIsAccessibleAction $ensureAccessible): JsonResponse
     {
         return response()->json([
             'data' => [
-                'local' => $this->localBackups(),
+                'local' => $this->localBackups($ensureAccessible),
                 'google_drive' => $remoteAction->execute(),
             ],
         ]);
     }
 
-    public function download(string $filename): StreamedResponse
+    public function download(string $filename, EnsureBackupDirectoryIsAccessibleAction $ensureAccessible): StreamedResponse
     {
         $disk = Storage::disk('backups');
+        $ensureAccessible->execute($disk->path(''));
 
         // Whitelist contra a listagem real do disco (allFiles — os dumps do
         // spatie/laravel-backup ficam num subdiretório) — nunca confiar no
@@ -61,7 +63,7 @@ class BackupController extends Controller
         return response()->json(['data' => ['code' => $action->execute($request->user()->id)]]);
     }
 
-    public function restore(RestoreBackupRequest $request, RestoreBackupAction $action): Response
+    public function restore(RestoreBackupRequest $request, RestoreBackupAction $action, EnsureBackupDirectoryIsAccessibleAction $ensureAccessible): Response
     {
         // Cache::pull é atômico (lê e apaga) — o código só serve para uma
         // tentativa, mesmo que a restauração falhe depois por outro motivo.
@@ -81,6 +83,7 @@ class BackupController extends Controller
             $zipPath = $tempUploadPath;
         } else {
             $disk = Storage::disk('backups');
+            $ensureAccessible->execute($disk->path(''));
             $filename = $request->string('filename')->toString();
             abort_unless(in_array($filename, $disk->allFiles(), true), 404, 'Backup não encontrado.');
             $zipPath = $disk->path($filename);
@@ -97,9 +100,10 @@ class BackupController extends Controller
         return response()->noContent();
     }
 
-    private function localBackups(): array
+    private function localBackups(EnsureBackupDirectoryIsAccessibleAction $ensureAccessible): array
     {
         $disk = Storage::disk('backups');
+        $ensureAccessible->execute($disk->path(''));
 
         return collect($disk->allFiles())
             ->filter(fn (string $file) => str_ends_with($file, '.zip'))

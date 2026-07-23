@@ -18,6 +18,10 @@ docker compose up -d
 
 docker compose exec php-fpm php artisan migrate --force
 docker compose exec php-fpm php artisan storage:link || true
+# Corrige permissão restritiva (0700) que storage/app/backup possa ter
+# herdado de antes de `visibility => public` (config/filesystems.php) —
+# achado real em Windows/Docker Desktop, ver docs/07-dev-environment.md.
+docker compose exec php-fpm php artisan backups:ensure-directory-permissions
 
 ./deploy-frontend.sh
 
