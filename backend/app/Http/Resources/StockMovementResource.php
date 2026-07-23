@@ -13,7 +13,7 @@ class StockMovementResource extends JsonResource
             'id' => $this->id,
             'product_variation_id' => $this->product_variation_id,
             'product_name' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->product?->name),
-            'product_code' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->product_code),
+            'product_code' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->code),
             'type' => $this->type->value,
             'type_label' => $this->type->label(),
             'quantity' => $this->quantity,

@@ -51,7 +51,7 @@ class KardexListTest extends TestCase
     {
         $admin = User::factory()->admin()->create();
         $product = Product::factory()->create(['name' => 'Parafuso Sextavado']);
-        $variation = ProductVariation::factory()->create(['product_id' => $product->id, 'product_code' => 'PRF-001']);
+        $variation = ProductVariation::factory()->create(['product_id' => $product->id, 'code' => 'PRF-001']);
         StockMovement::factory()->create(['product_variation_id' => $variation->id]);
         StockMovement::factory()->create();
 

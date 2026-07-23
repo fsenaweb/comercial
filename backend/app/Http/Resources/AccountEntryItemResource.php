@@ -13,7 +13,7 @@ class AccountEntryItemResource extends JsonResource
             'id' => $this->id,
             'product_variation_id' => $this->product_variation_id,
             'product_name' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->product?->name),
-            'product_code' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->product_code),
+            'product_code' => $this->whenLoaded('productVariation', fn () => $this->productVariation?->code),
             'quantity' => $this->quantity,
             'unit_price' => $this->unit_price,
             'discount_type' => $this->discount_type->value,

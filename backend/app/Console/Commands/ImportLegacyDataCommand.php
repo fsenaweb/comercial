@@ -23,9 +23,9 @@ use Illuminate\Support\Facades\DB;
  * histórico de decisões — escopo definido pelo cliente em 2026-07-18:
  * só cadastro de produto e cliente, sem histórico de venda/estoque/caixa.
  *
- * Seguro rodar mais de uma vez: produtos são casados por `product_code`
- * (atualiza em vez de duplicar; diferença de estoque vira um novo
- * stock_movement de ajuste) e clientes por `document` quando presente.
+ * Seguro rodar mais de uma vez: produtos são casados por `code` (CODIGO do
+ * legado, único — atualiza em vez de duplicar; diferença de estoque vira um
+ * novo stock_movement de ajuste) e clientes por `document` quando presente.
  */
 class ImportLegacyDataCommand extends Command
 {
@@ -147,7 +147,6 @@ class ImportLegacyDataCommand extends Command
     private function importProducts(string $file, User $admin): void
     {
         $handle = fopen($file, 'r');
-        $seenCodes = [];
         $created = 0;
         $updated = 0;
 
@@ -162,7 +161,6 @@ class ImportLegacyDataCommand extends Command
                 continue;
             }
 
-            $productCode = $this->uniqueProductCode($referencia, $codigo, $seenCodes);
             $eanGtin = $this->normalizeBarcode($codbarra);
             $wholesalePrice = (float) $precoAtacado;
             $wholesaleQty = (int) round((float) $qtdAtacado);
@@ -179,7 +177,7 @@ class ImportLegacyDataCommand extends Command
 
             $variationAttributes = [
                 'ean_gtin' => $eanGtin,
-                'legacy_code' => $codigo,
+                'reference' => $referencia !== '' ? $referencia : null,
                 'cost_price' => (float) $prCusto,
                 'markup' => $this->normalizeMarkup((float) $margem),
                 'sale_price' => (float) $prVenda,
@@ -189,7 +187,7 @@ class ImportLegacyDataCommand extends Command
             ];
 
             $newQuantity = (int) round((float) $qtdAtual);
-            $variation = ProductVariation::withTrashed()->where('product_code', $productCode)->first();
+            $variation = ProductVariation::withTrashed()->where('code', $codigo)->first();
 
             if ($variation) {
                 $variation->product->update($productAttributes);
@@ -210,7 +208,7 @@ class ImportLegacyDataCommand extends Command
                 $product = Product::create($productAttributes);
                 $variation = $product->variations()->create([
                     ...$variationAttributes,
-                    'product_code' => $productCode,
+                    'code' => $codigo,
                     'current_quantity' => $newQuantity,
                 ]);
                 StockMovement::create([
@@ -225,19 +223,6 @@ class ImportLegacyDataCommand extends Command
         }
         fclose($handle);
         $this->info("Produtos: {$created} criados, {$updated} atualizados.");
-    }
-
-    /** REFERENCIA tem ~387 colisões no legado — desempata anexando o CODIGO original. */
-    private function uniqueProductCode(string $referencia, string $codigo, array &$seenCodes): string
-    {
-        $base = $referencia !== '' ? $referencia : "LEG-{$codigo}";
-        if (! isset($seenCodes[$base])) {
-            $seenCodes[$base] = true;
-
-            return $base;
-        }
-
-        return "{$base}-{$codigo}";
     }
 
     private function normalizeBarcode(string $value): ?string

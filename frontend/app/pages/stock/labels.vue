@@ -294,7 +294,7 @@ async function handlePrint() {
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-txt-primary">{{ item.row.productName }}</p>
             <p class="text-[11px] text-txt-muted">
-              {{ item.row.variationLabel ? `${item.row.variationLabel} · ` : '' }}Cód. {{ item.row.variation.product_code }}
+              {{ item.row.variationLabel ? `${item.row.variationLabel} · ` : '' }}Cód. {{ item.row.variation.code }}
             </p>
           </div>
           <div class="flex items-center gap-3.5">
@@ -334,7 +334,7 @@ async function handlePrint() {
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11px] text-txt-muted">Cód. {{ row.variation.product_code }}</p>
+            <p class="text-[11px] text-txt-muted">Cód. {{ row.variation.code }}</p>
           </div>
           <Plus :size="15" class="shrink-0 text-emerald-600" />
         </div>

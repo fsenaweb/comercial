@@ -42,7 +42,7 @@ class LabelPrintTest extends TestCase
     public function test_authenticated_user_can_print_labels(): void
     {
         $user = User::factory()->create();
-        $variation = ProductVariation::factory()->create(['sale_price' => 15.90, 'product_code' => 'PC-001']);
+        $variation = ProductVariation::factory()->create(['sale_price' => 15.90, 'code' => 'PC-001']);
 
         $response = $this->actingAs($user)->post('/labels/print', $this->payload([
             ['variation_id' => $variation->id, 'quantity' => 3],

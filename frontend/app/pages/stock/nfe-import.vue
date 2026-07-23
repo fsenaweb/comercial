@@ -143,7 +143,7 @@ function openPicker(item: WorkingItem) {
 function choosePickerRow(row: SkuOption) {
   if (pickerTarget.value) {
     pickerTarget.value.variationId = row.variation.id
-    pickerTarget.value.variationLabel = `${row.productName} (Cód. ${row.variation.product_code})`
+    pickerTarget.value.variationLabel = `${row.productName} (Cód. ${row.variation.code})`
   }
   showPicker.value = false
 }
@@ -393,7 +393,7 @@ function startOver() {
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.product_code }} · {{ row.variation.current_quantity }} em estoque</p>
+            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ row.variation.current_quantity }} em estoque</p>
           </div>
           <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>

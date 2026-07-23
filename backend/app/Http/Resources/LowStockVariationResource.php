@@ -15,7 +15,7 @@ class LowStockVariationResource extends JsonResource
             'product_name' => $this->product->name,
             'color' => $this->color,
             'size' => $this->size,
-            'product_code' => $this->product_code,
+            'code' => $this->code,
             'current_quantity' => $this->current_quantity,
             'min_quantity' => $this->min_quantity,
         ];

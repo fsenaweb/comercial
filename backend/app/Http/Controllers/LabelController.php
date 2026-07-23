@@ -30,12 +30,12 @@ class LabelController extends Controller
                 }
 
                 $variationLabel = collect([$variation->color, $variation->size])->filter()->implode(' / ');
-                $barcodeValue = $variation->ean_gtin ?: $variation->product_code;
+                $barcodeValue = $variation->ean_gtin ?: $variation->code;
 
                 $label = [
                     'name' => $variation->product?->name.($variationLabel ? " - {$variationLabel}" : ''),
                     'price' => $variation->sale_price,
-                    'code' => $variation->product_code,
+                    'code' => $variation->code,
                     'barcode_svg' => $generator->getBarcode($barcodeValue, $generator::TYPE_CODE_128, 1.5, 28),
                 ];
 

@@ -69,8 +69,8 @@ class ReportCatalogTest extends TestCase
 
         $response->assertOk();
         $headerKeys = collect($response->json('data.headers'))->pluck('key');
-        $this->assertTrue($headerKeys->contains('product_code'));
-        $this->assertTrue($headerKeys->contains('legacy_code'));
+        $this->assertTrue($headerKeys->contains('code'));
+        $this->assertTrue($headerKeys->contains('reference'));
     }
 
     public static function salesByProductCatalogKeys(): array

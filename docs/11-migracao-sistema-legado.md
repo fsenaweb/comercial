@@ -130,9 +130,10 @@ inicial), `PESSOA`(`CLI='S'`)→`customers`.
 de corte, se o `.fbk` estiver mais fresco (produtos/clientes podem ter
 mudado desde o backup usado em desenvolvimento), é só repetir os passos
 1-3 com o arquivo novo — seguro rodar quantas vezes for preciso: produtos
-são casados por `product_code` (`REFERENCIA`, atualiza em vez de duplicar;
-diferença de estoque vira um novo `stock_movement` de ajuste com a
-diferença) e clientes por `document` quando presente.
+são casados por `code` (`CODIGO`, atualiza em vez de duplicar; diferença de
+estoque vira um novo `stock_movement` de ajuste com a diferença) e clientes
+por `document` quando presente. Ver decisão de 2026-07-22 abaixo — `code`
+substituiu `product_code` como campo de casamento.
 
 **Validado com o dump real completo em desenvolvimento (2026-07-18):**
 banco resetado (`migrate:fresh --seed`, mantém só `admin@loja.local`),
@@ -163,10 +164,10 @@ sistema — NCM, CFOP, ICMS, PIS/COFINS, SPED etc., **ignorar**):
 
 | Legado (`PRODUTO`) | Novo sistema |
 |---|---|
-| `CODIGO` | `product_variations.legacy_code` (preservado à parte — ver decisão abaixo) |
+| `CODIGO` | `product_variations.code` — campo único/obrigatório do sistema (decisão de 2026-07-22, ver abaixo; era `legacy_code` até então) |
 | `CODBARRA` | `product_variations.ean_gtin` (`'SEM GTIN'` ou vazio → `null`) |
 | `DESCRICAO` | `products.name` |
-| `REFERENCIA` | `product_variations.product_code` — **prioridade do cliente** (2026-07-18): é o código que ele usa para conferência cruzada com o sistema fiscal separado que já possui. 100% preenchida (13.280/13.280), com 387 colisões desempatadas anexando `CODIGO` |
+| `REFERENCIA` | `product_variations.reference` — campo livre de classificação do usuário, sem exigir unicidade (era `product_code` até 2026-07-22, ver abaixo). 100% preenchida (13.280/13.280); as ~387 colisões não são mais desempatadas com sufixo |
 | `GRUPO` (FK) | `categories` (via mapeamento já importado) |
 | `FK_MARCA` | `brands` (via mapeamento já importado) |
 | `UNIDADE` | `units` (via mapeamento já importado) |
@@ -204,6 +205,40 @@ Estoque", "Vendas por Produto" e "Lucro Bruto por Produto" (coluna "Código
 Interno", ao lado da coluna "Código" que já existia/ganhou nesta sessão).
 Não é buscável no PDV — decisão do usuário, `product_code`/código de
 barras continuam sendo a única busca de produto na venda.
+
+**Terceira rodada da decisão — inversão dos campos (2026-07-22):** cliente
+reportou nos relatórios que os itens cuja `REFERENCIA` original era só "1"
+apareciam como `1-XXXX` (o desempate de colisão anexando `CODIGO`), poluindo
+a coluna. Ao explicar o motivo, decisão do cliente foi inverter o papel dos
+dois campos, permanentemente (não só um ajuste de exibição no relatório) —
+`legacy_code`/`product_code` foram **renomeados** para `code`/`reference`:
+- `code` (antes `legacy_code`, o `CODIGO` do legado) passou a ser o campo
+  único/obrigatório do sistema — já era único na prática no sistema de
+  origem. É ele que o PDV, as Etiquetas e a importação de NF-e usam para
+  achar o produto exato (com fallback pra `reference`, ver abaixo).
+- `reference` (antes `product_code`, a `REFERENCIA` do legado) virou campo
+  livre de classificação do usuário, sem exigir unicidade — o desempate
+  `REFERENCIA-CODIGO` das ~387 colisões deixou de fazer sentido e foi
+  desfeito (a referência volta a aparecer só como `1`, mesmo repetida entre
+  produtos diferentes).
+- Rótulos na interface: "Código" (antes na coluna de `product_code`) agora é
+  a coluna de `code`; "Código Interno" (antes `legacy_code`) virou
+  "Referência", na coluna de `reference`.
+- Busca (PDV/Etiquetas/NF-e/Estoque): o lookup exato (bipagem/Enter)
+  prioriza `code`/`ean_gtin` (ambos únicos) e só cai para `reference` como
+  último recurso, já que não é única — pode retornar qualquer produto entre
+  os que compartilham a mesma referência. A busca por texto (autocomplete)
+  passou a considerar os dois campos, não só um.
+- Ainda em desenvolvimento (nada em produção) — o rename foi feito editando
+  a migration original de `product_variations` em vez de criar uma
+  migration nova de rename, e o banco de dev foi resetado
+  (`migrate:fresh --seed`) em vez de rodar uma migração incremental de dado.
+  Numa loja já em produção, a mesma mudança exigiria uma migration nova
+  (rename de coluna + swap de constraint `UNIQUE` + limpeza do sufixo
+  `REFERENCIA-CODIGO` nas linhas afetadas), não editar a migration original.
+- `ImportLegacyDataCommand` ajustado: casa produto por `code` (`CODIGO`,
+  já único) em vez de `product_code`; `reference` recebe `REFERENCIA` como
+  veio no legado, sem sufixo de desempate.
 
 ### `PESSOA` (filtro `CLI = 'S'`) → `customers`
 44 registros, todos cliente. Campos principais: `RAZAO`/`FANTASIA` (nome),

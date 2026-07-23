@@ -17,7 +17,7 @@ class ProductVariationFactory extends Factory
             'color' => null,
             'size' => null,
             'ean_gtin' => fake()->unique()->ean13(),
-            'product_code' => fake()->unique()->bothify('SKU-#####'),
+            'code' => fake()->unique()->bothify('SKU-#####'),
             'cost_price' => fake()->randomFloat(2, 1, 100),
             'markup' => fake()->randomFloat(2, 10, 100),
             'sale_price' => fake()->randomFloat(2, 10, 200),

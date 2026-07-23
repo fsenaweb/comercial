@@ -17,7 +17,7 @@ interface ReceivableRow {
 interface LowStockItem {
   id: number
   product_name: string
-  product_code: string
+  code: string
   current_quantity: number
   min_quantity: number
 }
@@ -189,7 +189,7 @@ await load()
         <div v-for="item in overview.low_stock_items" v-else :key="item.id" class="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-0">
           <div class="min-w-0">
             <p class="truncate text-sm font-medium text-txt-primary">{{ item.product_name }}</p>
-            <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code }}</p>
+            <p class="text-[11px] text-txt-muted">Cód. {{ item.code }}</p>
           </div>
           <span class="shrink-0 text-sm font-bold text-rose-600">{{ item.current_quantity }} / mín. {{ item.min_quantity }}</span>
         </div>

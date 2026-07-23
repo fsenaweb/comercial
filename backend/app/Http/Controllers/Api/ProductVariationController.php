@@ -27,6 +27,12 @@ class ProductVariationController extends Controller
      * busca indexada e exata, sem carregar o catálogo inteiro no navegador
      * (ver docs/11-migracao-sistema-legado.md, achado com o catálogo real de
      * 13 mil produtos). Só produto ativo.
+     *
+     * `code` e `ean_gtin` são únicos, então um match neles já identifica a
+     * variação sem ambiguidade; `reference` não é única (é só um campo de
+     * classificação livre do usuário) — vale como último recurso pra quem
+     * ainda decorou o valor antigo, mas em caso de colisão despacha para a
+     * primeira variação ativa encontrada.
      */
     public function lookup(Request $request): JsonResponse
     {
@@ -35,8 +41,13 @@ class ProductVariationController extends Controller
         $variation = ProductVariation::query()
             ->with('product')
             ->whereHas('product', fn ($q) => $q->where('active', true))
-            ->where(fn ($q) => $q->where('product_code', $code)->orWhere('ean_gtin', $code))
-            ->first();
+            ->where(fn ($q) => $q->where('code', $code)->orWhere('ean_gtin', $code))
+            ->first()
+            ?? ProductVariation::query()
+                ->with('product')
+                ->whereHas('product', fn ($q) => $q->where('active', true))
+                ->where('reference', $code)
+                ->first();
 
         if (! $variation) {
             return response()->json(['data' => null], 404);
@@ -72,7 +83,8 @@ class ProductVariationController extends Controller
                 $query->where(function ($q) use ($words) {
                     foreach ($words as $word) {
                         $q->where(function ($qWord) use ($word) {
-                            $qWord->where('product_code', 'ilike', "%{$word}%")
+                            $qWord->where('code', 'ilike', "%{$word}%")
+                                ->orWhere('reference', 'ilike', "%{$word}%")
                                 ->orWhere('ean_gtin', 'ilike', "%{$word}%")
                                 ->orWhereHas('product', fn ($q2) => $q2->where('name', 'ilike', "%{$word}%"));
                         });

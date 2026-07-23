@@ -26,7 +26,7 @@ class ProductVariationSearchTest extends TestCase
     public function test_lookup_finds_exact_match_by_product_code(): void
     {
         $user = User::factory()->create();
-        $variation = ProductVariation::factory()->create(['product_code' => 'PRF-M8']);
+        $variation = ProductVariation::factory()->create(['code' => 'PRF-M8']);
 
         $response = $this->actingAs($user)->getJson('/api/product-variations/lookup?code=PRF-M8');
 
@@ -43,6 +43,16 @@ class ProductVariationSearchTest extends TestCase
         $response->assertOk()->assertJsonPath('data.id', $variation->id);
     }
 
+    public function test_lookup_falls_back_to_reference_when_no_code_or_ean_matches(): void
+    {
+        $user = User::factory()->create();
+        $variation = ProductVariation::factory()->create(['reference' => 'REF-LIVRE']);
+
+        $response = $this->actingAs($user)->getJson('/api/product-variations/lookup?code=REF-LIVRE');
+
+        $response->assertOk()->assertJsonPath('data.id', $variation->id);
+    }
+
     public function test_lookup_returns_404_when_not_found(): void
     {
         $user = User::factory()->create();
@@ -54,7 +64,7 @@ class ProductVariationSearchTest extends TestCase
     {
         $user = User::factory()->create();
         $product = Product::factory()->create(['active' => false]);
-        ProductVariation::factory()->create(['product_id' => $product->id, 'product_code' => 'INATIVO-01']);
+        ProductVariation::factory()->create(['product_id' => $product->id, 'code' => 'INATIVO-01']);
 
         $this->actingAs($user)->getJson('/api/product-variations/lookup?code=INATIVO-01')->assertStatus(404);
     }

@@ -11,12 +11,19 @@ class StoreStockEntryRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('origin') === '') {
+            $this->merge(['origin' => null]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'product_variation_id' => ['required', 'integer', 'exists:product_variations,id'],
             'quantity' => ['required', 'integer', 'min:1'],
-            'origin' => ['required', 'string', 'max:255'],
+            'origin' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -27,7 +34,6 @@ class StoreStockEntryRequest extends FormRequest
             'product_variation_id.exists' => 'Produto não encontrado.',
             'quantity.required' => 'Informe a quantidade recebida.',
             'quantity.min' => 'A quantidade deve ser maior que zero.',
-            'origin.required' => 'Informe a origem da entrada (ex.: fornecedor, nota fiscal).',
         ];
     }
 }
