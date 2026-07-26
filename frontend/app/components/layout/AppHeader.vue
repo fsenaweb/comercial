@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, HelpCircle, LogOut, Search, Settings } from 'lucide-vue-next'
+import { ChevronDown, HelpCircle, LogOut, Settings } from 'lucide-vue-next'
 
 const auth = useAuthStore()
 const menuOpen = ref(false)
@@ -12,12 +12,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <header class="flex items-center justify-between border-b border-border bg-surface-raised px-8 py-3.5">
-    <label class="flex w-full max-w-xs items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-txt-muted">
-      <Search :size="15" />
-      <input type="search" placeholder="Buscar..." class="w-full bg-transparent text-txt-primary placeholder:text-txt-muted focus:outline-none">
-    </label>
-
+  <header class="flex items-center justify-end border-b border-border bg-surface-raised px-8 py-3.5">
     <div v-if="auth.user" class="flex items-center gap-3">
       <button
         type="button"

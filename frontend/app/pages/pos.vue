@@ -165,6 +165,23 @@ watch(highlightedSuggestionIndex, (index) => {
   nextTick(() => suggestionEls[index]?.scrollIntoView({ block: 'nearest' }))
 })
 
+// Dropdown de sugestões é teleportado para o <body> (ver template) e
+// posicionado via coordenadas fixas calculadas a partir do input - assim ele
+// flutua por cima de tudo em vez de ficar preso à largura/overflow da coluna
+// esquerda do PDV (que tinha overflow-y-auto e distorcia o layout quando o
+// dropdown, mais largo que a coluna, forçava scroll horizontal nela).
+const dropdownPosition = ref({ top: 0, left: 0 })
+function updateDropdownPosition() {
+  const el = searchInputRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  dropdownPosition.value = { top: rect.bottom + 6, left: rect.left }
+}
+
+watch(searchSuggestions, (rows) => {
+  if (rows.length > 0) nextTick(updateDropdownPosition)
+})
+
 watch(searchQuery, (query) => {
   if (suggestionsDebounce) clearTimeout(suggestionsDebounce)
   if (foundRow.value || !query.trim()) {
@@ -310,8 +327,16 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleGlobalKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener('scroll', updateDropdownPosition, true)
+  window.addEventListener('resize', updateDropdownPosition)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+  window.removeEventListener('resize', updateDropdownPosition)
+})
 
 // Total da linha já líquido de desconto (mesma conta usada no Resumo da venda) - a
 // linha do carrinho mostrava só unitário × quantidade, sem refletir o desconto do item.
@@ -710,30 +735,33 @@ async function confirmSaveQuote() {
               <X :size="14" />
             </button>
 
-            <div
-              v-if="searchSuggestions.length > 0"
-              class="absolute top-full right-0 left-0 z-10 mt-1.5 max-h-[300px] overflow-y-auto rounded-xl border border-border bg-surface-raised shadow-card"
-            >
-              <button
-                v-for="(row, index) in searchSuggestions"
-                :key="row.key"
-                :ref="(el) => setSuggestionRef(el, index)"
-                type="button"
-                class="flex w-full cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 text-left"
-                :class="index === highlightedSuggestionIndex ? 'bg-brand/15' : 'hover:bg-surface-subtle'"
-                @mouseenter="highlightedSuggestionIndex = index"
-                @click="selectSuggestion(row)"
+            <Teleport to="body">
+              <div
+                v-if="searchSuggestions.length > 0"
+                class="fixed z-50 max-h-[300px] w-[420px] overflow-y-auto rounded-xl border border-border bg-surface-raised shadow-card"
+                :style="{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px` }"
               >
-                <div class="min-w-0">
-                  <p class="truncate text-[13px] font-bold text-txt-primary">{{ row.productName }}</p>
-                  <p class="text-[11px] text-txt-muted">
-                    Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
-                    · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
-                  </p>
-                </div>
-                <span class="flex-none text-[12.5px] font-bold text-txt-secondary">{{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}</span>
-              </button>
-            </div>
+                <button
+                  v-for="(row, index) in searchSuggestions"
+                  :key="row.key"
+                  :ref="(el) => setSuggestionRef(el, index)"
+                  type="button"
+                  class="flex w-full cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 text-left"
+                  :class="index === highlightedSuggestionIndex ? 'bg-brand/15' : 'hover:bg-surface-subtle'"
+                  @mouseenter="highlightedSuggestionIndex = index"
+                  @click="selectSuggestion(row)"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate text-[13px] font-bold text-txt-primary">{{ row.productName }}</p>
+                    <p class="text-[11px] text-txt-muted">
+                      Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
+                      · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
+                    </p>
+                  </div>
+                  <span class="flex-none text-[12.5px] font-bold text-txt-secondary">{{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}</span>
+                </button>
+              </div>
+            </Teleport>
           </label>
 
           <p v-if="!foundRow" class="mb-3 text-[11px] text-txt-muted">Dica: digite <strong class="text-txt-secondary">10*</strong> antes do nome ou código pra incluir 10 unidades de uma vez.</p>

@@ -67,7 +67,12 @@ const gestaoItems = computed(() => [
   { key: 'relatorios', label: 'Relatórios', icon: BarChart3, to: '/reports' },
   ...(auth.isAdmin ? [{ key: 'dados-empresa', label: 'Dados da Empresa', icon: Landmark, to: '/settings/store' }] : []),
   ...(auth.isAdmin ? [{ key: 'usuarios', label: 'Usuários e Permissões', icon: UserCheck, to: '/users' }] : []),
-  ...(auth.isAdmin ? [{ key: 'configuracoes', label: 'Configurações', icon: Settings, to: '/settings/catalog' }] : []),
+  // "Configurações" é o hub de /settings (catálogo, backup...) - o link
+  // navega pro catálogo, mas o item some/desmarca sozinho ao entrar em
+  // Backup e restauração (/settings/backup) porque essa rota é irmã, não
+  // descendente, de /settings/catalog. `activeMatch` cobre as duas rotas
+  // pra manter o grupo aberto e o item destacado nas duas.
+  ...(auth.isAdmin ? [{ key: 'configuracoes', label: 'Configurações', icon: Settings, to: '/settings/catalog', activeMatch: ['/settings/catalog', '/settings/backup'] }] : []),
 ])
 
 const query = computed(() => sidebarQuery.value.trim().toLowerCase())
@@ -78,7 +83,11 @@ function matches(label: string) {
 const isCadastrosActive = computed(() => cadastrosLinks.some((link) => route.path.startsWith(link.to)))
 const isEstoqueActive = computed(() => estoqueLinks.some((link) => route.path.startsWith(link.to)))
 const isFinanceiroActive = computed(() => financeiroLinks.some((link) => route.path.startsWith(link.to)))
-const isGestaoActive = computed(() => gestaoItems.value.some((item) => item.to && route.path.startsWith(item.to)))
+function isGestaoItemActive(item: { to?: string, activeMatch?: string[] }) {
+  if (!item.to) return false
+  return (item.activeMatch ?? [item.to]).some((prefix) => route.path.startsWith(prefix))
+}
+const isGestaoActive = computed(() => gestaoItems.value.some((item) => isGestaoItemActive(item)))
 
 // Só um grupo aberto por vez: abrir um fecha os outros (clique manual) e a
 // navegação ressincroniza pro grupo da rota ativa (ou nenhum, se a página não
@@ -294,8 +303,8 @@ async function handleLogout() {
               v-if="item.to"
               v-show="matches(item.label)"
               :to="item.to"
-              class="flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold text-txt-secondary transition hover:bg-surface-subtle hover:text-txt-primary"
-              active-class="!bg-brand !text-brand-ink !shadow-card"
+              class="flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-semibold transition"
+              :class="isGestaoItemActive(item) ? '!bg-brand !text-brand-ink !shadow-card' : 'text-txt-secondary hover:bg-surface-subtle hover:text-txt-primary'"
             >
               <component :is="item.icon" :size="16" />
               {{ item.label }}
