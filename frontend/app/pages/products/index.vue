@@ -854,10 +854,11 @@ await load()
     </div>
 
     <div class="rounded-2xl border border-border bg-surface-raised shadow-card">
-      <div class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
+      <div class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3.5 text-[11px] font-bold tracking-wide text-txt-secondary uppercase">
         <span>Produto</span>
         <span>Código</span>
         <span>Cód. Interno</span>
+        <span>Localização</span>
         <span>Preço</span>
         <span>Estoque</span>
         <span class="text-right">Ações</span>
@@ -871,7 +872,7 @@ await load()
         v-for="row in filteredRows"
         v-else
         :key="row.key"
-        class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
+        class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center gap-2 border-b border-border px-5 py-3 last:border-0 hover:bg-surface-subtle"
       >
         <span
           class="flex cursor-pointer items-center gap-2 text-sm font-medium text-txt-primary hover:underline"
@@ -882,6 +883,7 @@ await load()
         </span>
         <span class="text-sm text-txt-secondary">{{ row.variation?.code ?? '-' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation?.reference ?? '-' }}</span>
+        <span class="text-sm text-txt-secondary">{{ row.product.location ?? '-' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '-' }}</span>
         <span v-if="row.variation">
           <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
