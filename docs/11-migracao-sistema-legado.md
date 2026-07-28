@@ -118,6 +118,15 @@ scripts/legacy-import/export-firebird.sh backup.fbk
 docker compose exec php-fpm php artisan legacy:import storage/legacy-import
 ```
 
+**Atenção:** o `migrate:fresh --seed` citado em outras partes deste
+documento (ex.: seção de achados abaixo) é exclusivo de teste em
+**desenvolvimento**, usado só pra resetar o banco local antes de validar a
+importação do zero. Ele apaga o banco inteiro — **nunca rodar contra o
+banco da loja já em produção** (apagaria vendas/estoque/caixa reais). O
+passo 3 acima (`legacy:import` direto, sem `migrate:fresh`) é o único
+comando que roda no PC da loja no dia da virada, e é seguro repetir
+(ver "Repetibilidade" abaixo).
+
 O comando `legacy:import` já está versionado no repositório — chega no PC
 da loja via `git pull`/`deploy.bat` normalmente, junto com o resto do
 código. Ordem interna da importação, dentro de uma única

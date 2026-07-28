@@ -82,12 +82,19 @@ Com o Docker Desktop aberto e rodando:
 
 ```
 docker compose up -d
+docker compose exec php-fpm composer install --no-dev --optimize-autoloader
 docker compose exec php-fpm php artisan key:generate
 docker compose exec php-fpm php artisan migrate --seed
 docker compose exec php-fpm php artisan storage:link
 docker compose --profile build run --rm nuxt-build
 ```
 
+- `composer install` é obrigatório aqui: `vendor/` não vai para o Git
+  (`.gitignore`) e a imagem do `php-fpm` só traz o binário do Composer
+  instalado, não as dependências do projeto — como `backend/` é bind mount,
+  elas precisam ser instaladas contra o volume já montado (por isso o comando
+  roda depois do `docker compose up -d`, não antes). Sem esse passo, a tela
+  de login carrega mas qualquer chamada de API dá erro 500 genérico.
 - `migrate --seed` cria o usuário administrador inicial:
   `admin@loja.local` / `password` — **troque essa senha no primeiro login**
   (Administração → Usuários e Permissões).

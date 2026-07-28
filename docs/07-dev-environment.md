@@ -16,6 +16,12 @@ docker compose up -d
 
 # 2. Configura o backend (primeira vez)
 cp backend/.env.example backend/.env
+# vendor/ não vai para o Git (.gitignore) e o Dockerfile só instala o binário
+# do Composer, não roda `install` — backend/ é bind mount, então um
+# `composer install` rodado durante o build da imagem seria sobrescrito pelo
+# conteúdo do host ao subir o container. Por isso roda aqui, contra o volume
+# já montado.
+docker compose exec php-fpm composer install
 docker compose exec php-fpm php artisan key:generate
 docker compose exec php-fpm php artisan migrate --seed   # cria admin@loja.local / password
 docker compose exec php-fpm php artisan storage:link     # symlink pra servir uploads (ex.: logo da loja) via nginx
@@ -78,6 +84,7 @@ O `.env` do backend já reconhece qualquer host graças a `SESSION_DOMAIN=null`;
 | Editou código do front, rodou `docker compose --profile build run --rm nuxt-build`, mas a build servida pelo nginx continua com a versão antiga (chunks `_nuxt/*.js` sem o código novo) | O serviço `nuxt-build` faz `COPY frontend/ ./` **na imagem** Docker (ver `docker/nuxt/Dockerfile`) — não é bind mount do código-fonte. `docker compose run` reusa a imagem já construída, que não sabe dos arquivos novos; às vezes até `docker compose build nuxt-build` (sem `--no-cache`) reaproveita uma camada velha e não pega o `COPY` mais recente. Achado na Sprint 1 depurando por que as telas de cadastro não apareciam mesmo com typecheck/build limpos. | `docker compose build --no-cache nuxt-build` antes de `docker compose --profile build run --rm nuxt-build` quando o código do front mudou desde a última imagem — o `--no-cache` é o que garante que o `COPY` não é pulado |
 | Corrigiu um bug de front, rebuildou, reiniciou o nginx, mas o navegador do usuário final continua reproduzindo o bug antigo | `default.conf` não define `Cache-Control`; sem esse header o navegador aplica cache heurístico e pode continuar servindo o `index.html`/bundle antigos indefinidamente, mesmo com o servidor já atualizado | Corrigido: `/_nuxt/*` (nome com hash de conteúdo) ganhou `Cache-Control: public, max-age=31536000, immutable`; `index.html`/demais rotas ganharam `Cache-Control: no-cache` (sempre revalida). Se o sintoma persistir em uma máquina específica, pedir um hard refresh (`Ctrl+Shift+R`) uma única vez para descartar o cache antigo já guardado antes dessa correção |
 | Login falha com CORS/CSRF ao acessar via nginx (`http://loja.local` ou o host da LAN), mas funcionava antes | `frontend/.env` (criado para o `npm run dev` local, que precisa apontar `NUXT_PUBLIC_API_BASE` para `http://localhost/api`) foi parar dentro da imagem do `nuxt-build` — o `COPY frontend/ ./` do Dockerfile copia esse `.env`, e o `npm run generate` o lê, baking o valor de dev (`localhost`) na build de produção em vez do padrão relativo (`/api`, mesma origem). Causa raiz: `frontend/.env` não estava no `.dockerignore`. | Corrigido: `frontend/.env` adicionado ao `.dockerignore` — a build via Docker nunca mais herda esse arquivo, independente do que estiver configurado localmente para o dev server |
+| Login (ou qualquer chamada de API) dá 500 genérico logo após instalar/atualizar, mesmo com container `php-fpm` no ar | `vendor/` não vai para o Git e o `Dockerfile` não roda `composer install` (só copia o binário) — como `backend/` é bind mount, o `install` precisa rodar contra o volume já montado, não durante o build da imagem | `docker compose exec php-fpm composer install` (dev) ou `composer install --no-dev --optimize-autoloader` (deploy/produção) — já incluído em `deploy.sh`/`deploy.bat` e nos passos de primeira instalação acima e em `10-instalacao-loja.md` |
 | Upload (ex.: logo da loja) salva com sucesso no backend, mas a imagem dá 404 ao carregar pelo nginx | `public/storage` é um symlink (`php artisan storage:link`) pra um caminho **absoluto** (`/var/www/html/storage/app/public`). O container do nginx só montava `backend/public`, não `backend/storage` — o symlink existe mas aponta pra um caminho que não existe dentro do próprio container do nginx | Corrigido: `docker-compose.yml` do serviço `nginx` ganhou um segundo bind mount, `./backend/storage/app/public:/var/www/html/storage/app/public:ro`, além do `location /storage/` em `docker/nginx/default.conf`. Rodar `docker compose up -d nginx` (não só `restart`) depois de puxar essa mudança, pra recriar o container com o volume novo |
 
 ## Deploy / atualização na máquina da loja
@@ -87,6 +94,7 @@ git pull
 # UID é somente-leitura no bash — não dá pra "export"; `env` passa pro processo filho
 env UID=$(id -u) GID=$(id -g) docker compose build
 docker compose up -d
+docker compose exec php-fpm composer install --no-dev --optimize-autoloader
 docker compose exec php-fpm php artisan migrate --force
 docker compose exec php-fpm php artisan storage:link   # idempotente; só precisa na primeira vez
 ./deploy-frontend.sh   # build --no-cache + publica a SPA + restart nginx
