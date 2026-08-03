@@ -547,4 +547,27 @@ class RegisterSaleTest extends TestCase
 
         $response->assertCreated()->assertJsonPath('data.total', '16.00');
     }
+
+    public function test_admin_can_register_a_sale_with_fractional_quantity(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 21.24, 'current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10.62]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 0.5]],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.total', '10.62');
+
+        $this->assertDatabaseHas('sale_items', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 0.5,
+            'total' => '10.62',
+        ]);
+        $this->assertSame('9.500', $variation->fresh()->current_quantity);
+    }
 }

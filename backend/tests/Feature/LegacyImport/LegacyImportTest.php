@@ -57,9 +57,9 @@ class LegacyImportTest extends TestCase
         $this->assertTrue($product->active);
         $this->assertSame('7891234567890', $variation->ean_gtin);
         $this->assertSame('2.25', $variation->sale_price);
-        $this->assertSame(100, $variation->current_quantity);
+        $this->assertSame('100.000', $variation->current_quantity);
         $this->assertSame('2.00', $variation->wholesale_price);
-        $this->assertSame(12, $variation->wholesale_min_qty);
+        $this->assertSame('12.000', $variation->wholesale_min_qty);
         $this->assertNotNull($product->brand_id);
         // CODIGO legado (único no sistema de origem) vira `code`, o
         // identificador único do sistema; REFERENCIA vira `reference`, campo

@@ -24,7 +24,7 @@ class AdjustStockTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.type', 'adjustment')
-            ->assertJsonPath('data.quantity', 5)
+            ->assertJsonPath('data.quantity', '5.000')
             ->assertJsonPath('data.origin', 'Contagem de inventário');
 
         $this->assertEquals(15, $variation->fresh()->current_quantity);
@@ -46,7 +46,7 @@ class AdjustStockTest extends TestCase
             'reason' => 'Avaria',
         ]);
 
-        $response->assertCreated()->assertJsonPath('data.quantity', -7);
+        $response->assertCreated()->assertJsonPath('data.quantity', '-7.000');
         $this->assertEquals(3, $variation->fresh()->current_quantity);
     }
 
@@ -128,5 +128,27 @@ class AdjustStockTest extends TestCase
         ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors(['product_variation_id']);
+    }
+
+    public function test_admin_can_adjust_stock_to_a_fractional_quantity(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/adjustment', [
+            'product_variation_id' => $variation->id,
+            'new_quantity' => 7.5,
+            'reason' => 'Contagem de inventário',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.quantity', '-2.500');
+
+        $this->assertSame('7.500', $variation->fresh()->current_quantity);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variation_id' => $variation->id,
+            'type' => 'adjustment',
+            'quantity' => -2.5,
+        ]);
     }
 }

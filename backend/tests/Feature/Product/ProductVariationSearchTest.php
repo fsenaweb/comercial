@@ -92,7 +92,7 @@ class ProductVariationSearchTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/product-variations/search?q=Limite');
 
         $response->assertOk()
-            ->assertJsonPath('data.0.max_quantity', 50)
+            ->assertJsonPath('data.0.max_quantity', '50.000')
             ->assertJsonPath('data.0.markup', '30.00');
     }
 

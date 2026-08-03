@@ -18,8 +18,8 @@ interface LowStockItem {
   id: number
   product_name: string
   code: string
-  current_quantity: number
-  min_quantity: number
+  current_quantity: string
+  min_quantity: string
 }
 
 interface Overview {
@@ -39,6 +39,7 @@ interface Overview {
 }
 
 const api = useApi()
+const { formatQuantity } = useQuantityFormat()
 const loading = ref(true)
 const overview = ref<Overview | null>(null)
 const monthCursor = ref(new Date().toISOString().slice(0, 7))
@@ -191,7 +192,7 @@ await load()
             <p class="truncate text-sm font-medium text-txt-primary">{{ item.product_name }}</p>
             <p class="text-[11px] text-txt-muted">Cód. {{ item.code }}</p>
           </div>
-          <span class="shrink-0 text-sm font-bold text-rose-600">{{ item.current_quantity }} / mín. {{ item.min_quantity }}</span>
+          <span class="shrink-0 text-sm font-bold text-rose-600">{{ formatQuantity(item.current_quantity) }} / mín. {{ formatQuantity(item.min_quantity) }}</span>
         </div>
       </div>
     </template>

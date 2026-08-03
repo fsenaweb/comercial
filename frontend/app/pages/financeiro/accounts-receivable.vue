@@ -18,7 +18,7 @@ interface AccountEntryItem {
   product_variation_id: number
   product_name: string | null
   product_code: string | null
-  quantity: number
+  quantity: string
   unit_price: string
   discount_type: DiscountType
   discount_value: string
@@ -71,6 +71,7 @@ const api = useApi()
 const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
 const { maskInput, toNumber, format } = useCurrencyMask()
+const { formatQuantity } = useQuantityFormat()
 
 const view = ref<'list' | 'detail'>('list')
 const loading = ref(true)
@@ -266,7 +267,7 @@ function openEditModal(entry: AccountEntry) {
       selected: null,
       itemId: item.id,
       productLabel: `${item.product_name} (Cód. ${item.product_code})`,
-      quantity: item.quantity,
+      quantity: Number(item.quantity),
       unitPriceMasked: format(Math.round(Number(item.unit_price) * 100)),
       discountType: item.discount_type,
       discountValue: Number(item.discount_value),
@@ -448,7 +449,7 @@ await loadAll()
 
           <div v-if="entry.items.length > 0" class="mt-3 space-y-1 border-t border-border pt-3">
             <div v-for="item in entry.items" :key="item.id" class="flex items-center justify-between gap-3 text-xs text-txt-secondary">
-              <span class="truncate">{{ item.quantity }}x {{ item.product_name }} <span class="text-txt-muted">(Cód. {{ item.product_code }})</span></span>
+              <span class="truncate">{{ formatQuantity(item.quantity) }}x {{ item.product_name }} <span class="text-txt-muted">(Cód. {{ item.product_code }})</span></span>
               <span class="shrink-0 font-medium text-txt-primary">{{ formatAmount(item.total) }}</span>
             </div>
             <p v-if="entry.discount && Number(entry.discount) > 0" class="text-right text-[11px] text-emerald-700">Desconto geral: −{{ formatAmount(entry.discount) }}</p>

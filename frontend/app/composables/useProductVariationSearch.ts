@@ -5,10 +5,10 @@ export interface ProductVariation {
   ean_gtin: string | null
   code: string
   sale_price: string
-  current_quantity: number
-  max_quantity: number | null
+  current_quantity: string
+  max_quantity: string | null
   markup: string | null
-  wholesale_min_qty: number | null
+  wholesale_min_qty: string | null
   wholesale_price: string | null
 }
 

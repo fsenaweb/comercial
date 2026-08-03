@@ -191,7 +191,7 @@ class ImportLegacyDataCommand extends Command
 
             if ($variation) {
                 $variation->product->update($productAttributes);
-                $oldQuantity = $variation->current_quantity;
+                $oldQuantity = (int) round((float) $variation->current_quantity);
                 $variation->update($variationAttributes);
                 if ($oldQuantity !== $newQuantity) {
                     StockMovement::create([

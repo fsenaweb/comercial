@@ -33,7 +33,7 @@ class StoreQuoteRequest extends FormRequest
                 'required', 'integer',
                 Rule::exists('product_variations', 'id')->whereNull('deleted_at'),
             ],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.apply_wholesale' => ['nullable', 'boolean'],
             'items.*.discount_type' => ['nullable', Rule::in(['fixed', 'percentage'])],
             'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],

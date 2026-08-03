@@ -6,6 +6,14 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 
 ## [Unreleased]
 
+### Adicionado
+- Suporte a quantidade fracionada de produto (ex. meia unidade de eletrodo, peso em kg), ponta a ponta: PDV (carrinho, modal "Adicionar item" com máscara decimal), venda, orçamento, ajuste/entrada de estoque, crediário e kardex. Colunas de quantidade (`sale_items`, `stock_movements`, `account_entry_items`, `product_variations`) migradas de `integer` para `numeric(12,3)`.
+
+### Corrigido
+- PDV: quantidade fracionada digitada no modal "Adicionar item" (ex. "0,5") não era mais forçada para "1" ao incluir no carrinho.
+- Importação do sistema legado: reimportação não cria mais um ajuste de estoque espúrio a cada execução (comparação de quantidade quebrada pela mudança de tipo, corrigida).
+- Import de NFe: quantidade fracionária (ex. peso em kg) não é mais truncada ao entrar no estoque.
+
 ## [1.0.0] - 2026-08-03
 
 Primeira versão estável em produção na loja (JP Parafusos e Acessórios). Marca o baseline antes da implementação de quantidade fracionada de produto — ponto de retorno seguro caso essa mudança de schema precise ser revertida.

@@ -15,7 +15,7 @@ class AdjustStockRequest extends FormRequest
     {
         return [
             'product_variation_id' => ['required', 'integer', 'exists:product_variations,id'],
-            'new_quantity' => ['required', 'integer', 'min:0'],
+            'new_quantity' => ['required', 'numeric', 'min:0'],
             'reason' => ['required', 'string', 'max:255'],
         ];
     }

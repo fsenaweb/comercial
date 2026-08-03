@@ -12,7 +12,7 @@ interface SaleItemDetail {
   id: number
   product_name: string | null
   product_code: string | null
-  quantity: number
+  quantity: string
   unit_price: string
   discount: string
   total: string
@@ -41,6 +41,7 @@ const store = useCashRegisterStore()
 const auth = useAuthStore()
 const { parse, firstFieldError } = useApiError()
 const { maskInput: maskCurrency, toNumber, format } = useCurrencyMask()
+const { formatQuantity } = useQuantityFormat()
 
 const canOperate = computed(() => auth.user?.role === 'admin' || auth.user?.role === 'cashier')
 
@@ -547,7 +548,7 @@ await loadAll()
               <p class="truncate font-semibold text-txt-primary">{{ item.product_name ?? '-' }}</p>
               <p class="text-[11px] text-txt-muted">Cód. {{ item.product_code ?? '-' }}</p>
             </div>
-            <span class="text-center text-txt-secondary">{{ item.quantity }}</span>
+            <span class="text-center text-txt-secondary">{{ formatQuantity(item.quantity) }}</span>
             <span class="text-right text-txt-secondary">{{ formatAmount(item.unit_price) }}</span>
             <span class="text-right font-semibold text-txt-primary">{{ formatAmount(item.total) }}</span>
           </div>

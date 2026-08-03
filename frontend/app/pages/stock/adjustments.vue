@@ -7,6 +7,7 @@ type SkuOption = ProductVariationRow
 const api = useApi()
 const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
+const { formatQuantity } = useQuantityFormat()
 
 const selected = ref<SkuOption | null>(null)
 const newQuantity = ref<number | null>(null)
@@ -17,7 +18,7 @@ const successMessage = ref<string | null>(null)
 
 function selectSku(row: SkuOption) {
   selected.value = row
-  newQuantity.value = row.variation.current_quantity
+  newQuantity.value = Number(row.variation.current_quantity)
   error.value = null
   successMessage.value = null
 }
@@ -70,14 +71,14 @@ function clearSelection() {
 
 const delta = computed(() => {
   if (!selected.value || newQuantity.value === null) return 0
-  return newQuantity.value - selected.value.variation.current_quantity
+  return newQuantity.value - Number(selected.value.variation.current_quantity)
 })
 
 const excessWarning = computed(() => {
   if (!selected.value || newQuantity.value === null) return null
   const max = selected.value.variation.max_quantity
-  if (max === null || newQuantity.value <= max) return null
-  return `Estoque máximo cadastrado é ${max} - este ajuste deixará o saldo acima do limite.`
+  if (max === null || newQuantity.value <= Number(max)) return null
+  return `Estoque máximo cadastrado é ${formatQuantity(max)} - este ajuste deixará o saldo acima do limite.`
 })
 
 async function handleSubmit() {
@@ -147,10 +148,11 @@ async function handleSubmit() {
             </div>
 
             <div class="mt-4 grid grid-cols-2 gap-4">
-              <BaseInput :model-value="selected.variation.current_quantity" label="Quantidade atual" disabled />
+              <BaseInput :model-value="formatQuantity(selected.variation.current_quantity)" label="Quantidade atual" disabled />
               <BaseInput
                 :model-value="newQuantity"
                 type="number"
+                step="any"
                 label="Quantidade contada"
                 :error="firstFieldError(error, 'new_quantity')"
                 @update:model-value="newQuantity = $event === '' ? null : Math.max(0, Number($event))"
@@ -213,7 +215,7 @@ async function handleSubmit() {
         >
           <div class="min-w-0">
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
-            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ row.variation.current_quantity }} em estoque</p>
+            <p class="text-[11.5px] text-txt-muted">Cód. {{ row.variation.code }} · {{ formatQuantity(row.variation.current_quantity) }} em estoque</p>
           </div>
           <BaseButton :block="false" @click.stop="choosePickerRow(row)">Escolher</BaseButton>
         </div>

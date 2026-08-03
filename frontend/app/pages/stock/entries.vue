@@ -8,7 +8,7 @@ interface StockMovement {
   id: number
   product_name: string | null
   product_code: string | null
-  quantity: number
+  quantity: string
   origin: string | null
   user_name: string | null
   created_at: string
@@ -23,6 +23,7 @@ interface FormItem {
 const api = useApi()
 const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
+const { formatQuantity } = useQuantityFormat()
 
 const entries = ref<StockMovement[]>([])
 const loading = ref(true)
@@ -131,9 +132,10 @@ function excessWarning(item: FormItem): string | null {
   if (!item.selected || !item.quantity) return null
   const max = item.selected.variation.max_quantity
   if (max === null) return null
-  const resulting = item.selected.variation.current_quantity + item.quantity
-  if (resulting <= max) return null
-  return `Estoque máximo cadastrado é ${max} - esta entrada deixará o saldo em ${resulting} (acima do limite).`
+  const maxNumber = Number(max)
+  const resulting = Number(item.selected.variation.current_quantity) + item.quantity
+  if (resulting <= maxNumber) return null
+  return `Estoque máximo cadastrado é ${formatQuantity(max)} - esta entrada deixará o saldo em ${formatQuantity(resulting)} (acima do limite).`
 }
 
 async function handleSubmit() {
@@ -207,7 +209,7 @@ await loadAll()
             <p class="truncate text-sm font-medium text-txt-primary">{{ entry.product_name ?? '-' }}</p>
             <p class="text-[11px] text-txt-muted">Cód. {{ entry.product_code ?? '-' }}</p>
           </div>
-          <span class="text-right text-sm font-bold text-emerald-700">+{{ entry.quantity }}</span>
+          <span class="text-right text-sm font-bold text-emerald-700">+{{ formatQuantity(entry.quantity) }}</span>
           <button type="button" class="min-w-0 cursor-pointer truncate text-left text-sm text-txt-secondary hover:text-txt-primary hover:underline" @click="openOriginModal(entry)">
             {{ entry.origin ?? '-' }}
           </button>
@@ -270,7 +272,7 @@ await loadAll()
                   <button type="button" class="shrink-0 cursor-pointer text-xs font-semibold text-brand" @click="item.selected = null">Trocar</button>
                 </div>
               </div>
-              <BaseInput v-model.number="item.quantity" type="number" label="Quantidade recebida" />
+              <BaseInput v-model.number="item.quantity" type="number" step="any" label="Quantidade recebida" />
             </div>
             <p v-if="excessWarning(item)" class="mt-2 flex items-center gap-1.5 text-xs text-sky-700">
               <AlertTriangle :size="13" class="shrink-0" />
@@ -335,7 +337,7 @@ await loadAll()
         <div class="grid grid-cols-2 gap-3 border-t border-border pt-3 text-txt-secondary">
           <span>Produto: <strong class="text-txt-primary">{{ originModalEntry.product_name ?? '-' }}</strong></span>
           <span>Data: <strong class="text-txt-primary">{{ formatDateTime(originModalEntry.created_at) }}</strong></span>
-          <span>Quantidade: <strong class="text-emerald-700">+{{ originModalEntry.quantity }}</strong></span>
+          <span>Quantidade: <strong class="text-emerald-700">+{{ formatQuantity(originModalEntry.quantity) }}</strong></span>
           <span>Usuário: <strong class="text-txt-primary">{{ originModalEntry.user_name ?? '-' }}</strong></span>
         </div>
       </div>

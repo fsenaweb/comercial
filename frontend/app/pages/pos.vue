@@ -47,6 +47,8 @@ const { parse, firstFieldError } = useApiError()
 const { printFormatDialog } = usePrintFormatDialog()
 const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurrency } = useCurrencyMask()
 const { maskInput: maskCep } = useCepMask()
+const { maskInput: maskQty, formatOnBlur: formatQtyBlur, toNumber: qtyToNumber } = useQuantityMask()
+const { formatQuantity } = useQuantityFormat()
 
 const loading = ref(true)
 const { findExact, search: searchProductVariations } = useProductVariationSearch()
@@ -89,8 +91,13 @@ const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const autoAdd = ref(true)
 const foundRow = ref<SkuRow | null>(null)
-const pendingQty = ref(1)
+const pendingQtyMasked = ref('1,00')
+const pendingQty = computed(() => qtyToNumber(pendingQtyMasked.value))
 const pendingUnitMasked = ref('R$ 0,00')
+
+function setPendingQty(value: number) {
+  pendingQtyMasked.value = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 function focusSearch() {
   searchInputRef.value?.focus()
@@ -99,7 +106,7 @@ function focusSearch() {
 function resetSearch() {
   searchQuery.value = ''
   foundRow.value = null
-  pendingQty.value = 1
+  setPendingQty(1)
   pendingUnitMasked.value = 'R$ 0,00'
 }
 
@@ -115,7 +122,7 @@ function resetSearch() {
 function handleSearchInput(event: Event) {
   if (foundRow.value) {
     foundRow.value = null
-    pendingQty.value = 1
+    setPendingQty(1)
     pendingUnitMasked.value = 'R$ 0,00'
   }
   searchQuery.value = (event.target as HTMLInputElement).value
@@ -128,8 +135,8 @@ function addRowToCart(row: SkuRow, quantity: number, unitPrice?: number) {
     variationLabel: row.variationLabel,
     productCode: row.variation.code,
     salePrice: unitPrice ?? Number(row.variation.sale_price),
-    currentQuantity: row.variation.current_quantity,
-    wholesaleMinQty: row.variation.wholesale_min_qty,
+    currentQuantity: Number(row.variation.current_quantity),
+    wholesaleMinQty: row.variation.wholesale_min_qty !== null ? Number(row.variation.wholesale_min_qty) : null,
     wholesalePrice: row.variation.wholesale_price !== null ? Number(row.variation.wholesale_price) : null,
   }, quantity)
 }
@@ -204,7 +211,7 @@ function selectSuggestion(row: SkuRow) {
   foundRow.value = row
   searchQuery.value = row.productName
   searchSuggestions.value = []
-  pendingQty.value = qty
+  setPendingQty(qty)
   pendingUnitMasked.value = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
 }
 
@@ -231,7 +238,7 @@ async function handleSearchKeydown(event: KeyboardEvent) {
       resetSearch()
     } else {
       foundRow.value = exact
-      pendingQty.value = qty
+      setPendingQty(qty)
       pendingUnitMasked.value = maskCurrency(String(Math.round(Number(exact.variation.sale_price) * 100)))
     }
     return
@@ -246,7 +253,7 @@ async function handleSearchKeydown(event: KeyboardEvent) {
   const [fuzzy] = await searchProductVariations(term, 1)
   if (fuzzy) {
     foundRow.value = fuzzy
-    pendingQty.value = qty
+    setPendingQty(qty)
     pendingUnitMasked.value = maskCurrency(String(Math.round(Number(fuzzy.variation.sale_price) * 100)))
   }
 }
@@ -254,8 +261,8 @@ async function handleSearchKeydown(event: KeyboardEvent) {
 const pendingTotalFmt = computed(() => formatCurrency(Math.round(currencyToNumber(pendingUnitMasked.value) * pendingQty.value * 100)))
 
 function handleIncluirItem() {
-  if (!foundRow.value) return
-  addRowToCart(foundRow.value, Math.max(1, pendingQty.value), currencyToNumber(pendingUnitMasked.value))
+  if (!foundRow.value || pendingQty.value <= 0) return
+  addRowToCart(foundRow.value, pendingQty.value, currencyToNumber(pendingUnitMasked.value))
   resetSearch()
   focusSearch()
 }
@@ -288,7 +295,7 @@ function openProductPicker() {
 function chooseProductFromPicker(row: SkuRow) {
   foundRow.value = row
   searchQuery.value = row.productName
-  pendingQty.value = 1
+  setPendingQty(1)
   pendingUnitMasked.value = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
   showProductPicker.value = false
 }
@@ -755,7 +762,7 @@ async function confirmSaveQuote() {
                     <p class="truncate text-[13px] font-bold text-txt-primary">{{ row.productName }}</p>
                     <p class="text-[11px] text-txt-muted">
                       Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
-                      · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
+                      · <span :class="Number(row.variation.current_quantity) > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ formatQuantity(row.variation.current_quantity) }} em estoque</span>
                     </p>
                   </div>
                   <span class="flex-none text-[12.5px] font-bold text-txt-secondary">{{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}</span>
@@ -770,18 +777,25 @@ async function confirmSaveQuote() {
             <p class="text-[13.5px] font-bold text-txt-primary">{{ foundRow.productName }}</p>
             <p class="mb-3 text-[11.5px] text-txt-muted">
               Cód. {{ foundRow.variation.code }}
-              · <span :class="foundRow.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ foundRow.variation.current_quantity }} em estoque</span>
+              · <span :class="Number(foundRow.variation.current_quantity) > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ formatQuantity(foundRow.variation.current_quantity) }} em estoque</span>
             </p>
 
             <div class="mb-2.5 grid grid-cols-2 gap-2.5">
               <div>
                 <label class="text-[9.5px] font-bold tracking-wide text-txt-muted uppercase">Qtd.</label>
                 <div class="mt-1.5 flex items-center gap-1.5">
-                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty = Math.max(1, pendingQty - 1)">
+                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="setPendingQty(Math.max(1, pendingQty - 1))">
                     <Minus :size="13" />
                   </button>
-                  <input v-model.number="pendingQty" type="number" min="1" class="w-full rounded-lg border border-border px-1 py-1 text-center text-sm">
-                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="pendingQty += 1">
+                  <input
+                    :value="pendingQtyMasked"
+                    type="text"
+                    inputmode="decimal"
+                    class="w-full rounded-lg border border-border px-1 py-1 text-center text-sm"
+                    @input="pendingQtyMasked = maskQty(($event.target as HTMLInputElement).value)"
+                    @blur="pendingQtyMasked = formatQtyBlur(pendingQtyMasked)"
+                  >
+                  <button type="button" class="cursor-pointer flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-border text-txt-secondary" @click="setPendingQty(pendingQty + 1)">
                     <Plus :size="13" />
                   </button>
                 </div>
@@ -802,7 +816,7 @@ async function confirmSaveQuote() {
               <span class="text-[15px] font-bold text-emerald-600">{{ pendingTotalFmt }}</span>
             </div>
 
-            <BaseButton :block="true" @click="handleIncluirItem">
+            <BaseButton :block="true" :disabled="pendingQty <= 0" @click="handleIncluirItem">
               <Plus :size="15" />
               Incluir item
             </BaseButton>
@@ -858,7 +872,7 @@ async function confirmSaveQuote() {
               </div>
             </div>
             <span class="rounded-full bg-surface-subtle px-3 py-1 text-xs font-bold text-txt-secondary">
-              {{ cart.itemCount }} {{ cart.itemCount === 1 ? 'item' : 'itens' }}
+              {{ formatQuantity(cart.itemCount) }} {{ cart.itemCount === 1 ? 'item' : 'itens' }}
             </span>
           </div>
 
@@ -892,7 +906,7 @@ async function confirmSaveQuote() {
                     @change="cart.setItemWholesale(item.key, ($event.target as HTMLInputElement).checked)"
                   >
                   <span class="text-[11.5px] font-semibold text-txt-secondary">
-                    Atacado ({{ formatCurrency(Math.round(item.wholesalePrice * 100)) }} a partir de {{ item.wholesaleMinQty }} un.)
+                    Atacado ({{ formatCurrency(Math.round(item.wholesalePrice * 100)) }} a partir de {{ formatQuantity(item.wholesaleMinQty) }} un.)
                   </span>
                 </label>
               </div>
@@ -900,7 +914,14 @@ async function confirmSaveQuote() {
                 <button type="button" class="cursor-pointer flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity - 1)">
                   <Minus :size="13" />
                 </button>
-                <span class="w-7 text-center text-[17px] font-bold text-txt-primary">{{ item.quantity }}</span>
+                <input
+                  :value="formatQuantity(item.quantity)"
+                  type="text"
+                  inputmode="decimal"
+                  class="w-12 rounded-lg border border-border px-1 py-1 text-center text-[15px] font-bold text-txt-primary"
+                  @input="($event.target as HTMLInputElement).value = maskQty(($event.target as HTMLInputElement).value)"
+                  @blur="cart.updateQuantity(item.key, qtyToNumber(($event.target as HTMLInputElement).value))"
+                >
                 <button type="button" class="cursor-pointer flex h-7 w-7 items-center justify-center rounded-lg border border-border text-txt-secondary" @click="cart.updateQuantity(item.key, item.quantity + 1)">
                   <Plus :size="13" />
                 </button>
@@ -1146,7 +1167,7 @@ async function confirmSaveQuote() {
             <p class="truncate text-sm font-bold text-txt-primary">{{ row.productName }}</p>
             <p class="text-[11.5px] text-txt-muted">
               Cód. {{ row.variation.code }}<span v-if="row.variationLabel"> · {{ row.variationLabel }}</span>
-              · <span :class="row.variation.current_quantity > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ row.variation.current_quantity }} em estoque</span>
+              · <span :class="Number(row.variation.current_quantity) > 0 ? 'text-txt-muted' : 'font-semibold text-rose-600'">{{ formatQuantity(row.variation.current_quantity) }} em estoque</span>
               · {{ formatCurrency(Math.round(Number(row.variation.sale_price) * 100)) }}
             </p>
           </div>

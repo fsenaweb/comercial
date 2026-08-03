@@ -170,4 +170,31 @@ class ImportNfeStockEntryTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_fractional_quantity_is_not_truncated(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->admin()->create();
+        $supplier = Supplier::factory()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 5]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-entries', [
+            'supplier_id' => $supplier->id,
+            'nfe_number' => '1234',
+            'products_total' => 50,
+            'total_value' => 50,
+            'items' => [
+                ['product_variation_id' => $variation->id, 'quantity' => 2.5, 'unit_cost' => 20, 'update_cost' => false],
+            ],
+        ]);
+
+        $response->assertCreated();
+        $this->assertSame('7.500', $variation->fresh()->current_quantity);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variation_id' => $variation->id,
+            'origin' => 'stock_entry',
+            'type' => 'in',
+            'quantity' => 2.5,
+        ]);
+    }
 }

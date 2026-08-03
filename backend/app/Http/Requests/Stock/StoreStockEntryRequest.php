@@ -22,7 +22,7 @@ class StoreStockEntryRequest extends FormRequest
     {
         return [
             'product_variation_id' => ['required', 'integer', 'exists:product_variations,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'numeric', 'min:0.01'],
             'origin' => ['nullable', 'string', 'max:255'],
         ];
     }
