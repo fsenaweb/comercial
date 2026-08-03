@@ -570,4 +570,49 @@ class RegisterSaleTest extends TestCase
         ]);
         $this->assertSame('9.500', $variation->fresh()->current_quantity);
     }
+
+    public function test_admin_can_register_a_sale_with_fixed_markup_on_an_item(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 15]],
+            'items' => [[
+                'product_variation_id' => $variation->id,
+                'quantity' => 1,
+                'discount_type' => 'fixed',
+                'discount_value' => -5,
+            ]],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.total', '15.00');
+        $this->assertDatabaseHas('sale_items', [
+            'product_variation_id' => $variation->id,
+            'discount_value' => -5,
+            'total' => '15.00',
+        ]);
+    }
+
+    public function test_admin_can_register_a_sale_with_percentage_markup_on_the_total_without_admin_password(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 10]);
+
+        // 500% de acréscimo - bem acima do teto de 20% que existe pro
+        // desconto, mas o acréscimo é livre por decisão do cliente
+        // (2026-08-03): nunca deve pedir admin_password.
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 120]],
+            'discount_type' => 'percentage',
+            'discount_value' => -500,
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.total', '120.00');
+    }
 }

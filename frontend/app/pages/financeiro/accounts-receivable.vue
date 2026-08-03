@@ -505,8 +505,8 @@ await loadAll()
                 <BaseInput v-model.number="item.quantity" type="number" min="1" label="Quantidade" />
                 <BaseInput :model-value="item.unitPriceMasked" label="Preço unitário" @update:model-value="item.unitPriceMasked = maskInput($event)" />
                 <div>
-                  <span class="mb-1 block text-sm font-medium text-txt-secondary">Desconto do item</span>
-                  <DiscountInput :type="item.discountType" :value="item.discountValue" @update:type="item.discountType = $event" @update:value="item.discountValue = $event" />
+                  <span class="mb-1 block text-sm font-medium text-txt-secondary">Desconto/Acréscimo do item</span>
+                  <PriceAdjustmentInput :type="item.discountType" :value="item.discountValue" @update:type="item.discountType = $event" @update:value="item.discountValue = $event" />
                 </div>
               </div>
               <p class="text-right text-xs font-semibold text-txt-secondary">Total do item: {{ formatAmount(itemLineTotal(item) / 100) }}</p>
@@ -516,8 +516,8 @@ await loadAll()
 
         <div class="rounded-xl border border-border p-4">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium text-txt-secondary">Desconto geral</span>
-            <DiscountInput :type="formDiscountType" :value="formDiscountValue" @update:type="formDiscountType = $event" @update:value="formDiscountValue = $event" />
+            <span class="text-sm font-medium text-txt-secondary">Desconto/Acréscimo geral</span>
+            <PriceAdjustmentInput :type="formDiscountType" :value="formDiscountValue" @update:type="formDiscountType = $event" @update:value="formDiscountValue = $event" />
           </div>
           <div class="mt-3 flex justify-between border-t border-border pt-3 text-sm">
             <span class="text-txt-secondary">Subtotal</span>
@@ -551,8 +551,8 @@ await loadAll()
           <div class="grid grid-cols-2 gap-3">
             <BaseInput :model-value="item.unitPriceMasked" label="Preço unitário" @update:model-value="item.unitPriceMasked = maskInput($event)" />
             <div>
-              <span class="mb-1 block text-sm font-medium text-txt-secondary">Desconto do item</span>
-              <DiscountInput :type="item.discountType" :value="item.discountValue" @update:type="item.discountType = $event" @update:value="item.discountValue = $event" />
+              <span class="mb-1 block text-sm font-medium text-txt-secondary">Desconto/Acréscimo do item</span>
+              <PriceAdjustmentInput :type="item.discountType" :value="item.discountValue" @update:type="item.discountType = $event" @update:value="item.discountValue = $event" />
             </div>
           </div>
           <p class="mt-2 text-right text-xs font-semibold text-txt-secondary">Total do item: {{ formatAmount(itemLineTotal(item) / 100) }}</p>
@@ -560,8 +560,8 @@ await loadAll()
 
         <div class="rounded-xl border border-border p-4">
           <div class="flex items-center justify-between gap-4">
-            <span class="text-sm font-medium text-txt-secondary">Desconto geral</span>
-            <DiscountInput :type="formDiscountType" :value="formDiscountValue" @update:type="formDiscountType = $event" @update:value="formDiscountValue = $event" />
+            <span class="text-sm font-medium text-txt-secondary">Desconto/Acréscimo geral</span>
+            <PriceAdjustmentInput :type="formDiscountType" :value="formDiscountValue" @update:type="formDiscountType = $event" @update:value="formDiscountValue = $event" />
           </div>
           <div class="mt-3 flex justify-between border-t border-border pt-3 text-base font-bold">
             <span class="text-txt-primary">Novo total da compra</span>

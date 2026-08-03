@@ -89,6 +89,8 @@
         <tr><td>Subtotal</td><td class="right">R$ {{ number_format($sale->subtotal, 2, ',', '.') }}</td></tr>
         @if ($sale->discount > 0)
             <tr><td>Desconto</td><td class="right">- R$ {{ number_format($sale->discount, 2, ',', '.') }}</td></tr>
+        @elseif ($sale->discount < 0)
+            <tr><td>Acréscimo</td><td class="right">+ R$ {{ number_format(abs($sale->discount), 2, ',', '.') }}</td></tr>
         @endif
         <tr class="bold"><td>Total</td><td class="right">R$ {{ number_format($sale->total, 2, ',', '.') }}</td></tr>
     </table>

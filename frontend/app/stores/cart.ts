@@ -175,11 +175,14 @@ export const useCartStore = defineStore('cart', {
       if (item) item.quantity = quantity
     },
 
+    // value pode ser negativo - representa acréscimo em vez de desconto (ver
+    // PriceAdjustmentInput.vue e ResolvesDiscounts::resolveDiscountAmount no
+    // backend, que já soma quando o desconto é negativo).
     updateItemDiscount(key: string, type: DiscountType, value: number) {
       const item = this.items.find((i) => i.key === key)
       if (item) {
         item.discountType = type
-        item.discountValue = Math.max(0, value)
+        item.discountValue = value
       }
     },
 
@@ -229,9 +232,11 @@ export const useCartStore = defineStore('cart', {
       line.amount = Math.max(0, Math.round((line.amount + this.remainingBalance) * 100) / 100)
     },
 
+    // value pode ser negativo - representa acréscimo em vez de desconto (ver
+    // updateItemDiscount acima).
     setSaleDiscount(type: DiscountType, value: number) {
       this.saleDiscountType = type
-      this.saleDiscountValue = Math.max(0, value)
+      this.saleDiscountValue = value
     },
 
     setNotes(value: string | null) {

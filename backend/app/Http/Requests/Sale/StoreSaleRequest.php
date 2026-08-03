@@ -27,8 +27,11 @@ class StoreSaleRequest extends FormRequest
             ],
             'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
             'discount_type' => ['nullable', Rule::in(['fixed', 'percentage'])],
+            // Sem 'min:0': valor negativo é acréscimo (soma em vez de subtrair,
+            // ver ResolvesDiscounts::resolveDiscountAmount) - livre, sem teto,
+            // decisão do cliente (2026-08-03).
             'discount_value' => [
-                'nullable', 'numeric', 'min:0',
+                'nullable', 'numeric',
                 Rule::when(($this->input('discount_type') ?? 'fixed') === 'percentage', ['max:100']),
             ],
             'admin_password' => ['nullable', 'string'],
@@ -41,7 +44,7 @@ class StoreSaleRequest extends FormRequest
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.apply_wholesale' => ['nullable', 'boolean'],
             'items.*.discount_type' => ['nullable', Rule::in(['fixed', 'percentage'])],
-            'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],
+            'items.*.discount_value' => ['nullable', 'numeric'],
             'items.*' => [
                 function ($attribute, $value, $fail) {
                     $type = $value['discount_type'] ?? 'fixed';
