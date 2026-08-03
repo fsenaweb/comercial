@@ -176,4 +176,29 @@ class CancelSaleTest extends TestCase
             \App\Models\CashOperation::where('reference_id', $saleId)->where('type', 'out')->count(),
         );
     }
+
+    public function test_canceling_a_sale_with_fractional_quantity_reverts_exact_fraction_to_stock(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 21.24, 'current_quantity' => 10]);
+
+        $saleId = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10.62]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 0.5]],
+        ])->json('data.id');
+
+        $this->assertSame('9.500', $variation->fresh()->current_quantity);
+
+        $response = $this->actingAs($admin)->postJson("/api/sales/{$saleId}/cancel", ['reason' => 'Erro de digitação']);
+
+        $response->assertOk();
+        $this->assertSame('10.000', $variation->fresh()->current_quantity);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variation_id' => $variation->id,
+            'type' => 'in',
+            'quantity' => 0.5,
+        ]);
+    }
 }

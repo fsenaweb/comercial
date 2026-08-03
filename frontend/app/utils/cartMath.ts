@@ -29,7 +29,7 @@ function discountAmountCents(baseCents: number, type: DiscountType, value: numbe
 }
 
 export function lineTotalCents(line: CartLineInput): number {
-  const gross = toCents(line.unitPrice) * line.quantity
+  const gross = Math.round(toCents(line.unitPrice) * line.quantity)
   const discount = discountAmountCents(gross, line.discountType, line.discountValue)
 
   return Math.max(0, gross - discount)

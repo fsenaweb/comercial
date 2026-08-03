@@ -5,6 +5,7 @@ const props = defineProps<{
   modelValue: string | number | null
   label: string
   type?: string
+  step?: string | number
   error?: string | null
   autocomplete?: string
   icon?: Component
@@ -40,6 +41,7 @@ async function handleInput(event: Event) {
       </span>
       <input
         :type="type ?? 'text'"
+        :step="step"
         :value="modelValue"
         :autocomplete="autocomplete"
         :disabled="disabled"

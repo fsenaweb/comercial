@@ -38,10 +38,10 @@ class ProductVariation extends Model
             'cost_price' => 'decimal:2',
             'markup' => 'decimal:2',
             'sale_price' => 'decimal:2',
-            'current_quantity' => 'integer',
-            'min_quantity' => 'integer',
-            'max_quantity' => 'integer',
-            'wholesale_min_qty' => 'integer',
+            'current_quantity' => 'decimal:3',
+            'min_quantity' => 'decimal:3',
+            'max_quantity' => 'decimal:3',
+            'wholesale_min_qty' => 'decimal:3',
             'wholesale_price' => 'decimal:2',
         ];
     }

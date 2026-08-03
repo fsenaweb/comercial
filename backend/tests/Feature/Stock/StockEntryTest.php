@@ -24,7 +24,7 @@ class StockEntryTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.type', 'in')
-            ->assertJsonPath('data.quantity', 25)
+            ->assertJsonPath('data.quantity', '25.000')
             ->assertJsonPath('data.origin', 'Compra NF 1234 - Fornecedor XPTO');
 
         $this->assertEquals(35, $variation->fresh()->current_quantity);
@@ -117,5 +117,20 @@ class StockEntryTest extends TestCase
         ]);
 
         $response->assertCreated()->assertJsonPath('data.origin', null);
+    }
+
+    public function test_admin_can_register_a_fractional_stock_entry(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create(['current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/entries', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 2.5,
+            'origin' => 'Compra fracionada',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.quantity', '2.500');
+        $this->assertSame('12.500', $variation->fresh()->current_quantity);
     }
 }

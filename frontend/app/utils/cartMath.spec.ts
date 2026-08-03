@@ -43,4 +43,17 @@ describe('cartMath', () => {
     // usuário, 2026-07-19: a fração de centavo fica sempre com a loja).
     expect(saleTotalCents(1290, 'percentage', 15)).toBe(1097)
   })
+
+  it('computes a line total with a fractional quantity', () => {
+    // 0,5 x R$21,24 = R$10,62 (bug motivador: metade de unidade de eletrodo)
+    expect(lineTotalCents({ unitPrice: 21.24, quantity: 0.5, discountType: 'fixed', discountValue: 0 })).toBe(1062)
+  })
+
+  it('rounds a fractional quantity that would otherwise land on half a cent', () => {
+    // 0,5 x R$10,99 = R$5,495 - precisa arredondar pro centavo mais próximo
+    // (549 ou 550), nunca deixar sobrar ".5" de centavo fracionado.
+    const result = lineTotalCents({ unitPrice: 10.99, quantity: 0.5, discountType: 'fixed', discountValue: 0 })
+    expect(Number.isInteger(result)).toBe(true)
+    expect(result).toBe(550)
+  })
 })

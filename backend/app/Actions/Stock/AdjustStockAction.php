@@ -15,7 +15,7 @@ class AdjustStockAction
         return DB::transaction(function () use ($data, $user) {
             $variation = ProductVariation::whereKey($data['product_variation_id'])->lockForUpdate()->firstOrFail();
 
-            $delta = $data['new_quantity'] - $variation->current_quantity;
+            $delta = bcsub((string) $data['new_quantity'], (string) $variation->current_quantity, 3);
 
             $variation->update(['current_quantity' => $data['new_quantity']]);
 

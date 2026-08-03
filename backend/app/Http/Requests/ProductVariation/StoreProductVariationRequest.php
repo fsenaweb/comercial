@@ -22,10 +22,10 @@ class StoreProductVariationRequest extends FormRequest
             'cost_price' => ['required', 'numeric', 'min:0'],
             'markup' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
-            'initial_quantity' => ['required', 'integer'],
-            'min_quantity' => ['nullable', 'integer', 'min:0'],
-            'max_quantity' => ['nullable', 'integer', 'min:0'],
-            'wholesale_min_qty' => ['nullable', 'integer', 'min:1', 'required_with:wholesale_price'],
+            'initial_quantity' => ['required', 'numeric'],
+            'min_quantity' => ['nullable', 'numeric', 'min:0'],
+            'max_quantity' => ['nullable', 'numeric', 'min:0'],
+            'wholesale_min_qty' => ['nullable', 'numeric', 'min:0.01', 'required_with:wholesale_price'],
             'wholesale_price' => ['nullable', 'numeric', 'min:0', 'required_with:wholesale_min_qty'],
         ];
     }

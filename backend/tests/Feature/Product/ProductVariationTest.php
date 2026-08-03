@@ -26,7 +26,7 @@ class ProductVariationTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.code', 'SKU-0001')
-            ->assertJsonPath('data.current_quantity', 15);
+            ->assertJsonPath('data.current_quantity', '15.000');
 
         $variation = ProductVariation::where('code', 'SKU-0001')->firstOrFail();
 

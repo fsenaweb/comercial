@@ -8,7 +8,7 @@ interface StockMovement {
   product_code: string | null
   type: 'in' | 'out' | 'adjustment' | 'sale'
   type_label: string
-  quantity: number
+  quantity: string
   origin: string | null
   reference_id: number | null
   user_id: number
@@ -17,6 +17,7 @@ interface StockMovement {
 }
 
 const api = useApi()
+const { formatQuantity } = useQuantityFormat()
 
 const movements = ref<StockMovement[]>([])
 const loading = ref(true)
@@ -85,8 +86,8 @@ function formatDateTime(value: string): string {
   return new Date(value).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const totalIn = computed(() => movements.value.filter((m) => m.quantity > 0).reduce((sum, m) => sum + m.quantity, 0))
-const totalOut = computed(() => movements.value.filter((m) => m.quantity < 0).reduce((sum, m) => sum + Math.abs(m.quantity), 0))
+const totalIn = computed(() => movements.value.filter((m) => Number(m.quantity) > 0).reduce((sum, m) => sum + Number(m.quantity), 0))
+const totalOut = computed(() => movements.value.filter((m) => Number(m.quantity) < 0).reduce((sum, m) => sum + Math.abs(Number(m.quantity)), 0))
 
 await load()
 </script>
@@ -155,8 +156,8 @@ await load()
         <span>
           <StatusBadge :label="movement.type_label" :tone="typeTone[movement.type]" />
         </span>
-        <span class="text-right text-sm font-bold" :class="movement.quantity < 0 ? 'text-rose-600' : 'text-emerald-700'">
-          {{ movement.quantity > 0 ? '+' : '' }}{{ movement.quantity }}
+        <span class="text-right text-sm font-bold" :class="Number(movement.quantity) < 0 ? 'text-rose-600' : 'text-emerald-700'">
+          {{ Number(movement.quantity) > 0 ? '+' : '' }}{{ formatQuantity(movement.quantity) }}
         </span>
         <button
           type="button"

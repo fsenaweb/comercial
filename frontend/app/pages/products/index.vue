@@ -37,10 +37,10 @@ interface Variation {
   cost_price: string
   markup: string | null
   sale_price: string
-  current_quantity: number
-  min_quantity: number | null
-  max_quantity: number | null
-  wholesale_min_qty: number | null
+  current_quantity: string
+  min_quantity: string | null
+  max_quantity: string | null
+  wholesale_min_qty: string | null
   wholesale_price: string | null
 }
 
@@ -84,6 +84,7 @@ const suppliersApi = useResourceApi<{ id: number; corporate_name: string }>('sup
 const api = useApi()
 const { parse, firstFieldError } = useApiError()
 const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurrency } = useCurrencyMask()
+const { formatQuantity } = useQuantityFormat()
 
 // Custo + margem% -> preço de venda calculado ao vivo (o preço continua
 // editável manualmente depois; o watch só recalcula quando custo/markup mudam).
@@ -212,9 +213,10 @@ function currencyBRL(value: number) {
 }
 
 function stockBadgeTone(variation: Variation): 'danger' | 'warning' | 'info' | 'success' {
-  if (variation.current_quantity <= 0) return 'danger'
-  if (variation.min_quantity !== null && variation.current_quantity <= variation.min_quantity) return 'warning'
-  if (variation.max_quantity !== null && variation.current_quantity > variation.max_quantity) return 'info'
+  const current = Number(variation.current_quantity)
+  if (current <= 0) return 'danger'
+  if (variation.min_quantity !== null && current <= Number(variation.min_quantity)) return 'warning'
+  if (variation.max_quantity !== null && current > Number(variation.max_quantity)) return 'info'
   return 'success'
 }
 
@@ -344,10 +346,10 @@ function openEditModal(row: SkuRow) {
     modalForm.cost_price_masked = maskCurrency(String(Math.round(Number(row.variation.cost_price) * 100)))
     modalForm.markup = row.variation.markup ?? ''
     modalForm.sale_price_masked = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
-    modalForm.quantity = row.variation.current_quantity
-    modalForm.min_quantity = row.variation.min_quantity
-    modalForm.max_quantity = row.variation.max_quantity
-    modalForm.wholesale_min_qty = row.variation.wholesale_min_qty
+    modalForm.quantity = Number(row.variation.current_quantity)
+    modalForm.min_quantity = row.variation.min_quantity !== null ? Number(row.variation.min_quantity) : null
+    modalForm.max_quantity = row.variation.max_quantity !== null ? Number(row.variation.max_quantity) : null
+    modalForm.wholesale_min_qty = row.variation.wholesale_min_qty !== null ? Number(row.variation.wholesale_min_qty) : null
     modalForm.wholesale_price_masked = row.variation.wholesale_price
       ? maskCurrency(String(Math.round(Number(row.variation.wholesale_price) * 100)))
       : 'R$ 0,00'
@@ -620,9 +622,9 @@ function startEditSku(variation: Variation) {
   skuForm.cost_price_masked = maskCurrency(String(Math.round(Number(variation.cost_price) * 100)))
   skuForm.markup = variation.markup ?? ''
   skuForm.sale_price_masked = maskCurrency(String(Math.round(Number(variation.sale_price) * 100)))
-  skuForm.min_quantity = variation.min_quantity
-  skuForm.max_quantity = variation.max_quantity
-  skuForm.wholesale_min_qty = variation.wholesale_min_qty
+  skuForm.min_quantity = variation.min_quantity !== null ? Number(variation.min_quantity) : null
+  skuForm.max_quantity = variation.max_quantity !== null ? Number(variation.max_quantity) : null
+  skuForm.wholesale_min_qty = variation.wholesale_min_qty !== null ? Number(variation.wholesale_min_qty) : null
   skuForm.wholesale_price_masked = variation.wholesale_price
     ? maskCurrency(String(Math.round(Number(variation.wholesale_price) * 100)))
     : 'R$ 0,00'
@@ -823,6 +825,7 @@ await load()
           <BaseInput
             v-model.number="quickForm.initial_quantity"
             type="number"
+            step="any"
             label="Quantidade inicial"
             :error="firstFieldError(quickError, 'initial_quantity')"
           />
@@ -833,6 +836,7 @@ await load()
           <BaseInput
             v-model.number="quickForm.wholesale_min_qty"
             type="number"
+            step="any"
             label="Qtd. p/ Preço Atacado"
             :error="firstFieldError(quickError, 'wholesale_min_qty')"
           />
@@ -886,7 +890,7 @@ await load()
         <span class="text-sm text-txt-secondary">{{ row.product.location ?? '-' }}</span>
         <span class="text-sm text-txt-secondary">{{ row.variation ? currencyBRL(Number(row.variation.sale_price)) : '-' }}</span>
         <span v-if="row.variation">
-          <StatusBadge :label="String(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
+          <StatusBadge :label="formatQuantity(row.variation.current_quantity)" :tone="stockBadgeTone(row.variation)" />
         </span>
         <span v-else class="text-sm text-txt-muted">-</span>
         <div class="flex justify-end gap-1">
@@ -1085,11 +1089,12 @@ await load()
                 v-else
                 v-model.number="modalForm.quantity"
                 type="number"
+                step="any"
                 label="Quantidade inicial"
                 :error="firstFieldError(modalError, 'initial_quantity')"
               />
-              <BaseInput v-model.number="modalForm.max_quantity" type="number" label="Qtde máxima" :error="firstFieldError(modalError, 'max_quantity')" />
-              <BaseInput v-model.number="modalForm.min_quantity" type="number" label="Qtde mínima" :error="firstFieldError(modalError, 'min_quantity')" />
+              <BaseInput v-model.number="modalForm.max_quantity" type="number" step="any" label="Qtde máxima" :error="firstFieldError(modalError, 'max_quantity')" />
+              <BaseInput v-model.number="modalForm.min_quantity" type="number" step="any" label="Qtde mínima" :error="firstFieldError(modalError, 'min_quantity')" />
             </div>
 
             <p class="mt-4 mb-2 text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Preço de atacado (opcional)</p>
@@ -1097,6 +1102,7 @@ await load()
               <BaseInput
                 v-model.number="modalForm.wholesale_min_qty"
                 type="number"
+                step="any"
                 label="Qtd. p/ Preço Atacado"
                 :error="firstFieldError(modalError, 'wholesale_min_qty')"
               />
@@ -1196,16 +1202,18 @@ await load()
                 v-if="!skuEditingId"
                 v-model.number="skuForm.initial_quantity"
                 type="number"
+                step="any"
                 label="Quantidade inicial"
                 :error="firstFieldError(skuError, 'initial_quantity')"
               />
-              <BaseInput v-model.number="skuForm.min_quantity" type="number" label="Estoque mínimo" :error="firstFieldError(skuError, 'min_quantity')" />
-              <BaseInput v-model.number="skuForm.max_quantity" type="number" label="Estoque máximo" :error="firstFieldError(skuError, 'max_quantity')" />
+              <BaseInput v-model.number="skuForm.min_quantity" type="number" step="any" label="Estoque mínimo" :error="firstFieldError(skuError, 'min_quantity')" />
+              <BaseInput v-model.number="skuForm.max_quantity" type="number" step="any" label="Estoque máximo" :error="firstFieldError(skuError, 'max_quantity')" />
             </div>
             <div class="grid grid-cols-2 gap-4">
               <BaseInput
                 v-model.number="skuForm.wholesale_min_qty"
                 type="number"
+                step="any"
                 label="Qtd. p/ Preço Atacado"
                 :error="firstFieldError(skuError, 'wholesale_min_qty')"
               />
@@ -1240,7 +1248,7 @@ await load()
           ]"
         >
           <template #cell-current_quantity="{ item }">
-            <StatusBadge :label="String(item.current_quantity)" :tone="stockBadgeTone(item)" />
+            <StatusBadge :label="formatQuantity(item.current_quantity)" :tone="stockBadgeTone(item)" />
           </template>
           <template v-if="auth.isAdmin" #actions="{ item }">
             <IconButton :icon="Pencil" label="Editar" @click="startEditSku(item)" />

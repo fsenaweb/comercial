@@ -20,7 +20,7 @@ class StoreAccountDebitRequest extends FormRequest
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_variation_id' => ['required', 'integer', 'exists:product_variations,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount_type' => ['nullable', 'in:fixed,percentage'],
             'items.*.discount_value' => ['nullable', 'numeric', 'min:0'],

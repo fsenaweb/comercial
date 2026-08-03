@@ -22,7 +22,7 @@ export interface SaleItem {
   product_variation_id: number
   product_name: string | null
   product_code: string | null
-  quantity: number
+  quantity: string
   unit_price: string
   discount_type: DiscountType
   discount_type_label: string
