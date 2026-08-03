@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Ban, Eye, Receipt, Search, TrendingUp, Users } from 'lucide-vue-next'
+import { Ban, Eye, Printer, Receipt, Search, TrendingUp, Users } from 'lucide-vue-next'
 
 interface UserOption {
   id: number
@@ -41,6 +41,7 @@ const api = useApi()
 const auth = useAuthStore()
 const { parse, firstFieldError } = useApiError()
 const { format } = useCurrencyMask()
+const { printFormatDialog } = usePrintFormatDialog()
 
 const sales = ref<SaleListItem[]>([])
 const sellers = ref<UserOption[]>([])
@@ -109,6 +110,12 @@ async function viewSale(saleId: number) {
   const { data } = await api<{ data: SaleDetail }>(`/sales/${saleId}`)
   detail.value = data
   detailLoading.value = false
+}
+
+async function printSale(saleId: number) {
+  showDetail.value = false
+  const format = await printFormatDialog()
+  if (format) window.open(`/sales/${saleId}/receipt?format=${format}`, '_blank')
 }
 
 // ---- Cancelamento de venda ----
@@ -208,6 +215,7 @@ await Promise.all([load(), loadSellers()])
         </span>
         <div class="flex justify-end gap-1">
           <IconButton :icon="Eye" label="Ver detalhes" @click="viewSale(sale.id)" />
+          <IconButton :icon="Printer" label="Imprimir" @click="printSale(sale.id)" />
           <IconButton
             v-if="canCancelSale && sale.status === 'completed'"
             :icon="Ban"
@@ -256,6 +264,12 @@ await Promise.all([load(), loadSellers()])
           <span class="text-txt-secondary">Subtotal: <strong class="text-txt-primary">{{ formatAmount(detail.subtotal) }}</strong></span>
           <span class="text-txt-secondary">Desconto: <strong class="text-txt-primary">{{ formatAmount(detail.discount) }}</strong></span>
           <span class="text-txt-secondary">Total: <strong class="text-emerald-700">{{ formatAmount(detail.total) }}</strong></span>
+        </div>
+
+        <div class="flex justify-end border-t border-border pt-4">
+          <BaseButton type="button" variant="ghost" :block="false" @click="printSale(detail.id)">
+            <Printer :size="15" class="mr-1.5 inline" /> Imprimir
+          </BaseButton>
         </div>
       </div>
     </BaseModal>
