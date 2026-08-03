@@ -277,7 +277,10 @@ await Promise.all([load(), loadSellers()])
 
         <div class="flex items-center justify-end gap-5 text-sm">
           <span class="text-txt-secondary">Subtotal: <strong class="text-txt-primary">{{ formatAmount(detail.subtotal) }}</strong></span>
-          <span class="text-txt-secondary">Desconto: <strong class="text-txt-primary">{{ formatAmount(detail.discount) }}</strong></span>
+          <span class="text-txt-secondary">
+            {{ Number(detail.discount) < 0 ? 'Acréscimo' : 'Desconto' }}:
+            <strong class="text-txt-primary">{{ formatAmount(Math.abs(Number(detail.discount))) }}</strong>
+          </span>
           <span class="text-txt-secondary">Total: <strong class="text-emerald-700">{{ formatAmount(detail.total) }}</strong></span>
         </div>
 

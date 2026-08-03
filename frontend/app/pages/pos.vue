@@ -926,8 +926,8 @@ async function confirmSaveQuote() {
                   <Plus :size="13" />
                 </button>
               </div>
-              <div class="w-44 flex-none">
-                <DiscountInput
+              <div class="w-52 flex-none">
+                <PriceAdjustmentInput
                   :type="item.discountType"
                   :value="item.discountValue"
                   @update:type="cart.updateItemDiscount(item.key, $event, item.discountValue)"
@@ -956,9 +956,9 @@ async function confirmSaveQuote() {
             <span class="text-[13.5px] font-semibold text-txt-primary">{{ formatCurrency(Math.round(cart.subtotal * 100)) }}</span>
           </div>
           <div class="mb-3 flex items-center justify-between gap-3">
-            <span class="text-sm text-txt-secondary">Desconto</span>
-            <div class="w-44">
-              <DiscountInput
+            <span class="text-sm text-txt-secondary">Desconto/Acréscimo</span>
+            <div class="w-52">
+              <PriceAdjustmentInput
                 :type="cart.saleDiscountType"
                 :value="cart.saleDiscountValue"
                 @update:type="cart.setSaleDiscount($event, cart.saleDiscountValue)"

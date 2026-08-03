@@ -56,4 +56,15 @@ describe('cartMath', () => {
     expect(Number.isInteger(result)).toBe(true)
     expect(result).toBe(550)
   })
+
+  it('treats a negative fixed "discount" as a markup, adding instead of subtracting', () => {
+    // Acréscimo de R$5 num item de R$10 - "desconto" negativo soma em vez de
+    // subtrair, sem precisar de um tipo novo (decisão do cliente, 2026-08-03).
+    expect(lineTotalCents({ unitPrice: 10, quantity: 1, discountType: 'fixed', discountValue: -5 })).toBe(1500)
+  })
+
+  it('treats a negative percentage "discount" as a markup on the sale total', () => {
+    // 10% de acréscimo em R$30 -> R$33
+    expect(saleTotalCents(3000, 'percentage', -10)).toBe(3300)
+  })
 })

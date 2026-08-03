@@ -158,4 +158,21 @@ class RegisterAccountDebitTest extends TestCase
         $this->assertDatabaseHas('account_entry_items', ['product_variation_id' => $variation->id, 'quantity' => 0.5]);
         $this->assertSame('9.500', $variation->fresh()->current_quantity);
     }
+
+    public function test_cashier_can_register_a_debit_with_markup_on_an_item(): void
+    {
+        $cashier = User::factory()->cashier()->create();
+        $customer = Customer::factory()->create();
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 10]);
+
+        $response = $this->actingAs($cashier)->postJson('/api/accounts-receivable/debits', [
+            'customer_id' => $customer->id,
+            'description' => 'Compra com acréscimo',
+            'items' => [
+                ['product_variation_id' => $variation->id, 'quantity' => 2, 'discount_type' => 'fixed', 'discount_value' => -5],
+            ],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.amount', '25.00');
+    }
 }
