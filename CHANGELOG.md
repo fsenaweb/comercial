@@ -13,6 +13,7 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 - PDV: quantidade fracionada digitada no modal "Adicionar item" (ex. "0,5") não era mais forçada para "1" ao incluir no carrinho.
 - Importação do sistema legado: reimportação não cria mais um ajuste de estoque espúrio a cada execução (comparação de quantidade quebrada pela mudança de tipo, corrigida).
 - Import de NFe: quantidade fracionária (ex. peso em kg) não é mais truncada ao entrar no estoque.
+- PDV: coluna do carrinho não corta mais o botão de excluir item na resolução 1366×768 (coluna "Resumo da venda" reduzida de 440px para 400px).
 
 ## [1.0.0] - 2026-08-03
 
