@@ -59,8 +59,10 @@ call "%~dp0deploy-frontend.bat"
 if errorlevel 1 goto :error
 
 echo Deploy concluido.
+pause
 exit /b 0
 
 :error
 echo ERRO: deploy interrompido.
+pause
 exit /b 1
