@@ -33,6 +33,7 @@ Ainda assim, a modelagem e as regras de negócio (cadastros, estoque, caixa, ven
 3. **Validação antes do commit:** backend — `docker compose exec php-fpm php artisan test`; frontend — `npx nuxi typecheck` e `npm run generate`. Se qualquer validação falhar, corrigir e revalidar; **não prosseguir com erros**.
 4. **Commit somente com aprovação:** nunca commitar por conta própria. Ao terminar e validar, apresentar um resumo do que foi feito e aguardar aprovação explícita do usuário. Após aprovado: um único commit agrupando a tarefa, padrão Conventional Commits (`feat:`, `fix:`, `chore:`...).
 5. **Docker sem root:** nenhum arquivo do repositório pode ser criado/alterado como root — comandos em containers sempre com o UID/GID do host. Regras e comandos prontos em `docs/07-dev-environment.md`.
+6. **CHANGELOG.md a cada PR:** toda tarefa com efeito visível pro usuário final (feature nova, correção de bug, mudança de comportamento) ganha uma linha em `CHANGELOG.md` (seção `[Unreleased]`), no mesmo commit/PR que faz a mudança — não depois, não como tarefa separada. Ao cortar uma nova versão marcada (tag `vX.Y.Z`), mover o conteúdo de `[Unreleased]` para uma seção `[X.Y.Z] - AAAA-MM-DD` nova. `v1.0.0` (tag em `aa34752`, 2026-08-03) marca o baseline estável em produção — ponto de retorno caso alguma mudança maior (ex. schema de banco) precise ser revertida.
 
 ## Índice de Documentação
 Para manter o contexto organizado, as definições detalhadas estão divididas nos arquivos abaixo. **Sempre consulte estes documentos antes de implementar novas funcionalidades.**
