@@ -946,7 +946,7 @@ async function confirmSaveQuote() {
       </div>
 
       <!-- RIGHT -->
-      <div class="flex w-[440px] flex-none flex-col gap-3.5 overflow-y-auto border-l border-border p-4">
+      <div class="flex w-[400px] flex-none flex-col gap-3.5 overflow-y-auto border-l border-border p-4">
         <div class="rounded-2xl bg-surface-raised p-4.5 shadow-card">
           <p class="font-display text-sm font-bold text-txt-primary">Resumo da venda</p>
           <p class="mb-4 text-[10px] font-bold tracking-wide text-txt-muted uppercase">Valores e descontos</p>
