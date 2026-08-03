@@ -2,6 +2,8 @@
 
 > **Instrução nº 1 (sempre válida, todo prompt):** toda resposta em texto ao usuário (mensagens de chat, resumos, perguntas de esclarecimento) deve ser em português — independente do idioma em que o usuário escrever. Isso é além da regra já existente de "interface 100% em português"/"código 100% em inglês" abaixo, que trata do conteúdo do sistema, não da conversa com o desenvolvedor.
 
+> **Instrução nº 2 (sempre válida, todo prompt, sem exceção):** nunca criar, editar ou escrever qualquer arquivo do repositório enquanto o branch atual for `master`. Antes da **primeira** alteração de qualquer tarefa (mesmo uma linha, mesmo um `.bat`/doc fora de `backend/`/`frontend/`), rodar `git status --short` + `git branch --show-current`; se estiver na `master`, criar e trocar para `feat/<nome-curto>` (ou `fix/`, `chore/`) **antes** de qualquer `Edit`/`Write`/`Bash` que altere arquivo — não depois. Se perceber que uma alteração já foi feita na `master` por engano, criar a branch imediatamente a partir do estado atual (as alterações não commitadas acompanham a troca) e avisar o usuário do lapso. Ver também item 1 de "Fluxo de Trabalho" abaixo.
+
 ## Descrição do Projeto
 Desenvolvimento de um sistema de gestão comercial e PDV (Ponto de Venda) projetado para rodar exclusivamente em rede local (LAN). O sistema gerencia cadastros, estoque, caixa e fluxo de venda/atendimento para uma única loja, não sendo SaaS e não emitindo cupons fiscais (apenas comprovante interno não fiscal).
 

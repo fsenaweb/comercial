@@ -29,11 +29,19 @@ interface SaleItemDetail {
   total: string
 }
 
+interface SalePaymentDetail {
+  id: number
+  payment_method_id: number
+  payment_method_name: string | null
+  amount: string
+}
+
 interface SaleDetail extends SaleListItem {
   subtotal: string
   discount: string
   canceled_reason: string | null
   canceled_at: string | null
+  payments: SalePaymentDetail[]
   items: SaleItemDetail[]
 }
 
@@ -233,8 +241,14 @@ await Promise.all([load(), loadSellers()])
         <div class="grid grid-cols-2 gap-3 text-sm">
           <span class="text-txt-secondary">Cliente: <strong class="text-txt-primary">{{ detail.customer_name ?? 'Não informado' }}</strong></span>
           <span class="text-txt-secondary">Vendedor: <strong class="text-txt-primary">{{ detail.seller_name ?? '-' }}</strong></span>
-          <span class="text-txt-secondary">Forma de pagamento: <strong class="text-txt-primary">{{ detail.payment_method_name ?? '-' }}</strong></span>
           <span class="text-txt-secondary">Data: <strong class="text-txt-primary">{{ formatDateTime(detail.created_at) }}</strong></span>
+          <span class="text-txt-secondary">
+            Forma de pagamento:
+            <strong v-if="detail.payments.length === 0" class="text-txt-primary">-</strong>
+            <strong v-for="(payment, index) in detail.payments" :key="payment.id" class="text-txt-primary">
+              {{ payment.payment_method_name ?? '-' }} ({{ formatAmount(payment.amount) }})<span v-if="index < detail.payments.length - 1">, </span>
+            </strong>
+          </span>
         </div>
 
         <div v-if="detail.status === 'canceled'" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
