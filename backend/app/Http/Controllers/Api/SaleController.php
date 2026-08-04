@@ -38,6 +38,15 @@ class SaleController extends Controller
             $query->whereDate('created_at', '<=', $request->string('date_to')->value());
         }
 
+        // Sem filtro de data explícito, a listagem de vendas (não orçamentos)
+        // mostra só o dia atual por padrão - pedido do cliente (2026-08-03),
+        // pra não paginar o histórico inteiro toda vez que abre a tela.
+        // `created_at` já é gravado em horário local (APP_TIMEZONE), então
+        // `today()` bate direto com o valor persistido, sem conversão de fuso.
+        if (! $request->filled('date_from') && ! $request->filled('date_to') && ! $request->boolean('is_quote')) {
+            $query->whereDate('created_at', today());
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->string('status')->value());
         }
@@ -48,7 +57,20 @@ class SaleController extends Controller
                 : $query->whereNotNull('cash_register_id');
         }
 
-        return SaleResource::collection($query->paginate(20));
+        // Total/ticket médio do filtro inteiro (não só da página atual) - o
+        // front mostrava esses valores mudando ao trocar de página, o que
+        // não faz sentido pro usuário (achado do cliente, 2026-08-04).
+        // Cancelada nunca entra na conta, com ou sem filtro de status.
+        $summaryBase = (clone $query)->where('status', '!=', 'canceled');
+        $totalAmount = (float) (clone $summaryBase)->sum('total');
+        $completedCount = (clone $summaryBase)->count();
+
+        return SaleResource::collection($query->paginate(20))->additional([
+            'filter_summary' => [
+                'total_amount' => round($totalAmount, 2),
+                'average_ticket' => $completedCount > 0 ? round($totalAmount / $completedCount, 2) : 0,
+            ],
+        ]);
     }
 
     public function show(Sale $sale): SaleResource

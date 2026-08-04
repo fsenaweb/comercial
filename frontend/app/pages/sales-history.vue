@@ -61,6 +61,11 @@ const sellerId = ref<string | number>('')
 const dateFrom = ref('')
 const dateTo = ref('')
 const statusFilter = ref('')
+const page = ref(1)
+const totalPages = ref(1)
+const totalSales = ref(0)
+const totalPeriod = ref(0)
+const averageTicket = ref(0)
 
 const sellerOptions = computed(() => [{ value: '', label: 'Todos os vendedores' }, ...sellers.value.map((s) => ({ value: s.id, label: s.name }))])
 const statusOptions = [
@@ -82,6 +87,7 @@ function formatDateTime(value: string): string {
 function buildQuery() {
   const query = new URLSearchParams()
   query.set('is_quote', '0')
+  query.set('page', String(page.value))
   if (search.value.trim()) query.set('search', search.value.trim())
   if (sellerId.value) query.set('seller_id', String(sellerId.value))
   if (dateFrom.value) query.set('date_from', dateFrom.value)
@@ -93,19 +99,39 @@ function buildQuery() {
 async function load() {
   loading.value = true
   const qs = buildQuery()
-  const { data } = await api<{ data: SaleListItem[] }>(`/sales${qs ? `?${qs}` : ''}`)
+  const { data, meta, filter_summary: filterSummary } = await api<{
+    data: SaleListItem[]
+    meta: { current_page: number, last_page: number, total: number }
+    filter_summary: { total_amount: number, average_ticket: number }
+  }>(`/sales?${qs}`)
   sales.value = data
+  totalPages.value = meta.last_page
+  totalSales.value = meta.total
+  totalPeriod.value = filterSummary.total_amount
+  averageTicket.value = filterSummary.average_ticket
   loading.value = false
 }
+
+// Sem filtro de data, a listagem já vem só do dia atual por padrão (ver
+// SaleController::index) - aplicar um filtro novo sempre volta pra página 1,
+// senão o usuário pode ficar "preso" numa página que não existe mais pro
+// filtro escolhido.
+function applyFilters() {
+  page.value = 1
+  load()
+}
+
+watch(page, () => load())
 
 async function loadSellers() {
   const { data } = await api<{ data: UserOption[] }>('/users/active')
   sellers.value = data
 }
 
-const completedSales = computed(() => sales.value.filter((s) => s.status !== 'canceled'))
-const totalPeriod = computed(() => completedSales.value.reduce((sum, s) => sum + Number(s.total), 0))
-const averageTicket = computed(() => (completedSales.value.length > 0 ? totalPeriod.value / completedSales.value.length : 0))
+// Sem filtro de data explícito a listagem já é só o dia atual (ver
+// SaleController::index) - o label reflete isso; com filtro de data, vira
+// "Vendas no filtro" pra não afirmar que é "do dia" quando não é.
+const salesCountLabel = computed(() => (dateFrom.value || dateTo.value ? 'Vendas no filtro' : 'Vendas do dia'))
 
 // ---- Detalhe da venda ----
 const showDetail = ref(false)
@@ -167,7 +193,7 @@ await Promise.all([load(), loadSellers()])
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatCard label="Vendas no filtro" :value="sales.length" :icon="Receipt" tone="violet" />
+      <StatCard :label="salesCountLabel" :value="totalSales" :icon="Receipt" tone="violet" />
       <StatCard label="Total do período" :value="formatAmount(totalPeriod)" :icon="TrendingUp" tone="emerald" />
       <StatCard label="Ticket médio" :value="formatAmount(averageTicket)" :icon="Users" tone="sky" />
     </div>
@@ -177,7 +203,7 @@ await Promise.all([load(), loadSellers()])
         <label class="mb-1 block text-sm font-medium text-txt-secondary">Buscar</label>
         <label class="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-txt-muted">
           <Search :size="15" />
-          <input v-model="search" type="text" placeholder="Número da venda ou cliente..." class="w-full bg-transparent text-sm text-txt-primary placeholder:text-txt-muted focus:outline-none" @keyup.enter="load">
+          <input v-model="search" type="text" placeholder="Número da venda ou cliente..." class="w-full bg-transparent text-sm text-txt-primary placeholder:text-txt-muted focus:outline-none" @keyup.enter="applyFilters">
         </label>
       </div>
       <div class="w-56">
@@ -192,7 +218,7 @@ await Promise.all([load(), loadSellers()])
       <div class="w-44">
         <BaseInput v-model="dateTo" type="date" label="Até" />
       </div>
-      <BaseButton :block="false" @click="load">Filtrar</BaseButton>
+      <BaseButton :block="false" @click="applyFilters">Filtrar</BaseButton>
     </div>
 
     <div class="rounded-2xl border border-border bg-surface-raised shadow-card">
@@ -233,6 +259,16 @@ await Promise.all([load(), loadSellers()])
             @click="openCancelModal(sale.id)"
           />
         </div>
+      </div>
+
+      <div v-if="!loading && sales.length > 0" class="flex items-center justify-end gap-3 border-t border-border px-5 py-3.5">
+        <span class="text-xs text-txt-secondary">
+          Página <strong class="text-txt-primary">{{ page }}</strong> de
+          <strong class="text-txt-primary">{{ totalPages }}</strong>
+          ({{ totalSales }} venda{{ totalSales === 1 ? '' : 's' }})
+        </span>
+        <BaseButton variant="ghost" :block="false" :disabled="page <= 1" @click="page = page - 1">Anterior</BaseButton>
+        <BaseButton variant="ghost" :block="false" :disabled="page >= totalPages" @click="page = page + 1">Próxima</BaseButton>
       </div>
     </div>
 
