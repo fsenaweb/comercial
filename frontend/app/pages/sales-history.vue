@@ -64,6 +64,8 @@ const statusFilter = ref('')
 const page = ref(1)
 const totalPages = ref(1)
 const totalSales = ref(0)
+const totalPeriod = ref(0)
+const averageTicket = ref(0)
 
 const sellerOptions = computed(() => [{ value: '', label: 'Todos os vendedores' }, ...sellers.value.map((s) => ({ value: s.id, label: s.name }))])
 const statusOptions = [
@@ -97,10 +99,16 @@ function buildQuery() {
 async function load() {
   loading.value = true
   const qs = buildQuery()
-  const { data, meta } = await api<{ data: SaleListItem[], meta: { current_page: number, last_page: number, total: number } }>(`/sales?${qs}`)
+  const { data, meta, filter_summary: filterSummary } = await api<{
+    data: SaleListItem[]
+    meta: { current_page: number, last_page: number, total: number }
+    filter_summary: { total_amount: number, average_ticket: number }
+  }>(`/sales?${qs}`)
   sales.value = data
   totalPages.value = meta.last_page
   totalSales.value = meta.total
+  totalPeriod.value = filterSummary.total_amount
+  averageTicket.value = filterSummary.average_ticket
   loading.value = false
 }
 
@@ -120,9 +128,10 @@ async function loadSellers() {
   sellers.value = data
 }
 
-const completedSales = computed(() => sales.value.filter((s) => s.status !== 'canceled'))
-const totalPeriod = computed(() => completedSales.value.reduce((sum, s) => sum + Number(s.total), 0))
-const averageTicket = computed(() => (completedSales.value.length > 0 ? totalPeriod.value / completedSales.value.length : 0))
+// Sem filtro de data explícito a listagem já é só o dia atual (ver
+// SaleController::index) - o label reflete isso; com filtro de data, vira
+// "Vendas no filtro" pra não afirmar que é "do dia" quando não é.
+const salesCountLabel = computed(() => (dateFrom.value || dateTo.value ? 'Vendas no filtro' : 'Vendas do dia'))
 
 // ---- Detalhe da venda ----
 const showDetail = ref(false)
@@ -184,7 +193,7 @@ await Promise.all([load(), loadSellers()])
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatCard label="Vendas no filtro" :value="totalSales" :icon="Receipt" tone="violet" />
+      <StatCard :label="salesCountLabel" :value="totalSales" :icon="Receipt" tone="violet" />
       <StatCard label="Total do período" :value="formatAmount(totalPeriod)" :icon="TrendingUp" tone="emerald" />
       <StatCard label="Ticket médio" :value="formatAmount(averageTicket)" :icon="Users" tone="sky" />
     </div>

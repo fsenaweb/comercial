@@ -97,4 +97,25 @@ class SaleHistoryFilterTest extends TestCase
 
         $response->assertOk()->assertJsonCount(1, 'data');
     }
+
+    public function test_filter_summary_reflects_the_whole_filtered_set_not_just_the_current_page(): void
+    {
+        $seller = User::factory()->create();
+        $admin = User::factory()->admin()->create();
+        // 3 vendas de R$10 hoje (uma delas cancelada, não deve entrar na
+        // soma) + 1 venda antiga (fora do filtro padrão de hoje).
+        $this->makeSale($seller);
+        $this->makeSale($seller);
+        $canceled = $this->makeSale($seller);
+        $canceled->forceFill(['status' => 'canceled'])->save();
+        $old = $this->makeSale($seller);
+        $old->forceFill(['created_at' => now()->subDays(10)])->save();
+
+        $response = $this->actingAs($admin)->getJson('/api/sales');
+
+        $response->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('filter_summary.total_amount', 20)
+            ->assertJsonPath('filter_summary.average_ticket', 10);
+    }
 }

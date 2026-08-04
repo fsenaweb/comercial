@@ -57,7 +57,20 @@ class SaleController extends Controller
                 : $query->whereNotNull('cash_register_id');
         }
 
-        return SaleResource::collection($query->paginate(20));
+        // Total/ticket médio do filtro inteiro (não só da página atual) - o
+        // front mostrava esses valores mudando ao trocar de página, o que
+        // não faz sentido pro usuário (achado do cliente, 2026-08-04).
+        // Cancelada nunca entra na conta, com ou sem filtro de status.
+        $summaryBase = (clone $query)->where('status', '!=', 'canceled');
+        $totalAmount = (float) (clone $summaryBase)->sum('total');
+        $completedCount = (clone $summaryBase)->count();
+
+        return SaleResource::collection($query->paginate(20))->additional([
+            'filter_summary' => [
+                'total_amount' => round($totalAmount, 2),
+                'average_ticket' => $completedCount > 0 ? round($totalAmount / $completedCount, 2) : 0,
+            ],
+        ]);
     }
 
     public function show(Sale $sale): SaleResource
