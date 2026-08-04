@@ -16,6 +16,8 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 - Importação do sistema legado: reimportação não cria mais um ajuste de estoque espúrio a cada execução (comparação de quantidade quebrada pela mudança de tipo, corrigida).
 - Import de NFe: quantidade fracionária (ex. peso em kg) não é mais truncada ao entrar no estoque.
 - PDV: coluna do carrinho não corta mais o botão de excluir item na resolução 1366×768 (coluna "Resumo da venda" reduzida de 440px para 400px).
+- Histórico de vendas: "Total do período" e "Ticket médio" não mudavam mais de valor entre páginas — agora refletem o filtro inteiro, não só a página exibida.
+- Favicon (ícone da aba do navegador) trocado do ícone genérico do Nuxt para o logo da loja.
 
 ## [1.0.0] - 2026-08-03
 
