@@ -18,6 +18,9 @@ export default defineNuxtConfig({
       // (:root[data-theme="dark"]) sobrescreve isso assim que o usuário
       // escolhe o tema escuro explicitamente.
       meta: [{ name: 'color-scheme', content: 'light' }],
+      // Favicon = mesmo logo usado no login/PDV (public/logo.png), pedido do
+      // cliente (2026-08-04) no lugar do ícone genérico padrão do Nuxt.
+      link: [{ rel: 'icon', type: 'image/png', href: '/logo.png' }],
       script: [
         {
           // Roda no <head>, antes do Vue montar - lê o hint de cookie (gravado
