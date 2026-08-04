@@ -40,6 +40,17 @@ function toRow(item: SearchApiRow): ProductVariationRow {
 export function useProductVariationSearch() {
   const api = useApi()
   const searching = ref(false)
+  // Protege contra condição de corrida: se o usuário digita rápido (ex.
+  // "10*paraf"), o debounce de cada tela dispara uma busca por termo
+  // intermediário ("10", "10*", "10*p"...) sempre que há uma pausa >200ms
+  // entre teclas - e nada garante que essas respostas voltam na ordem em
+  // que foram pedidas. Sem essa proteção, uma resposta velha (de um termo
+  // que não bate com nada) podia chegar depois da resposta certa e
+  // sobrescrever o resultado correto com uma lista vazia - o produto
+  // "sumia" até o usuário buscar de novo. Achado real do cliente
+  // (2026-08-04), mais frequente com o prefixo "10*" por causa da pausa
+  // natural entre digitar o prefixo e o termo de busca.
+  let latestRequestId = 0
 
   async function findExact(code: string): Promise<ProductVariationRow | null> {
     const trimmed = code.trim()
@@ -52,17 +63,26 @@ export function useProductVariationSearch() {
     }
   }
 
-  async function search(query: string, limit = 20): Promise<ProductVariationRow[]> {
+  /**
+   * Retorna `null` quando essa busca foi superada por uma mais recente -
+   * nesse caso o chamador deve ignorar o retorno (não sobrescrever a lista
+   * já exibida), não tratar como "sem resultado".
+   */
+  async function search(query: string, limit = 20): Promise<ProductVariationRow[] | null> {
     const trimmed = query.trim()
     if (!trimmed) return []
+    const requestId = ++latestRequestId
     searching.value = true
     try {
       const res = await api<{ data: SearchApiRow[] }>(
         `/product-variations/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`,
       )
+      if (requestId !== latestRequestId) return null
       return res.data.map(toRow)
+    } catch {
+      return requestId === latestRequestId ? [] : null
     } finally {
-      searching.value = false
+      if (requestId === latestRequestId) searching.value = false
     }
   }
 

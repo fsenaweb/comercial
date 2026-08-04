@@ -39,7 +39,8 @@ watch(pickerSearch, (query) => {
     return
   }
   pickerDebounce = setTimeout(async () => {
-    filteredPickerRows.value = await searchProductVariations(query, 20)
+    const rows = await searchProductVariations(query, 20)
+    if (rows !== null) filteredPickerRows.value = rows
   }, 200)
 })
 

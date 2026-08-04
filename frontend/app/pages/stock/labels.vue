@@ -126,7 +126,8 @@ watch(searchQuery, (query) => {
     return
   }
   searchDebounce = setTimeout(async () => {
-    searchResults.value = await searchProductVariations(query, 20)
+    const rows = await searchProductVariations(query, 20)
+    if (rows !== null) searchResults.value = rows
   }, 200)
 })
 

@@ -201,7 +201,9 @@ watch(searchQuery, (query) => {
     return
   }
   suggestionsDebounce = setTimeout(async () => {
-    searchSuggestions.value = await searchProductVariations(term, 20)
+    const rows = await searchProductVariations(term, 20)
+    if (rows === null) return
+    searchSuggestions.value = rows
     highlightedSuggestionIndex.value = 0
   }, 200)
 })
@@ -250,7 +252,7 @@ async function handleSearchKeydown(event: KeyboardEvent) {
     return
   }
 
-  const [fuzzy] = await searchProductVariations(term, 1)
+  const [fuzzy] = (await searchProductVariations(term, 1)) ?? []
   if (fuzzy) {
     foundRow.value = fuzzy
     setPendingQty(qty)
@@ -281,7 +283,8 @@ watch(productPickerSearch, (query) => {
     return
   }
   productPickerDebounce = setTimeout(async () => {
-    filteredProductPickerRows.value = await searchProductVariations(query, 20)
+    const rows = await searchProductVariations(query, 20)
+    if (rows !== null) filteredProductPickerRows.value = rows
   }, 200)
 })
 
