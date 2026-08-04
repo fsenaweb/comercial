@@ -18,6 +18,8 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 - PDV: coluna do carrinho não corta mais o botão de excluir item na resolução 1366×768 (coluna "Resumo da venda" reduzida de 440px para 400px).
 - Histórico de vendas: "Total do período" e "Ticket médio" não mudavam mais de valor entre páginas — agora refletem o filtro inteiro, não só a página exibida.
 - Favicon (ícone da aba do navegador) trocado do ícone genérico do Nuxt para o logo da loja.
+- PDV: busca de produto às vezes não mostrava resultado na hora (sumia até buscar de novo) — condição de corrida entre buscas digitadas rápido, mais frequente usando o prefixo de quantidade "10*". Corrigido em todas as telas que usam a busca de produto, não só o PDV.
+- PDV/crediário: pagamento em dinheiro de venda com produto fracionado às vezes era rejeitado como "valor não bate" — o total exibido no PDV podia arredondar 1 centavo diferente do valor gravado pelo backend quando preço × quantidade fracionada caía numa fração de centavo. PDV agora trunca do mesmo jeito que o backend, sempre.
 
 ## [1.0.0] - 2026-08-03
 
