@@ -49,12 +49,24 @@ describe('cartMath', () => {
     expect(lineTotalCents({ unitPrice: 21.24, quantity: 0.5, discountType: 'fixed', discountValue: 0 })).toBe(1062)
   })
 
-  it('rounds a fractional quantity that would otherwise land on half a cent', () => {
-    // 0,5 x R$10,99 = R$5,495 - precisa arredondar pro centavo mais próximo
-    // (549 ou 550), nunca deixar sobrar ".5" de centavo fracionado.
+  it('truncates a fractional quantity landing on a fraction of a cent, matching the backend', () => {
+    // 0,5 x R$10,99 = R$5,495 - trunca pra R$5,49 (549 centavos), igual
+    // bcmul($unitPrice, $quantity, 2) no backend (BuildsSaleItems), que
+    // trunca em vez de arredondar. Antes o front arredondava pra R$5,50
+    // (550) enquanto o backend gravava R$5,49 - o pagamento em dinheiro
+    // batido no valor exibido no PDV era rejeitado na hora de finalizar a
+    // venda ("valor não bate"), achado real do cliente (2026-08-04), mais
+    // frequente com produto fracionado.
     const result = lineTotalCents({ unitPrice: 10.99, quantity: 0.5, discountType: 'fixed', discountValue: 0 })
     expect(Number.isInteger(result)).toBe(true)
-    expect(result).toBe(550)
+    expect(result).toBe(549)
+  })
+
+  it('does not truncate an exact cent value due to floating point imprecision', () => {
+    // 0,5 x R$21,24 = R$10,62 exato - garante que o epsilon de proteção não
+    // deixa um valor exato cair pro centavo de baixo por erro de ponto
+    // flutuante (0,5 x 2124 pode virar 1061.9999999998 em vez de 1062).
+    expect(lineTotalCents({ unitPrice: 21.24, quantity: 0.5, discountType: 'fixed', discountValue: 0 })).toBe(1062)
   })
 
   it('treats a negative fixed "discount" as a markup, adding instead of subtracting', () => {
