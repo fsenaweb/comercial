@@ -29,7 +29,16 @@ function discountAmountCents(baseCents: number, type: DiscountType, value: numbe
 }
 
 export function lineTotalCents(line: CartLineInput): number {
-  const gross = Math.round(toCents(line.unitPrice) * line.quantity)
+  // Trunca (não arredonda) pro centavo, igual o backend faz em
+  // BuildsSaleItems::buildSaleItems() com bcmul($unitPrice, $quantity, 2) -
+  // bcmath sempre trunca, nunca arredonda. Com quantidade fracionada,
+  // unitPrice × quantidade pode cair numa fração de centavo (ex. R$7,99 ×
+  // 1,375 = R$10,98625) - se o front arredondasse pra R$10,99 e o backend
+  // truncasse pra R$10,98, o pagamento em dinheiro batido no total exibido
+  // seria rejeitado na hora de registrar a venda ("valor não bate"). O
+  // +1e-7 protege contra erro de ponto flutuante empurrando um valor exato
+  // (ex. 1062.0) pra baixo do inteiro por uma fração de bilionésimo.
+  const gross = Math.floor(toCents(line.unitPrice) * line.quantity + 1e-7)
   const discount = discountAmountCents(gross, line.discountType, line.discountValue)
 
   return Math.max(0, gross - discount)

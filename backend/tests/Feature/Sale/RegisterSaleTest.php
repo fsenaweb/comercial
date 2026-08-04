@@ -615,4 +615,24 @@ class RegisterSaleTest extends TestCase
 
         $response->assertCreated()->assertJsonPath('data.total', '120.00');
     }
+
+    public function test_fractional_quantity_line_total_truncates_to_the_cent_matching_the_frontend(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        // 0,5 x R$10,99 = R$5,495 - o backend trunca (bcmul scale 2) pra
+        // R$5,49, nunca R$5,50. O PDV (cartMath.ts) precisa truncar do
+        // mesmo jeito, senão o pagamento em dinheiro batido no total exibido
+        // é rejeitado aqui como "valor não bate" - achado real do cliente
+        // (2026-08-04), mais frequente com produto fracionado.
+        $variation = ProductVariation::factory()->create(['sale_price' => 10.99, 'current_quantity' => 10]);
+
+        $response = $this->actingAs($admin)->postJson('/api/sales', [
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 5.49]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 0.5]],
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.total', '5.49');
+    }
 }
