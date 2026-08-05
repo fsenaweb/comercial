@@ -146,16 +146,36 @@ Detalhes e o porquê dessa flag em `01-architecture.md`, seção
 
 ## 8. Atualizações futuras
 
-Depois da instalação inicial, toda atualização de versão é um único
-comando, rodado na raiz do repositório (`cd comercial`):
+Depois da instalação inicial, `deploy.bat` (raiz do repositório, `cd
+comercial`) abre um painel de manutenção interativo:
 
 ```
 deploy.bat
 ```
 
-Ele encapsula `git pull` + rebuild dos containers + `migrate --force` +
-republicação da SPA — mesmo runbook do `deploy.sh` usado em desenvolvimento,
-adaptado para `cmd.exe`. Não precisa repetir nenhum passo das seções 3-5.
+```
+========================================================
+  JP PARAFUSOS E ACESSORIOS - SISTEMA COMERCIAL
+========================================================
+
+  Painel de manutencao - maquina da loja
+
+  1. Atualizar sistema
+  2. Ver status do sistema
+  3. Ver logs
+  4. Reiniciar sistema
+  5. Sair
+
+  Escolha uma opcao:
+```
+
+A opção **1 (Atualizar sistema)** é o que antes era o comando único: encapsula
+`git pull` + rebuild dos containers + `migrate --force` + republicação da
+SPA — mesmo runbook do `deploy.sh` usado em desenvolvimento, adaptado para
+`cmd.exe` — com barra de progresso e estimativa de tempo (baseada em quanto
+levou a última vez). Não precisa repetir nenhum passo das seções 3-5. As
+demais opções (status/logs/reiniciar) são atalhos de diagnóstico rápido,
+sem precisar abrir o Docker Desktop.
 
 ## Checklist final
 

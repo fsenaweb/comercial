@@ -11,6 +11,7 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 - Acréscimo de preço no PDV e no crediário, por item ou no total da venda — mesmo botão de desconto ganhou um alternador de sinal (Desconto/Acréscimo), sem teto nem senha de admin (livre, decisão do cliente). Permite vender acima do preço de tabela sem alterar o cadastro do produto.
 - Paginação no histórico de vendas (20 por página, com botões Anterior/Próxima), e filtro padrão mostrando só as vendas do dia atual quando nenhuma data é escolhida — antes a tela sempre trazia as 20 vendas mais recentes de todo o histórico, sem forma de navegar pras demais.
 - Entrada de Estoque: campos de Custo, Lucro (%) e Valor de venda por item, visíveis/editáveis só para admin — permite atualizar o preço no mesmo lançamento da entrada, sem precisar repetir o processo no cadastro do produto. Pré-preenchidos com o preço atual (não zerado); se não forem alterados, a entrada não muda o preço.
+- `deploy.sh`/`deploy.bat` viraram um painel de manutenção interativo (banner, cores, barra de progresso com estimativa baseada na duração da última execução): além de "Atualizar sistema" (o que já existia), ganharam "Ver status do sistema", "Ver logs" (por serviço ou todos) e "Reiniciar sistema" — diagnóstico rápido sem precisar abrir o Docker Desktop ou decorar comandos.
 
 ### Corrigido
 - PDV: quantidade fracionada digitada no modal "Adicionar item" (ex. "0,5") não era mais forçada para "1" ao incluir no carrinho.
