@@ -6,6 +6,8 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-05
+
 ### Adicionado
 - Suporte a quantidade fracionada de produto (ex. meia unidade de eletrodo, peso em kg), ponta a ponta: PDV (carrinho, modal "Adicionar item" com máscara decimal), venda, orçamento, ajuste/entrada de estoque, crediário e kardex. Colunas de quantidade (`sale_items`, `stock_movements`, `account_entry_items`, `product_variations`) migradas de `integer` para `numeric(12,3)`.
 - Acréscimo de preço no PDV e no crediário, por item ou no total da venda — mesmo botão de desconto ganhou um alternador de sinal (Desconto/Acréscimo), sem teto nem senha de admin (livre, decisão do cliente). Permite vender acima do preço de tabela sem alterar o cadastro do produto.
