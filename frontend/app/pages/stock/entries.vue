@@ -89,9 +89,20 @@ function removeItem(key: number) {
 // cliente, 2026-07-21: a busca não encontrava produto fora dela).
 const showPicker = ref(false)
 const pickerSearch = ref('')
+const pickerSearchInput = ref<HTMLInputElement | null>(null)
 const pickerTarget = ref<FormItem | null>(null)
 const filteredPickerRows = ref<SkuOption[]>([])
 let pickerDebounce: ReturnType<typeof setTimeout> | null = null
+
+// `autofocus` do HTML só é confiável na primeira renderização do input -
+// como o BaseModal usa `v-if`, o elemento é recriado a cada abertura, mas o
+// foco automático some depois da primeira vez (achado do cliente,
+// 2026-08-05). Focando explicitamente aqui garante o foco sempre.
+watch(showPicker, async (open) => {
+  if (!open) return
+  await nextTick()
+  pickerSearchInput.value?.focus()
+})
 
 watch(pickerSearch, (query) => {
   if (pickerDebounce) clearTimeout(pickerDebounce)
@@ -307,10 +318,10 @@ await loadAll()
       <label class="relative mb-3 block">
         <Search :size="15" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-txt-muted" />
         <input
+          ref="pickerSearchInput"
           v-model="pickerSearch"
           type="text"
           placeholder="Nome ou código do produto"
-          autofocus
           class="w-full rounded-xl border border-border py-2.5 pr-3 pl-9 text-sm"
         >
       </label>
