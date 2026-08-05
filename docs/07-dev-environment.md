@@ -102,9 +102,17 @@ docker compose exec php-fpm php artisan storage:link   # idempotente; só precis
 ./deploy-frontend.sh   # build --no-cache + publica a SPA + restart nginx
 ```
 
-> `./deploy.sh` (raiz do repo) encapsula o ciclo completo acima (`git pull` + rebuild + `up -d` + correção de dono de `storage/` + `migrate --force` + `storage:link` + `./deploy-frontend.sh`) — não precisa rodar os passos manualmente.
+> `./deploy.sh` (raiz do repo) abre um **painel de manutenção interativo**
+> (banner, cores, barra de progresso com estimativa baseada na duração da
+> última execução) com um menu: **1. Atualizar sistema** roda o ciclo
+> completo acima (`git pull` + rebuild + `up -d` + correção de dono de
+> `storage/` + `migrate --force` + `storage:link` + `./deploy-frontend.sh`);
+> **2. Ver status do sistema** (`docker compose ps`); **3. Ver logs**
+> (por serviço ou todos, últimas 100 linhas); **4. Reiniciar sistema**
+> (`docker compose restart`); **5. Sair**. Não precisa rodar os passos
+> manualmente nem decorar comandos Docker pra diagnóstico básico.
 >
-> **Servidor Windows:** o SO definitivo da máquina da loja ainda não está fechado (`01-architecture.md`) — pode ser Linux (plano principal) ou um Windows 10 já existente na loja. Para esse segundo caso, `deploy.bat`/`deploy-frontend.bat` (raiz do repo) fazem exatamente o mesmo ciclo via **Docker Desktop com backend WSL2** — mesmo `docker-compose.yml`, sem UID/GID (esse truque é só para bind mount Linux; o Docker Desktop mapeia permissão por fora disso, os defaults `1000` do compose bastam). Rodar direto num `cmd.exe`/Prompt de Comando, mesma pasta do repo.
+> **Servidor Windows:** o SO definitivo da máquina da loja ainda não está fechado (`01-architecture.md`) — pode ser Linux (plano principal) ou um Windows 10 já existente na loja. Para esse segundo caso, `deploy.bat`/`deploy-frontend.bat` (raiz do repo) fazem exatamente o mesmo ciclo (mesmo menu interativo) via **Docker Desktop com backend WSL2** — mesmo `docker-compose.yml`, sem UID/GID (esse truque é só para bind mount Linux; o Docker Desktop mapeia permissão por fora disso, os defaults `1000` do compose bastam). Rodar direto num `cmd.exe`/Prompt de Comando, mesma pasta do repo. A estimativa de tempo usa PowerShell só pra pegar o timestamp (`cmd.exe` não tem isso nativo) — já vem em qualquer Windows 10 exigido pelo próprio Docker Desktop, sem instalar nada a mais.
 
 ### Configuração de produção (LAN) — checklist do `.env`
 - `APP_ENV=production`, `APP_DEBUG=false`.

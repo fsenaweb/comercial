@@ -1,1 +1,5 @@
 .idea/
+
+# Duração da última atualização (deploy.sh/deploy.bat) - estado local da
+# máquina, só usado pra estimar a barra de progresso da próxima execução.
+/.deploy-last-duration
