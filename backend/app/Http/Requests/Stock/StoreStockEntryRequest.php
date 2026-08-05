@@ -24,6 +24,13 @@ class StoreStockEntryRequest extends FormRequest
             'product_variation_id' => ['required', 'integer', 'exists:product_variations,id'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'origin' => ['nullable', 'string', 'max:255'],
+            // Só admin pode atualizar preço na mesma entrada (ver
+            // ProductVariationPolicy::update) - a Action ignora esses campos
+            // se quem enviou não for admin, então a validação aqui é só
+            // formato; a autorização de fato é checada na Action.
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
+            'markup' => ['nullable', 'numeric', 'min:0'],
+            'sale_price' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

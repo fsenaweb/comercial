@@ -18,12 +18,23 @@ interface FormItem {
   key: number
   selected: SkuOption | null
   quantity: number | null
+  cost_price_masked: string
+  markup: string
+  sale_price_masked: string
 }
 
 const api = useApi()
+const auth = useAuthStore()
 const { search: searchProductVariations } = useProductVariationSearch()
 const { parse, firstFieldError } = useApiError()
 const { formatQuantity } = useQuantityFormat()
+const { maskInput: maskCurrency, toNumber: currencyToNumber, format: formatCurrency } = useCurrencyMask()
+
+// Custo + margem% -> preço de venda calculado ao vivo, mesmo padrão de
+// products/index.vue (o preço continua editável manualmente depois).
+function applyMarkup(costPrice: number, markupPercent: number): number {
+  return costPrice * (1 + markupPercent / 100)
+}
 
 const entries = ref<StockMovement[]>([])
 const loading = ref(true)
@@ -55,7 +66,7 @@ async function loadAll() {
 let itemKeySeq = 0
 function emptyItem(): FormItem {
   itemKeySeq += 1
-  return { key: itemKeySeq, selected: null, quantity: null }
+  return { key: itemKeySeq, selected: null, quantity: null, cost_price_masked: 'R$ 0,00', markup: '', sale_price_masked: 'R$ 0,00' }
 }
 
 const origin = ref('')
@@ -124,8 +135,40 @@ function openPicker(item: FormItem) {
 }
 
 function choosePickerRow(row: SkuOption) {
-  if (pickerTarget.value) pickerTarget.value.selected = row
+  if (pickerTarget.value) {
+    pickerTarget.value.selected = row
+    // Pré-preenche com o preço atual da variação (não com zero) - assim, se
+    // o admin não mexer nesses campos, o valor enviado de volta é igual ao
+    // que já está salvo, sem risco de zerar o preço sem querer.
+    if (auth.isAdmin && row.variation.cost_price !== undefined) {
+      pickerTarget.value.cost_price_masked = maskCurrency(String(Math.round(Number(row.variation.cost_price) * 100)))
+      pickerTarget.value.markup = row.variation.markup ?? ''
+      pickerTarget.value.sale_price_masked = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
+    }
+  }
   showPicker.value = false
+}
+
+function handleItemCostInput(item: FormItem, value: string) {
+  item.cost_price_masked = maskCurrency(value)
+  recalcSalePrice(item)
+}
+
+function handleItemMarkupInput(item: FormItem, value: string) {
+  item.markup = value
+  recalcSalePrice(item)
+}
+
+function handleItemSaleInput(item: FormItem, value: string) {
+  item.sale_price_masked = maskCurrency(value)
+}
+
+function recalcSalePrice(item: FormItem) {
+  if (item.markup === '') return
+  const markupPercent = Number(item.markup)
+  if (Number.isNaN(markupPercent)) return
+  const cost = currencyToNumber(item.cost_price_masked)
+  item.sale_price_masked = formatCurrency(Math.round(applyMarkup(cost, markupPercent) * 100))
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {
@@ -163,6 +206,13 @@ async function handleSubmit() {
           product_variation_id: item.selected!.variation.id,
           quantity: item.quantity,
           origin: origin.value,
+          ...(auth.isAdmin
+            ? {
+                cost_price: currencyToNumber(item.cost_price_masked),
+                markup: item.markup === '' ? null : Number(item.markup),
+                sale_price: currencyToNumber(item.sale_price_masked),
+              }
+            : {}),
         },
       })
     }
@@ -290,6 +340,27 @@ await loadAll()
               <AlertTriangle :size="13" class="shrink-0" />
               {{ excessWarning(item) }}
             </p>
+
+            <div v-if="item.selected && auth.isAdmin" class="mt-3 border-t border-border pt-3">
+              <p class="mb-2 text-[10.5px] font-bold tracking-wide text-txt-muted uppercase">Atualizar preço (opcional)</p>
+              <div class="grid grid-cols-3 gap-4">
+                <BaseInput
+                  :model-value="item.cost_price_masked"
+                  label="Custo"
+                  @update:model-value="(v) => handleItemCostInput(item, v)"
+                />
+                <BaseInput
+                  :model-value="item.markup"
+                  label="Lucro (%)"
+                  @update:model-value="(v) => handleItemMarkupInput(item, v)"
+                />
+                <BaseInput
+                  :model-value="item.sale_price_masked"
+                  label="Valor de venda"
+                  @update:model-value="(v) => handleItemSaleInput(item, v)"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
