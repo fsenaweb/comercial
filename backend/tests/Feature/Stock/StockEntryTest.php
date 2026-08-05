@@ -133,4 +133,72 @@ class StockEntryTest extends TestCase
         $response->assertCreated()->assertJsonPath('data.quantity', '2.500');
         $this->assertSame('12.500', $variation->fresh()->current_quantity);
     }
+
+    public function test_admin_can_update_price_in_the_same_entry(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create([
+            'current_quantity' => 10,
+            'cost_price' => 1.00,
+            'markup' => 20,
+            'sale_price' => 1.20,
+        ]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/entries', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 5,
+            'origin' => 'Compra NF 1234',
+            'cost_price' => 1.50,
+            'markup' => 30,
+            'sale_price' => 1.95,
+        ]);
+
+        $response->assertCreated();
+        $fresh = $variation->fresh();
+        $this->assertSame('1.50', $fresh->cost_price);
+        $this->assertSame('30.00', $fresh->markup);
+        $this->assertSame('1.95', $fresh->sale_price);
+    }
+
+    public function test_cashier_sending_price_fields_does_not_change_price(): void
+    {
+        $cashier = User::factory()->cashier()->create();
+        $variation = ProductVariation::factory()->create([
+            'current_quantity' => 10,
+            'cost_price' => 1.00,
+            'sale_price' => 1.20,
+        ]);
+
+        $response = $this->actingAs($cashier)->postJson('/api/stock-movements/entries', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 5,
+            'cost_price' => 999,
+            'sale_price' => 999,
+        ]);
+
+        $response->assertCreated();
+        $fresh = $variation->fresh();
+        $this->assertSame('1.00', $fresh->cost_price);
+        $this->assertSame('1.20', $fresh->sale_price);
+    }
+
+    public function test_price_fields_are_optional(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $variation = ProductVariation::factory()->create([
+            'current_quantity' => 10,
+            'cost_price' => 1.00,
+            'sale_price' => 1.20,
+        ]);
+
+        $response = $this->actingAs($admin)->postJson('/api/stock-movements/entries', [
+            'product_variation_id' => $variation->id,
+            'quantity' => 5,
+        ]);
+
+        $response->assertCreated();
+        $fresh = $variation->fresh();
+        $this->assertSame('1.00', $fresh->cost_price);
+        $this->assertSame('1.20', $fresh->sale_price);
+    }
 }

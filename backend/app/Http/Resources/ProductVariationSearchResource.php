@@ -19,6 +19,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * seletores só "buscavam" dentro da primeira página carregada. Migrados pra
  * este endpoint, só faltavam esses dois campos que eles usam e o payload
  * enxuto original não tinha.
+ *
+ * `cost_price` só vai no payload para admin (`$this->when`) - é o único
+ * campo de custo/margem exposto por este endpoint, e ele é usado também
+ * pelo PDV/Etiquetas (cashier/vendedor têm acesso), então não pode vazar
+ * pra quem não é admin (ver ProductVariationPolicy::update, mesma regra).
  */
 class ProductVariationSearchResource extends JsonResource
 {
@@ -31,6 +36,7 @@ class ProductVariationSearchResource extends JsonResource
             'size' => $this->size,
             'ean_gtin' => $this->ean_gtin,
             'code' => $this->code,
+            'cost_price' => $this->when($request->user()?->isAdmin(), $this->cost_price),
             'sale_price' => $this->sale_price,
             'current_quantity' => $this->current_quantity,
             'max_quantity' => $this->max_quantity,

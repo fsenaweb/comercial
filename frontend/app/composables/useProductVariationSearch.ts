@@ -4,6 +4,9 @@ export interface ProductVariation {
   size: string | null
   ean_gtin: string | null
   code: string
+  // Só vem preenchido pra admin (ver ProductVariationSearchResource) - não
+  // usar pra decidir UI, o papel do usuário já é checado via useAuthStore().
+  cost_price?: string
   sale_price: string
   current_quantity: string
   max_quantity: string | null
