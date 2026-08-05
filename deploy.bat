@@ -32,6 +32,18 @@ if errorlevel 1 goto :error
 docker compose up -d
 if errorlevel 1 goto :error
 
+REM Corrige o dono de storage/ e bootstrap/cache pro usuario do container
+REM (www-data) sempre, incondicionalmente - nao so o "achado real" antigo do
+REM diretorio de backup. backend/storage e bind mount: se em algum momento
+REM ficou com outro dono no host (root via "exec -u root", restauracao de
+REM backup, rebuild com UID diferente etc.), o php-fpm nao escreve mais nem
+REM em storage/logs/laravel.log, e nem um chmod sem ser root resolve. Rodar
+REM isso sempre, a cada deploy, evita depender de alguem notar o log de erro
+REM na tela antes de corrigir (achado real na loja do cliente, 2026-08-05).
+echo Corrigindo permissoes de storage...
+docker compose exec -u root php-fpm chown -R www-data:www-data storage bootstrap/cache
+docker compose exec -u root php-fpm chmod -R ug+rwX storage bootstrap/cache
+
 REM vendor/ nao vai para o Git (.gitignore) e o Dockerfile so instala o
 REM binario do Composer, nao roda "install" - porque backend/ e bind mount,
 REM entao um "composer install" rodado durante o build da imagem seria

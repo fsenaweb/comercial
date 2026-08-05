@@ -28,6 +28,17 @@ fi
 env UID="$(id -u)" GID="$(id -g)" docker compose build
 docker compose up -d
 
+# Corrige o dono de storage/ e bootstrap/cache pro usuário do container
+# (www-data) sempre, incondicionalmente — não só o "achado real" antigo do
+# diretório de backup. `backend/storage` é bind mount: se em algum momento
+# ficou com outro dono no host (root via `exec -u root`, restauração de
+# backup, rebuild com UID diferente etc.), o php-fpm não escreve mais nem em
+# storage/logs/laravel.log, e nem um `chmod` sem ser root resolve. Rodar isso
+# sempre, a cada deploy, evita depender de alguém notar o log-de-erro na
+# tela antes de corrigir (achado real na loja do cliente, 2026-08-05).
+docker compose exec -u root php-fpm chown -R www-data:www-data storage bootstrap/cache
+docker compose exec -u root php-fpm chmod -R ug+rwX storage bootstrap/cache
+
 # vendor/ não vai para o Git (.gitignore) e o Dockerfile só instala o binário
 # do Composer, não roda `install` — porque backend/ é bind mount, então
 # qualquer `composer install` rodado durante o build da imagem seria
