@@ -35,6 +35,19 @@ class ReportController extends Controller
         'valor_estoque' => 'buildStockValue',
     ];
 
+    /** Nº de linhas por chamada a `Mpdf::WriteHTML()` na exportação em PDF — ver exportPdf(). */
+    private const PDF_ROW_CHUNK = 500;
+
+    /**
+     * Teto de linhas listadas no PDF. Diferente da query/Excel (ver buildStockValue() e
+     * ReportArrayExport), o Mpdf mantém em memória o estado de todas as páginas já geradas —
+     * medido em ~78 MB a cada 1.000 linhas, então nenhum memory_limit razoável cobre o catálogo
+     * inteiro (~13,4 mil produtos exigiria mais de 1 GB só nessa etapa). Os totais do resumo
+     * continuam batendo com o estoque inteiro (calculados antes do corte); só a listagem
+     * detalhada é truncada, com aviso pro usuário usar a exportação em Excel pra lista completa.
+     */
+    private const MAX_PDF_ROWS = 4000;
+
     public function salesByDay(Request $request): JsonResponse
     {
         [$dateFrom, $dateTo] = $this->resolvePeriod($request, 30);
@@ -126,12 +139,39 @@ class ReportController extends Controller
         return response()->json(['data' => $this->reportData($key, $request)]);
     }
 
+    /**
+     * Gera o HTML em lotes (`WriteHTML` chamado várias vezes) em vez de renderizar a tabela
+     * inteira como uma única string antes de entregar pro Mpdf — com relatórios de milhares de
+     * linhas (ex. "Valor do Estoque", ver buildStockValue()), montar tudo de uma vez inflava o
+     * pico de memória o bastante pra estourar o memory_limit do PHP-FPM.
+     */
     public function exportPdf(string $key, Request $request): SymfonyResponse
     {
         $report = $this->reportData($key, $request);
+        $letterhead = $this->letterhead();
+
+        $totalRows = count($report['rows']);
+        if ($totalRows > self::MAX_PDF_ROWS) {
+            $report['rows'] = array_slice($report['rows'], 0, self::MAX_PDF_ROWS);
+            $report['truncated_note'] = sprintf(
+                'Exibindo as primeiras %s de %s linhas — os totais acima consideram o estoque inteiro. Para a lista completa, use "Exportar Excel".',
+                number_format(self::MAX_PDF_ROWS, 0, ',', '.'),
+                number_format($totalRows, 0, ',', '.'),
+            );
+        }
 
         $mpdf = new Mpdf(['tempDir' => sys_get_temp_dir()]);
-        $mpdf->WriteHTML(view('reports.export', ['report' => $report, 'letterhead' => $this->letterhead()])->render());
+        $mpdf->WriteHTML(view('reports.partials.head', ['report' => $report, 'letterhead' => $letterhead])->render());
+
+        if ($report['rows'] === []) {
+            $mpdf->WriteHTML(view('reports.partials.empty-row', ['report' => $report])->render());
+        } else {
+            foreach (array_chunk($report['rows'], self::PDF_ROW_CHUNK) as $chunk) {
+                $mpdf->WriteHTML(view('reports.partials.rows', ['rows' => $chunk, 'headers' => $report['headers']])->render());
+            }
+        }
+
+        $mpdf->WriteHTML(view('reports.partials.foot')->render());
 
         return response($mpdf->Output($key.'.pdf', Destination::STRING_RETURN), 200, [
             'Content-Type' => 'application/pdf',
@@ -445,28 +485,45 @@ class ReportController extends Controller
         ];
     }
 
+    /**
+     * Catálogo com milhares de variações (loja real: ~13,4 mil) — usa `cursor()` em vez de
+     * `get()`/`with()` pra nunca ter mais de um model hidratado em memória por vez (o join com
+     * `products` já resolve o nome sem precisar carregar a relação inteira). É a causa raiz do
+     * "sem memória suficiente" reportado pelo cliente ao exportar esse relatório (PDF/Excel).
+     */
     private function buildStockValue(): array
     {
-        $variations = ProductVariation::query()->with('product')->orderBy('product_id')->get();
-
         $totalCost = 0.0;
         $totalSale = 0.0;
+        $rows = [];
 
-        $rows = $variations->map(function ($variation) use (&$totalCost, &$totalSale) {
-            $costValue = (float) $variation->current_quantity * (float) $variation->cost_price;
-            $saleValue = (float) $variation->current_quantity * (float) $variation->sale_price;
-            $totalCost += $costValue;
-            $totalSale += $saleValue;
+        ProductVariation::query()
+            ->join('products', 'products.id', '=', 'product_variations.product_id')
+            ->orderBy('product_variations.product_id')
+            ->select([
+                'products.name as product_name',
+                'product_variations.code',
+                'product_variations.reference',
+                'product_variations.current_quantity',
+                'product_variations.cost_price',
+                'product_variations.sale_price',
+            ])
+            ->cursor()
+            ->each(function ($variation) use (&$rows, &$totalCost, &$totalSale) {
+                $costValue = (float) $variation->current_quantity * (float) $variation->cost_price;
+                $saleValue = (float) $variation->current_quantity * (float) $variation->sale_price;
+                $totalCost += $costValue;
+                $totalSale += $saleValue;
 
-            return [
-                'product_name' => $variation->product->name,
-                'code' => $variation->code,
-                'reference' => $variation->reference,
-                'current_quantity' => (string) $variation->current_quantity,
-                'cost_value' => $this->money($costValue),
-                'sale_value' => $this->money($saleValue),
-            ];
-        })->all();
+                $rows[] = [
+                    'product_name' => $variation->product_name,
+                    'code' => $variation->code,
+                    'reference' => $variation->reference,
+                    'current_quantity' => (string) $variation->current_quantity,
+                    'cost_value' => $this->money($costValue),
+                    'sale_value' => $this->money($saleValue),
+                ];
+            });
 
         return [
             'title' => 'Valor do Estoque',
