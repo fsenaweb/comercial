@@ -6,6 +6,9 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 
 ## [Unreleased]
 
+### Corrigido
+- Relatório "Valor do Estoque": exportação em PDF e Excel dava erro de falta de memória com o catálogo completo (~13,4 mil produtos). Query reescrita para não carregar todos os models de uma vez (`cursor()`/join em vez de `get()->with()`), geração do PDF passou a escrever em lotes, e o `memory_limit` do PHP-FPM subiu de 128M para 512M. A listagem do PDF agora tem um teto de 4.000 linhas (os totais do resumo continuam somando o estoque inteiro) com aviso para usar a exportação em Excel na lista completa — o Excel não tem esse limite.
+
 ## [1.1.0] - 2026-08-05
 
 ### Adicionado
