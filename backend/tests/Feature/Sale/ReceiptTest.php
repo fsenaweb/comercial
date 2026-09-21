@@ -35,6 +35,43 @@ class ReceiptTest extends TestCase
         $response->assertSee($paymentMethod->name);
     }
 
+    public function test_receipt_shows_the_sale_notes_when_present(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+            'notes' => 'Entregar embrulhado para presente',
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt");
+
+        $response->assertOk();
+        $response->assertSee('Entregar embrulhado para presente');
+    }
+
+    public function test_receipt_omits_the_notes_block_when_there_are_none(): void
+    {
+        CashRegister::factory()->open()->create();
+        $admin = User::factory()->admin()->create();
+        $paymentMethod = PaymentMethod::factory()->create(['active_on_pos' => true]);
+        $variation = ProductVariation::factory()->create(['sale_price' => 10, 'current_quantity' => 20]);
+
+        $sale = app(RegisterSaleAction::class)->execute([
+            'payments' => [['payment_method_id' => $paymentMethod->id, 'amount' => 10]],
+            'items' => [['product_variation_id' => $variation->id, 'quantity' => 1]],
+        ], $admin);
+
+        $response = $this->actingAs($admin)->get("/sales/{$sale->id}/receipt");
+
+        $response->assertOk();
+        $response->assertDontSee('Observação:');
+    }
+
     public function test_receipt_lists_every_payment_leg_of_a_split_payment_sale(): void
     {
         CashRegister::factory()->open()->create();

@@ -39,6 +39,7 @@ interface SalePaymentDetail {
 interface SaleDetail extends SaleListItem {
   subtotal: string
   discount: string
+  notes: string | null
   canceled_reason: string | null
   canceled_at: string | null
   payments: SalePaymentDetail[]
@@ -291,6 +292,11 @@ await Promise.all([load(), loadSellers()])
         <div v-if="detail.status === 'canceled'" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <p class="font-bold">Venda cancelada{{ detail.canceled_at ? ` em ${formatDateTime(detail.canceled_at)}` : '' }}</p>
           <p v-if="detail.canceled_reason" class="mt-0.5">Motivo: {{ detail.canceled_reason }}</p>
+        </div>
+
+        <div v-if="detail.notes" class="rounded-xl border border-border bg-surface-subtle p-3 text-sm">
+          <p class="font-semibold text-txt-secondary">Observação</p>
+          <p class="text-txt-primary">{{ detail.notes }}</p>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border">
