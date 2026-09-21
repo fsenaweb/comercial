@@ -129,10 +129,11 @@ async function loadSellers() {
   sellers.value = data
 }
 
-// Sem filtro de data explícito a listagem já é só o dia atual (ver
-// SaleController::index) - o label reflete isso; com filtro de data, vira
-// "Vendas no filtro" pra não afirmar que é "do dia" quando não é.
-const salesCountLabel = computed(() => (dateFrom.value || dateTo.value ? 'Vendas no filtro' : 'Vendas do dia'))
+// Sem filtro de data nem de busca, a listagem já é só o dia atual (ver
+// SaleController::index) - o label reflete isso; com filtro de data ou busca
+// por número/cliente, vira "Vendas no filtro" pra não afirmar que é "do dia"
+// quando não é.
+const salesCountLabel = computed(() => (dateFrom.value || dateTo.value || search.value.trim() ? 'Vendas no filtro' : 'Vendas do dia'))
 
 // ---- Detalhe da venda ----
 const showDetail = ref(false)

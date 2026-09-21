@@ -73,6 +73,19 @@ class SaleHistoryFilterTest extends TestCase
         $response->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $today->id);
     }
 
+    public function test_search_by_sale_number_finds_sales_outside_todays_default_filter(): void
+    {
+        $seller = User::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $today = $this->makeSale($seller);
+        $lastMonth = $this->makeSale($seller);
+        $lastMonth->forceFill(['created_at' => now()->subMonth()])->save();
+
+        $response = $this->actingAs($admin)->getJson('/api/sales?search='.$lastMonth->number);
+
+        $response->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $lastMonth->id);
+    }
+
     public function test_explicit_date_filter_overrides_the_default_today_filter(): void
     {
         $seller = User::factory()->create();

@@ -9,6 +9,7 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 ### Corrigido
 - Relatório "Valor do Estoque": exportação em PDF e Excel dava erro de falta de memória com o catálogo completo (~13,4 mil produtos). Query reescrita para não carregar todos os models de uma vez (`cursor()`/join em vez de `get()->with()`), geração do PDF passou a escrever em lotes, e o `memory_limit` do PHP-FPM subiu de 128M para 512M. A listagem do PDF agora tem um teto de 4.000 linhas (os totais do resumo continuam somando o estoque inteiro) com aviso para usar a exportação em Excel na lista completa — o Excel não tem esse limite.
 - Campo "Observação" do PDV (bloco "Configuração do pedido"): era salvo no banco (`sales.notes`) e devolvido pela API, mas não aparecia em lugar nenhum depois — nem no comprovante impresso, nem no detalhe da venda no Histórico de Vendas ou no Caixa. Agora é exibido nos três lugares quando preenchido.
+- Histórico de Vendas: buscar pelo número da venda sem preencher De/Até não encontrava vendas de dias anteriores — o filtro padrão de "só hoje" (pensado pra tela não paginar o histórico inteiro sem filtro nenhum) se aplicava mesmo com uma busca por número preenchida. Agora a busca por número/cliente ignora esse filtro padrão e alcança o histórico inteiro.
 
 ## [1.1.0] - 2026-08-05
 

@@ -38,12 +38,16 @@ class SaleController extends Controller
             $query->whereDate('created_at', '<=', $request->string('date_to')->value());
         }
 
-        // Sem filtro de data explícito, a listagem de vendas (não orçamentos)
+        // Sem filtro de data nem de busca, a listagem de vendas (não orçamentos)
         // mostra só o dia atual por padrão - pedido do cliente (2026-08-03),
         // pra não paginar o histórico inteiro toda vez que abre a tela.
         // `created_at` já é gravado em horário local (APP_TIMEZONE), então
         // `today()` bate direto com o valor persistido, sem conversão de fuso.
-        if (! $request->filled('date_from') && ! $request->filled('date_to') && ! $request->boolean('is_quote')) {
+        // Com `search` preenchido, o atalho não se aplica: o cliente pode não
+        // saber a data da venda que está procurando pelo número (achado do
+        // cliente, 2026-09-21) - restringir ao dia atual fazia a busca por
+        // número nunca encontrar vendas de outros dias.
+        if (! $request->filled('search') && ! $request->filled('date_from') && ! $request->filled('date_to') && ! $request->boolean('is_quote')) {
             $query->whereDate('created_at', today());
         }
 
