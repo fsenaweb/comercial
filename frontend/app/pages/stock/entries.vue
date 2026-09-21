@@ -78,6 +78,7 @@ function openForm() {
   origin.value = ''
   items.value = [emptyItem()]
   error.value = null
+  pickerTarget.value = null
   view.value = 'form'
 }
 
@@ -90,6 +91,7 @@ function addItem() {
 }
 
 function removeItem(key: number) {
+  if (pickerTarget.value?.key === key) pickerTarget.value = null
   items.value = items.value.filter((item) => item.key !== key)
   if (items.value.length === 0) items.value.push(emptyItem())
 }
@@ -146,6 +148,7 @@ function choosePickerRow(row: SkuOption) {
       pickerTarget.value.sale_price_masked = maskCurrency(String(Math.round(Number(row.variation.sale_price) * 100)))
     }
   }
+  pickerTarget.value = null
   showPicker.value = false
 }
 
