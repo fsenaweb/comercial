@@ -39,6 +39,7 @@ interface SalePaymentDetail {
 interface SaleDetail extends SaleListItem {
   subtotal: string
   discount: string
+  notes: string | null
   canceled_reason: string | null
   canceled_at: string | null
   payments: SalePaymentDetail[]
@@ -128,10 +129,11 @@ async function loadSellers() {
   sellers.value = data
 }
 
-// Sem filtro de data explícito a listagem já é só o dia atual (ver
-// SaleController::index) - o label reflete isso; com filtro de data, vira
-// "Vendas no filtro" pra não afirmar que é "do dia" quando não é.
-const salesCountLabel = computed(() => (dateFrom.value || dateTo.value ? 'Vendas no filtro' : 'Vendas do dia'))
+// Sem filtro de data nem de busca, a listagem já é só o dia atual (ver
+// SaleController::index) - o label reflete isso; com filtro de data ou busca
+// por número/cliente, vira "Vendas no filtro" pra não afirmar que é "do dia"
+// quando não é.
+const salesCountLabel = computed(() => (dateFrom.value || dateTo.value || search.value.trim() ? 'Vendas no filtro' : 'Vendas do dia'))
 
 // ---- Detalhe da venda ----
 const showDetail = ref(false)
@@ -291,6 +293,11 @@ await Promise.all([load(), loadSellers()])
         <div v-if="detail.status === 'canceled'" class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <p class="font-bold">Venda cancelada{{ detail.canceled_at ? ` em ${formatDateTime(detail.canceled_at)}` : '' }}</p>
           <p v-if="detail.canceled_reason" class="mt-0.5">Motivo: {{ detail.canceled_reason }}</p>
+        </div>
+
+        <div v-if="detail.notes" class="rounded-xl border border-border bg-surface-subtle p-3 text-sm">
+          <p class="font-semibold text-txt-secondary">Observação</p>
+          <p class="text-txt-primary">{{ detail.notes }}</p>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border">

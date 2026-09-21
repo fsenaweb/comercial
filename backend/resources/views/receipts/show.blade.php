@@ -95,6 +95,11 @@
         <tr class="bold"><td>Total</td><td class="right">R$ {{ number_format($sale->total, 2, ',', '.') }}</td></tr>
     </table>
 
+    @if ($sale->notes)
+        <div class="line"></div>
+        <div><span class="bold">Observação:</span> {{ $sale->notes }}</div>
+    @endif
+
     <div class="line"></div>
 
     <div class="barcode">

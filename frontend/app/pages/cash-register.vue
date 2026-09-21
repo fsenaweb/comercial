@@ -33,6 +33,7 @@ interface SaleDetail {
   subtotal: string
   discount: string
   total: string
+  notes: string | null
   payments: SalePaymentDetail[]
   items: SaleItemDetail[]
 }
@@ -534,6 +535,11 @@ await loadAll()
               {{ payment.payment_method_name ?? '-' }} ({{ formatAmount(payment.amount) }})<span v-if="index < saleDetail.payments.length - 1">, </span>
             </span>
           </div>
+        </div>
+
+        <div v-if="saleDetail.notes" class="rounded-xl border border-border bg-surface-subtle p-3 text-sm">
+          <p class="font-semibold text-txt-secondary">Observação</p>
+          <p class="text-txt-primary">{{ saleDetail.notes }}</p>
         </div>
 
         <div class="overflow-hidden rounded-xl border border-border">
