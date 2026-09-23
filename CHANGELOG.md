@@ -6,6 +6,9 @@ Cada PR/commit relevante para o usuário final (feature nova, correção de bug,
 
 ## [Unreleased]
 
+### Corrigido
+- Backup automático no Google Drive: autorização na loja do cliente falhava com "Erro 403: access_denied" — o app OAuth ainda estava em modo "Testando" no Google Cloud, que só libera e-mails cadastrados como usuário de teste. Resolvido publicando o app para produção; passo documentado em `docs/01-architecture.md` (seção "Backup remoto — Google Drive"), incluindo a nova exigência do Google de página inicial/política de privacidade públicas (páginas institucionais publicadas em [`fsenaweb/sistema-comercial-paginas`](https://github.com/fsenaweb/sistema-comercial-paginas) via GitHub Pages).
+
 ## [1.1.1] - 2026-09-21
 
 ### Corrigido
